@@ -1,14 +1,14 @@
 // src/ui/screens/CreateEventScreen.tsx
 import React from 'react';
-import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X } from 'lucide-react';
+import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
-import type { Combo, ClientProfile } from '../../core/domain/types';
+import type { Product, ClientProfile } from '../../core/domain/types';
 
 // --- Components ---
 
 const DynamicIcon = ({ name, ...props }: { name: string } & LucideProps) => {
-  const iconMap: { [key: string]: React.FC<LucideProps> } = { Anchor, Utensils, Beer, User, Circle };
+  const iconMap: { [key: string]: React.FC<LucideProps> } = { Anchor, Utensils, Beer, User, Circle, Package: Package };
   const IconComponent = iconMap[name] || HelpCircle;
   return <IconComponent {...props} />;
 };
@@ -61,15 +61,11 @@ const NewClientModal: React.FC<{
 
 export const CreateEventScreen: React.FC = () => {
   const vm = useCreateEventViewModel();
-  const isComboSelected = (combo: Combo) => vm.selectedCombos.some(c => c.id === combo.id);
+  const isProductSelected = (product: Product) => vm.selectedProducts.some(p => p.id === product.id);
 
   return (
     <div className="bg-gray-50 min-h-screen font-sans text-gray-800">
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Criar Novo Passeio</h1>
-        </div>
-      </header>
+      {/* This screen no longer has its own header, as it's part of the Layout */}
 
       <main className="max-w-4xl mx-auto p-4 pb-48">
         {/* Section: Client and Passengers */}
@@ -143,38 +139,44 @@ export const CreateEventScreen: React.FC = () => {
           </div>
         </section>
 
-        {/* Available Combos */}
+        {/* Available Products */}
         <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Combos Disponíveis</h2>
+          <h2 className="text-lg font-semibold mb-3">Produtos Disponíveis</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {vm.availableCombos.map((combo) => (
-              <label key={combo.id} htmlFor={`combo-${combo.id}`} className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${isComboSelected(combo) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500' : 'bg-white border-gray-200 hover:border-gray-400'}`}>
-                <DynamicIcon name={combo.iconKey} className="w-6 h-6 mr-4 text-gray-600" />
+            {vm.availableProducts.map((product) => (
+              <label key={product.id} htmlFor={`product-${product.id}`} className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all ${isProductSelected(product) ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500' : 'bg-white border-gray-200 hover:border-gray-400'}`}>
+                <DynamicIcon name={product.iconKey} className="w-6 h-6 mr-4 text-gray-600" />
                 <div className="flex-grow">
-                  <p className="font-semibold">{combo.name}</p>
-                  <p className="text-sm text-gray-500">R$ {combo.price.toFixed(2)}</p>
+                  <p className="font-semibold">{product.name}</p>
+                  <p className="text-sm text-gray-500">
+                    R$ {product.price.toFixed(2)}
+                    {product.pricingType === 'PER_PERSON' && ' / pessoa'}
+                  </p>
                 </div>
-                <input id={`combo-${combo.id}`} type="checkbox" checked={isComboSelected(combo)} onChange={() => vm.toggleCombo(combo)} className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                <input id={`product-${product.id}`} type="checkbox" checked={isProductSelected(product)} onChange={() => vm.toggleProduct(product)} className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
               </label>
             ))}
           </div>
         </section>
 
         {/* Selected Items & Discount */}
-        {vm.selectedCombos.length > 0 && (
+        {vm.selectedProducts.length > 0 && (
           <section>
             <h2 className="text-lg font-semibold mb-3">Itens Selecionados</h2>
             <div className="bg-white p-4 rounded-lg shadow-sm divide-y divide-gray-200">
-              {vm.selectedCombos.map((combo) => (
-                <div key={combo.id} className="flex items-center justify-between py-3">
+              {vm.selectedProducts.map((product) => (
+                <div key={product.id} className="flex items-center justify-between py-3">
                   <div>
-                    <p className="font-semibold">{combo.name}</p>
-                    <p className={`text-sm ${combo.isCourtesy ? 'line-through text-gray-400' : 'text-gray-600'}`}>R$ {combo.price.toFixed(2)}</p>
+                    <p className="font-semibold">{product.name}</p>
+                    <p className={`text-sm ${product.isCourtesy ? 'line-through text-gray-400' : 'text-gray-600'}`}>
+                      R$ {product.price.toFixed(2)}
+                      {product.pricingType === 'PER_PERSON' && ` x ${vm.passengerCount} passageiros`}
+                    </p>
                   </div>
                   <div className="flex items-center">
-                    <span className="text-sm mr-2">{combo.isCourtesy ? 'Cortesia' : 'Marcar Cortesia'}</span>
-                    <label htmlFor={`courtesy-${combo.id}`} className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" id={`courtesy-${combo.id}`} className="sr-only peer" checked={combo.isCourtesy} onChange={() => vm.toggleCourtesy(combo.id)} />
+                    <span className="text-sm mr-2">{product.isCourtesy ? 'Cortesia' : 'Marcar Cortesia'}</span>
+                    <label htmlFor={`courtesy-${product.id}`} className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id={`courtesy-${product.id}`} className="sr-only peer" checked={product.isCourtesy} onChange={() => vm.toggleCourtesy(product.id)} />
                       <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>

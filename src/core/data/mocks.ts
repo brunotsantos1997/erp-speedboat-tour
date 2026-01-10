@@ -1,40 +1,42 @@
 // src/core/data/mocks.ts
 import { v4 as uuidv4 } from 'uuid';
-import type { Combo, ClientProfile, LoyaltyRule } from '../domain/types';
+import type { Product, ClientProfile, LoyaltyRule } from '../domain/types';
 
 /**
- * List of available combos for selection.
+ * List of available products for selection. Renamed from Combos.
  */
-export const AVAILABLE_COMBOS: Combo[] = [
+export const AVAILABLE_PRODUCTS: Product[] = [
   {
     id: uuidv4(),
     name: 'Aluguel Lancha (4h)',
     price: 2500,
+    pricingType: 'FIXED',
     iconKey: 'Anchor',
+    isDefaultCourtesy: false,
   },
   {
     id: uuidv4(),
     name: 'Kit Churrasco',
-    price: 500,
+    price: 100, // Price per person
+    pricingType: 'PER_PERSON',
     iconKey: 'Utensils',
+    isDefaultCourtesy: false,
   },
   {
     id: uuidv4(),
     name: 'Bebidas',
-    price: 200,
+    price: 50, // Price per person
+    pricingType: 'PER_PERSON',
     iconKey: 'Beer',
+    isDefaultCourtesy: false,
   },
   {
     id: uuidv4(),
     name: 'Serviço de Marinheiro',
     price: 300,
+    pricingType: 'FIXED',
     iconKey: 'User',
-  },
-  {
-    id: uuidv4(),
-    name: 'Boia Recreativa',
-    price: 150,
-    iconKey: 'Circle',
+    isDefaultCourtesy: true, // Example of default courtesy
   },
 ];
 
