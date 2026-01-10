@@ -1,13 +1,15 @@
 // src/core/domain/types.ts
 
 /**
- * Represents a selectable service or product combo.
+ * Represents a configurable product or service.
  */
-export interface Combo {
+export interface Product {
   id: string;
   name: string;
   price: number;
-  iconKey: string; // Simplified for robust bundling
+  pricingType: 'FIXED' | 'PER_PERSON';
+  iconKey: string;
+  isDefaultCourtesy: boolean;
 }
 
 /**
@@ -19,9 +21,9 @@ export interface Discount {
 }
 
 /**
- * Represents a selected combo in an event, with its courtesy status.
+ * Represents a selected product in an event, with its courtesy status.
  */
-export interface SelectedCombo extends Combo {
+export interface SelectedProduct extends Product {
   isCourtesy: boolean;
 }
 
@@ -30,9 +32,10 @@ export interface SelectedCombo extends Combo {
  */
 export interface Event {
   id: string;
-  combos: SelectedCombo[];
+  products: SelectedProduct[];
   discount: Discount;
-  clientPhone: string;
+  client: ClientProfile | null;
+  passengerCount: number;
   subtotal: number;
   total: number;
 }
@@ -41,6 +44,7 @@ export interface Event {
  * Represents a client's profile for loyalty checks.
  */
 export interface ClientProfile {
+  id: string;
   phone: string;
   name: string;
   totalTrips: number;
