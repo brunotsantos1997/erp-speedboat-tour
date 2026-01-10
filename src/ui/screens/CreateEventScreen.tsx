@@ -1,8 +1,9 @@
 // src/ui/screens/CreateEventScreen.tsx
 import React from 'react';
-import { Anchor, Utensils, Beer, User, Circle, HelpCircle, LucideProps } from 'lucide-react';
+import { Anchor, Utensils, Beer, User, Circle, HelpCircle } from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
-import { Combo } from '../../core/domain/types';
+import type { Combo } from '../../core/domain/types';
 
 // Icon map for robust dynamic rendering
 const iconMap: { [key: string]: React.FC<LucideProps> } = {

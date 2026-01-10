@@ -1,12 +1,9 @@
 // src/viewmodels/useCreateEventViewModel.ts
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import {
+import type {
   Combo,
   Discount,
   SelectedCombo,
-  ClientProfile,
-  LoyaltyRule,
 } from '../core/domain/types';
 import {
   AVAILABLE_COMBOS,

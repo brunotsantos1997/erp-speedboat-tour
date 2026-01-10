@@ -1,5 +1,4 @@
 // src/core/domain/types.ts
-import { Icon } from 'lucide-react';
 
 /**
  * Represents a selectable service or product combo.

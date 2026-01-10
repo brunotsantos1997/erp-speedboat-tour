@@ -1,6 +1,6 @@
 // src/core/data/mocks.ts
 import { v4 as uuidv4 } from 'uuid';
-import { Combo, ClientProfile, LoyaltyRule } from '../domain/types';
+import type { Combo, ClientProfile, LoyaltyRule } from '../domain/types';
 
 /**
  * List of available combos for selection.
