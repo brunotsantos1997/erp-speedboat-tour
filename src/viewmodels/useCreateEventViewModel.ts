@@ -21,6 +21,7 @@ export const useCreateEventViewModel = () => {
 
   // New Client Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<ClientProfile | null>(null);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
 
@@ -66,7 +67,7 @@ export const useCreateEventViewModel = () => {
     }
   }, []);
 
-  // Client Management Handlers (same as before)
+  // Client Management Handlers
   const handleClientSearch = useCallback(async (term: string) => {
     setClientSearchTerm(term);
     if (term.length > 2) {
@@ -90,14 +91,64 @@ export const useCreateEventViewModel = () => {
     setClientSearchTerm('');
   }, []);
 
-  const handleAddNewClient = useCallback(async () => {
-    if (!newClientName || !newClientPhone) return;
-    const newClient = await clientRepository.add({ id: '', name: newClientName, phone: newClientPhone });
-    selectClient(newClient);
+  // --- Client CRUD Handlers ---
+
+  const handleOpenModal = (client: ClientProfile | null = null) => {
+    if (client) {
+      setEditingClient(client);
+      setNewClientName(client.name);
+      setNewClientPhone(client.phone);
+    } else {
+      setEditingClient(null);
+      setNewClientName('');
+      setNewClientPhone('');
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
     setIsModalOpen(false);
+    setEditingClient(null);
     setNewClientName('');
     setNewClientPhone('');
-  }, [newClientName, newClientPhone, selectClient]);
+  };
+
+  const handleSaveClient = useCallback(async () => {
+    if (!newClientName || !newClientPhone) return;
+
+    if (editingClient) {
+      // Update existing client
+      const updatedClient = { ...editingClient, name: newClientName, phone: newClientPhone };
+      const result = await clientRepository.update(updatedClient);
+      // If the edited client was selected, update the selection
+      if (selectedClient?.id === result.id) {
+        setSelectedClient(result);
+        setClientSearchTerm(result.name);
+      }
+    } else {
+      // Add new client
+      const newClient = await clientRepository.add({ id: '', name: newClientName, phone: newClientPhone });
+      selectClient(newClient);
+    }
+
+    handleCloseModal();
+    // Refresh search results to show changes
+    if (clientSearchTerm.length > 2) {
+      handleClientSearch(clientSearchTerm);
+    }
+  }, [editingClient, newClientName, newClientPhone, selectedClient, clientSearchTerm, handleClientSearch, selectClient]);
+
+  const handleDeleteClient = useCallback(async (clientId: string) => {
+    if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
+      await clientRepository.delete(clientId);
+      // If the deleted client was selected, clear the selection
+      if (selectedClient?.id === clientId) {
+        clearClientSelection();
+      }
+      // Refresh search results
+       handleClientSearch(clientSearchTerm);
+    }
+  }, [selectedClient, clientSearchTerm, handleClientSearch, clearClientSelection]);
 
 
   // Derived State: Calculations with new pricing logic
@@ -154,6 +205,7 @@ export const useCreateEventViewModel = () => {
     loyaltySuggestion,
     // Modal state
     isModalOpen,
+    editingClient,
     newClientName,
     newClientPhone,
     // Handlers
@@ -165,9 +217,11 @@ export const useCreateEventViewModel = () => {
     handleClientSearch,
     selectClient,
     clearClientSelection,
-    setIsModalOpen,
     setNewClientName,
     setNewClientPhone,
-    handleAddNewClient,
+    handleOpenModal,
+    handleCloseModal,
+    handleSaveClient,
+    handleDeleteClient,
   };
 };

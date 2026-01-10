@@ -3,6 +3,8 @@ import React from 'react';
 import { useProductsViewModel } from '../../viewmodels/useProductsViewModel';
 import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../core/domain/types';
+import IconPicker from '../components/IconPicker';
+import type { IconKey } from '../components/IconPicker';
 
 // --- Components ---
 
@@ -30,7 +32,10 @@ const ProductModal: React.FC<{
               <option value="PER_PERSON">Por Pessoa</option>
             </select>
           </div>
-          <input type="text" placeholder="Ícone (Lucide)" value={product.iconKey} onChange={(e) => onUpdate('iconKey', e.target.value)} className="w-full p-3 border rounded-lg" />
+          <IconPicker
+            selectedIcon={product.iconKey as IconKey}
+            onSelectIcon={(iconKey) => onUpdate('iconKey', iconKey)}
+          />
           <div className="flex items-center">
             <input type="checkbox" id="isDefaultCourtesy" checked={product.isDefaultCourtesy} onChange={(e) => onUpdate('isDefaultCourtesy', e.target.checked)} className="h-4 w-4 text-blue-600 border-gray-300 rounded mr-2" />
             <label htmlFor="isDefaultCourtesy">Marcar como cortesia por padrão?</label>

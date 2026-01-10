@@ -1,6 +1,6 @@
 // src/ui/screens/CreateEventScreen.tsx
 import React from 'react';
-import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package } from 'lucide-react';
+import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package, Pencil, Trash2 } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
 import type { Product, ClientProfile } from '../../core/domain/types';
@@ -8,26 +8,29 @@ import type { Product, ClientProfile } from '../../core/domain/types';
 // --- Components ---
 
 const DynamicIcon = ({ name, ...props }: { name: string } & LucideProps) => {
-  const iconMap: { [key: string]: React.FC<LucideProps> } = { Anchor, Utensils, Beer, User, Circle, Package: Package };
+  const iconMap: { [key: string]: React.FC<LucideProps> } = { Anchor, Utensils, Beer, User, Circle, Package };
   const IconComponent = iconMap[name] || HelpCircle;
   return <IconComponent {...props} />;
 };
 
 const NewClientModal: React.FC<{
   isOpen: boolean;
+  editingClient: ClientProfile | null;
   name: string;
   phone: string;
   setName: (name: string) => void;
   setPhone: (phone: string) => void;
   onSave: () => void;
   onClose: () => void;
-}> = ({ isOpen, name, phone, setName, setPhone, onSave, onClose }) => {
+}> = ({ isOpen, editingClient, name, phone, setName, setPhone, onSave, onClose }) => {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-        <h2 className="text-xl font-bold mb-4">Cadastrar Novo Cliente</h2>
+        <h2 className="text-xl font-bold mb-4">
+          {editingClient ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
+        </h2>
         <div className="space-y-4">
           <input
             type="text"
@@ -49,7 +52,7 @@ const NewClientModal: React.FC<{
             Cancelar
           </button>
           <button onClick={onSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            Salvar Cliente
+            {editingClient ? 'Atualizar' : 'Salvar Cliente'}
           </button>
         </div>
       </div>
@@ -98,10 +101,20 @@ export const CreateEventScreen: React.FC = () => {
                 {/* Search Results */}
                 {vm.clientSearchResults.length > 0 && (
                   <ul className="absolute w-full bg-white border border-gray-300 rounded-lg mt-1 shadow-lg z-20 max-h-60 overflow-y-auto">
-                    {vm.clientSearchResults.map(client => (
-                      <li key={client.id} onClick={() => vm.selectClient(client)} className="p-3 hover:bg-gray-100 cursor-pointer">
-                        <p className="font-semibold">{client.name}</p>
-                        <p className="text-sm text-gray-500">{client.phone}</p>
+                    {vm.clientSearchResults.map((client) => (
+                      <li key={client.id} className="flex items-center justify-between p-3 hover:bg-gray-100 group">
+                        <div onClick={() => vm.selectClient(client)} className="flex-grow cursor-pointer">
+                          <p className="font-semibold">{client.name}</p>
+                          <p className="text-sm text-gray-500">{client.phone}</p>
+                        </div>
+                        <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button onClick={() => vm.handleOpenModal(client)} className="p-1 text-gray-500 hover:text-blue-600">
+                                <Pencil size={18} />
+                           </button>
+                           <button onClick={() => vm.handleDeleteClient(client.id)} className="p-1 text-gray-500 hover:text-red-600">
+                                <Trash2 size={18} />
+                           </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -109,7 +122,7 @@ export const CreateEventScreen: React.FC = () => {
                  {vm.clientSearchTerm.length > 2 && !vm.isSearching && vm.clientSearchResults.length === 0 && (
                     <div className="bg-white border border-gray-300 rounded-lg mt-1 p-4 text-center">
                         <p className="text-gray-600 mb-3">Nenhum cliente encontrado.</p>
-                        <button onClick={() => vm.setIsModalOpen(true)} className="text-blue-600 font-semibold hover:underline">
+                        <button onClick={() => vm.handleOpenModal(null)} className="text-blue-600 font-semibold hover:underline">
                             + Cadastrar Novo Cliente
                         </button>
                     </div>
@@ -217,12 +230,13 @@ export const CreateEventScreen: React.FC = () => {
 
       <NewClientModal
         isOpen={vm.isModalOpen}
+        editingClient={vm.editingClient}
         name={vm.newClientName}
         phone={vm.newClientPhone}
         setName={vm.setNewClientName}
         setPhone={vm.setNewClientPhone}
-        onSave={vm.handleAddNewClient}
-        onClose={() => vm.setIsModalOpen(false)}
+        onSave={vm.handleSaveClient}
+        onClose={vm.handleCloseModal}
       />
     </div>
   );

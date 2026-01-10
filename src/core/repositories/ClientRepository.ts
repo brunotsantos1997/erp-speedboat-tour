@@ -1,5 +1,4 @@
 // src/core/repositories/ClientRepository.ts
-import { v4 as uuidv4 } from 'uuid';
 import type { ClientProfile } from '../domain/types';
 import { MOCK_CLIENTS } from '../data/mocks';
 
@@ -7,6 +6,8 @@ import { MOCK_CLIENTS } from '../data/mocks';
 export interface IClientRepository {
   search(term: string): Promise<ClientProfile[]>;
   add(newClient: Omit<ClientProfile, 'id' | 'totalTrips'>): Promise<ClientProfile>;
+  update(client: ClientProfile): Promise<ClientProfile>;
+  delete(clientId: string): Promise<void>;
 }
 
 /**
@@ -46,6 +47,32 @@ class MockClientRepository implements IClientRepository {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     return newClient;
+  }
+
+  async update(updatedClient: ClientProfile): Promise<ClientProfile> {
+    const index = this.clients.findIndex(c => c.id === updatedClient.id);
+    if (index === -1) {
+      throw new Error("Client not found");
+    }
+
+    this.clients[index] = updatedClient;
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    return updatedClient;
+  }
+
+  async delete(clientId: string): Promise<void> {
+    const index = this.clients.findIndex(c => c.id === clientId);
+    if (index === -1) {
+      throw new Error("Client not found");
+    }
+
+    this.clients.splice(index, 1);
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
 }
 
