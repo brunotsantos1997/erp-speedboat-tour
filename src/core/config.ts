@@ -1,0 +1,1 @@
+export const RESERVATION_FEE_PERCENTAGE = 0.3;

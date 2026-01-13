@@ -1,7 +1,7 @@
 // src/ui/screens/ClientHistoryScreen.tsx
 import React from 'react';
 import { useClientHistoryViewModel } from '../../viewmodels/useClientHistoryViewModel';
-import { Search, X, Calendar, Edit, Ban, CheckCircle, Clock, Pencil } from 'lucide-react';
+import { Search, X, Calendar, Edit, Ban, CheckCircle, Clock, Pencil, FileText } from 'lucide-react';
 import type { EventStatus, Event as EventType, ClientProfile } from '../../core/domain/types';
 import { useNavigate } from 'react-router-dom';
 
@@ -71,25 +71,33 @@ const StatusBadge: React.FC<{ status: EventStatus }> = ({ status }) => {
   );
 };
 
-const EventCard: React.FC<{ event: EventType; onCancel: (id: string) => void; onEdit: (id: string) => void; }> = ({ event, onCancel, onEdit }) => (
-    <div className="bg-white p-4 rounded-lg shadow-md border">
-        <div className="flex justify-between items-start">
-            <div>
-                <p className="font-bold text-lg">{event.boat.name}</p>
-                <p className="flex items-center text-gray-600"><Calendar size={16} className="mr-2" /> {new Date(event.date).toLocaleDateString()} às {event.time}</p>
+const EventCard: React.FC<{ event: EventType; onCancel: (id: string) => void; onEdit: (id: string) => void; }> = ({ event, onCancel, onEdit }) => {
+
+    const openVoucher = (eventId: string) => {
+        window.open(`/voucher/${eventId}`, '_blank');
+    };
+
+    return (
+        <div className="bg-white p-4 rounded-lg shadow-md border">
+            <div className="flex justify-between items-start">
+                <div>
+                    <p className="font-bold text-lg">{event.boat.name}</p>
+                    <p className="flex items-center text-gray-600"><Calendar size={16} className="mr-2" /> {new Date(event.date).toLocaleDateString()} às {event.time}</p>
+                </div>
+                <StatusBadge status={event.status} />
             </div>
-            <StatusBadge status={event.status} />
+            <div className="mt-4 border-t pt-4 flex justify-end space-x-2">
+                 <button onClick={() => openVoucher(event.id)} className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 flex items-center"><FileText size={14} className="mr-1" /> Voucher</button>
+                {event.status === 'SCHEDULED' && (
+                    <>
+                        <button onClick={() => onCancel(event.id)} className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 flex items-center"><Ban size={14} className="mr-1" /> Cancelar</button>
+                        <button onClick={() => onEdit(event.id)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"><Edit size={14} className="mr-1" /> Alterar</button>
+                    </>
+                )}
+            </div>
         </div>
-        <div className="mt-4 border-t pt-4 flex justify-end space-x-2">
-            {event.status === 'SCHEDULED' && (
-                <>
-                    <button onClick={() => onCancel(event.id)} className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 flex items-center"><Ban size={14} className="mr-1" /> Cancelar</button>
-                    <button onClick={() => onEdit(event.id)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"><Edit size={14} className="mr-1" /> Alterar</button>
-                </>
-            )}
-        </div>
-    </div>
-);
+    );
+};
 
 
 export const ClientHistoryScreen: React.FC = () => {

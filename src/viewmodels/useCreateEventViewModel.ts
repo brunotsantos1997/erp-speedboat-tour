@@ -1,5 +1,6 @@
 // src/viewmodels/useCreateEventViewModel.ts
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Product, Discount, SelectedProduct, ClientProfile, Boat, Event as EventType } from '../core/domain/types';
 import { LOYALTY_RULES } from '../core/data/mocks';
 import { clientRepository } from '../core/repositories/ClientRepository';
@@ -9,6 +10,10 @@ import { eventRepository } from '../core/repositories/EventRepository';
 import { formatDate } from '../core/utils/formatDate';
 
 export const useCreateEventViewModel = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [editingEventId, setEditingEventId] = useState<string | null>(searchParams.get('eventId'));
+
   // Event State
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [selectedTime, setSelectedTime] = useState('09:00');
@@ -36,6 +41,34 @@ export const useCreateEventViewModel = () => {
   const [editingClient, setEditingClient] = useState<ClientProfile | null>(null);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
+
+  // Effect to load event for editing
+  useEffect(() => {
+    const loadEventForEditing = async () => {
+      if (editingEventId) {
+        const event = await eventRepository.getById(editingEventId);
+        if (event) {
+          // Be careful with date parsing, ensure correct timezone handling
+          const eventDate = new Date(event.date);
+          const userTimezoneOffset = eventDate.getTimezoneOffset() * 60000;
+
+          setSelectedDate(new Date(eventDate.getTime() + userTimezoneOffset));
+          setSelectedTime(event.time);
+          setSelectedBoat(event.boat);
+          setSelectedProducts(event.products);
+          setDiscount(event.discount);
+          setPassengerCount(event.passengerCount);
+          setSelectedClient(event.client);
+          setClientSearchTerm(event.client.name);
+        } else {
+          console.error("Event to edit not found!");
+          setEditingEventId(null); // Clear ID if not found
+        }
+      }
+    };
+
+    loadEventForEditing();
+  }, [editingEventId]);
 
   // Fetch initial data
   useEffect(() => {
@@ -243,6 +276,53 @@ export const useCreateEventViewModel = () => {
 
   const total = useMemo(() => Math.max(0, subtotal - totalDiscount), [subtotal, totalDiscount]);
 
+  const createEvent = useCallback(async () => {
+    if (!selectedDate || !selectedClient || !selectedBoat) {
+      alert('Por favor, preencha todos os campos obrigatórios: Data, Cliente e Lancha.');
+      return;
+    }
+
+    const eventData = {
+      date: formatDate(selectedDate),
+      time: selectedTime,
+      status: 'SCHEDULED',
+      boat: selectedBoat,
+      products: selectedProducts,
+      discount,
+      client: selectedClient,
+      passengerCount,
+      subtotal,
+      total,
+    };
+
+    try {
+      if (editingEventId) {
+        const updatedEvent = { ...eventData, id: editingEventId };
+        await eventRepository.update(updatedEvent);
+        alert('Passeio atualizado com sucesso!');
+      } else {
+        await eventRepository.add(eventData);
+        alert('Passeio agendado com sucesso!');
+      }
+      navigate(`/clients?clientId=${selectedClient.id}`);
+    } catch (error) {
+      console.error('Erro ao salvar evento:', error);
+      alert('Ocorreu um erro ao salvar o passeio.');
+    }
+  }, [
+    selectedDate,
+    selectedTime,
+    selectedBoat,
+    selectedProducts,
+    discount,
+    selectedClient,
+    passengerCount,
+    subtotal,
+    total,
+    navigate,
+    editingEventId
+  ]);
+
   // Side Effects: Loyalty Checks (same as before)
   useEffect(() => {
     if (!selectedClient) {
@@ -264,6 +344,7 @@ export const useCreateEventViewModel = () => {
 
   return {
     // Event State
+    editingEventId,
     selectedDate,
     selectedTime,
     scheduledEvents,
@@ -309,5 +390,6 @@ export const useCreateEventViewModel = () => {
     handleCloseModal,
     handleSaveClient,
     handleDeleteClient,
+    createEvent,
   };
 };

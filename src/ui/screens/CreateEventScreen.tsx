@@ -432,7 +432,10 @@ export const CreateEventScreen: React.FC = () => {
             </div>
           </div>
           {/* Action Button */}
-          <button className="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 text-lg font-bold shadow-lg">
+          <button
+            onClick={vm.createEvent}
+            className="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 text-lg font-bold shadow-lg"
+          >
             Agendar Passeio
           </button>
         </div>

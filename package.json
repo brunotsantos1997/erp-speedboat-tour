@@ -13,6 +13,7 @@
   "dependencies": {
     "@types/react-input-mask": "^3.0.6",
     "date-fns": "^4.1.0",
+    "html2pdf.js": "^0.14.0",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-day-picker": "^9.13.0",

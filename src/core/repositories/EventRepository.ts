@@ -5,6 +5,7 @@ import { MOCK_CLIENTS } from '../data/mocks';
 import { boatRepository } from './BoatRepository';
 
 export interface IEventRepository {
+  getById(eventId: string): Promise<Event | undefined>;
   getEventsByDate(date: string): Promise<Event[]>;
   getEventsByClient(clientId: string): Promise<Event[]>;
   add(event: Omit<Event, 'id'>): Promise<Event>;
@@ -57,6 +58,10 @@ class MockEventRepository implements IEventRepository {
       subtotal: 3000,
       total: 3000,
     });
+  }
+
+  async getById(eventId: string): Promise<Event | undefined> {
+    return this.events.find(e => e.id === eventId);
   }
 
   async getEventsByDate(date: string): Promise<Event[]> {
