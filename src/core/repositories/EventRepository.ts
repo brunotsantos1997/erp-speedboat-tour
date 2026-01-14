@@ -1,6 +1,6 @@
 // src/core/repositories/EventRepository.ts
 import { v4 as uuidv4 } from 'uuid';
-import type { Event, EventStatus } from '../domain/types';
+import type { Event, EventStatus, PaymentStatus } from '../domain/types';
 import { MOCK_CLIENTS } from '../data/mocks';
 import { boatRepository } from './BoatRepository';
 
@@ -11,6 +11,7 @@ export interface IEventRepository {
   add(event: Omit<Event, 'id'>): Promise<Event>;
   update(event: Event): Promise<Event>;
   updateStatus(eventId: string, status: EventStatus): Promise<Event>;
+  updatePaymentStatus(eventId: string, paymentStatus: PaymentStatus): Promise<Event>;
 }
 
 class MockEventRepository implements IEventRepository {
@@ -40,6 +41,7 @@ class MockEventRepository implements IEventRepository {
       date: formatDate(today),
       time: '10:00',
       status: 'SCHEDULED',
+      paymentStatus: 'PENDING',
       boat: boats[0],
       client: MOCK_CLIENTS[0],
       passengerCount: 5,
@@ -54,6 +56,7 @@ class MockEventRepository implements IEventRepository {
       date: formatDate(tomorrow),
       time: '14:00',
       status: 'SCHEDULED',
+      paymentStatus: 'PENDING',
       boat: boats[0],
       client: MOCK_CLIENTS[1],
       passengerCount: 8,
@@ -99,6 +102,14 @@ class MockEventRepository implements IEventRepository {
     const index = this.events.findIndex(e => e.id === eventId);
     if (index === -1) throw new Error('Event not found');
     this.events[index].status = status;
+    return this.events[index];
+  }
+
+  async updatePaymentStatus(eventId: string, paymentStatus: PaymentStatus): Promise<Event> {
+    await this.initializationPromise;
+    const index = this.events.findIndex(e => e.id === eventId);
+    if (index === -1) throw new Error('Event not found');
+    this.events[index].paymentStatus = paymentStatus;
     return this.events[index];
   }
 }
