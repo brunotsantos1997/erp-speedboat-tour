@@ -3,9 +3,9 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { Product, Discount, SelectedProduct, ClientProfile, Boat, Event as EventType } from '../core/domain/types';
 import { LOYALTY_RULES } from '../core/data/mocks';
-import { BOAT_HOURLY_RATE, BOAT_HALF_HOUR_RATE } from '../core/config';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { productRepository } from '../core/repositories/ProductRepository';
+import { PriceRepository, RentalPrices } from '../core/repositories/PriceRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { formatDate } from '../core/utils/formatDate';
@@ -24,6 +24,9 @@ export const useCreateEventViewModel = () => {
   // Boat State
   const [availableBoats, setAvailableBoats] = useState<Boat[]>([]);
   const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null);
+
+  // Price State
+  const [rentalPrices, setRentalPrices] = useState<RentalPrices>({ hourlyRate: 0, halfHourRate: 0 });
 
   // Core State
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -77,9 +80,11 @@ export const useCreateEventViewModel = () => {
     const loadInitialData = async () => {
       const products = await productRepository.getAll();
       const boats = await boatRepository.getAll();
+      const prices = await new PriceRepository().getPrices();
 
       setAvailableProducts(products);
       setAvailableBoats(boats);
+      setRentalPrices(prices);
 
       if (boats.length > 0) {
         setSelectedBoat(boats[0]);
@@ -241,13 +246,13 @@ export const useCreateEventViewModel = () => {
     const hours = Math.floor(durationInMinutes / 60);
     const remainingMinutes = durationInMinutes % 60;
 
-    let cost = hours * BOAT_HOURLY_RATE;
+    let cost = hours * rentalPrices.hourlyRate;
     if (remainingMinutes >= 30) {
-      cost += BOAT_HALF_HOUR_RATE;
+      cost += rentalPrices.halfHourRate;
     }
 
     return cost;
-  }, [startTime, endTime]);
+  }, [startTime, endTime, rentalPrices]);
 
   const subtotal = useMemo(() => {
     const productsTotal = selectedProducts.reduce((acc, product) => {
@@ -285,7 +290,7 @@ export const useCreateEventViewModel = () => {
 
   const createEvent = useCallback(async () => {
     if (!selectedDate || !selectedClient || !selectedBoat) {
-      alert('Por favor, preencha todos os campos obrigatórios: Data, Cliente e Lancha.');
+      // This will be replaced by a toast notification in the view.
       return;
     }
 
@@ -307,15 +312,13 @@ export const useCreateEventViewModel = () => {
       if (editingEventId) {
         const updatedEvent = { ...eventData, id: editingEventId };
         await eventRepository.update(updatedEvent);
-        alert('Passeio atualizado com sucesso!');
       } else {
         await eventRepository.add(eventData);
-        alert('Passeio agendado com sucesso!');
       }
       navigate(`/clients?clientId=${selectedClient.id}`);
     } catch (error) {
       console.error('Erro ao salvar evento:', error);
-      alert('Ocorreu um erro ao salvar o passeio.');
+      // This will be replaced by a toast notification in the view.
     }
   }, [
     selectedDate,

@@ -40,6 +40,15 @@ export interface Boat {
   size: number; // in feet
 }
 
+/**
+ * Represents a boarding location.
+ */
+export interface BoardingLocation {
+  id: string;
+  name: string;
+  mapLink?: string;
+}
+
 export type EventStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 export type PaymentStatus = 'PENDING' | 'CONFIRMED';
 
@@ -54,6 +63,7 @@ export interface Event {
   status: EventStatus;
   paymentStatus?: PaymentStatus;
   boat: Boat;
+  boardingLocation: BoardingLocation;
   products: SelectedProduct[];
   discount: Discount;
   client: ClientProfile;

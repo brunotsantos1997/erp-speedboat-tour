@@ -35,14 +35,36 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, o
             <PlusCircle className="mr-3" />
             Criar Passeio
           </NavLink>
-          <NavLink to="/products" className={navLinkClass} onClick={onClose}>
-            <Settings className="mr-3" />
-            Configurar Produtos
-          </NavLink>
-          <NavLink to="/boats" className={navLinkClass} onClick={onClose}>
-            <Anchor className="mr-3" />
-            Configurar Lanchas
-          </NavLink>
+          {/* Settings Dropdown */}
+          <div>
+            <button
+              className="flex items-center w-full px-4 py-3 text-lg font-semibold text-left text-gray-700 rounded-lg hover:bg-gray-200"
+              onClick={(e) => {
+                const submenu = e.currentTarget.nextElementSibling;
+                submenu?.classList.toggle('hidden');
+              }}
+            >
+              <Settings className="mr-3" />
+              Configurações
+            </button>
+            <div className="pl-8 space-y-2 hidden">
+              <NavLink to="/products" className={navLinkClass} onClick={onClose}>
+                Produtos
+              </NavLink>
+              <NavLink to="/boats" className={navLinkClass} onClick={onClose}>
+                Lanchas
+              </NavLink>
+              <NavLink to="/boarding-locations" className={navLinkClass} onClick={onClose}>
+                Locais de Embarque
+              </NavLink>
+              <NavLink to="/voucher-terms" className={navLinkClass} onClick={onClose}>
+                Termos do Voucher
+              </NavLink>
+              <NavLink to="/rental-prices" className={navLinkClass} onClick={onClose}>
+                Preços de Aluguel
+              </NavLink>
+            </div>
+          </div>
           <NavLink to="/clients" className={navLinkClass} onClick={onClose}>
             <Users className="mr-3" />
             Clientes

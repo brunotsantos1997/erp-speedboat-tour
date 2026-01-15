@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package, Pencil, Trash2, AlertTriangle, Minus, Plus } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
+import { useToastContext } from '../../ui/contexts/ToastContext';
 import type { Product, ClientProfile } from '../../core/domain/types';
 import InputMask from 'react-input-mask';
 import { DayPicker } from 'react-day-picker';
@@ -154,6 +155,7 @@ const NewClientModal: React.FC<{
 
 export const CreateEventScreen: React.FC = () => {
   const vm = useCreateEventViewModel();
+  const { showToast } = useToastContext();
   const isProductSelected = (product: Product) => vm.selectedProducts.some(p => p.id === product.id);
 
   const bookedDays = vm.scheduledEvents.map(event => new Date(event.date));
@@ -410,7 +412,13 @@ export const CreateEventScreen: React.FC = () => {
           </div>
           {/* Action Button */}
           <button
-            onClick={vm.createEvent}
+            onClick={() => {
+              vm.createEvent().then(() => {
+                showToast(vm.editingEventId ? 'Passeio atualizado com sucesso!' : 'Passeio agendado com sucesso!');
+              }).catch(() => {
+                showToast('Ocorreu um erro ao salvar o passeio.');
+              });
+            }}
             className="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 text-lg font-bold shadow-lg"
           >
             Agendar Passeio
