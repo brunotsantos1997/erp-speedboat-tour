@@ -5,10 +5,13 @@ import type { Product, Discount, SelectedProduct, ClientProfile, Boat, Event as 
 import { LOYALTY_RULES } from '../core/data/mocks';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { productRepository } from '../core/repositories/ProductRepository';
-import { PriceRepository, RentalPrices } from '../core/repositories/PriceRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { formatDate } from '../core/utils/formatDate';
+import { PriceRepository } from '../core/repositories/PriceRepository';
+import type { RentalPrices } from '../core/repositories/PriceRepository';
+import type { BoardingLocation } from '../core/domain/types';
+import { MockBoardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
 
 export const useCreateEventViewModel = () => {
   const navigate = useNavigate();
@@ -27,6 +30,10 @@ export const useCreateEventViewModel = () => {
 
   // Price State
   const [rentalPrices, setRentalPrices] = useState<RentalPrices>({ hourlyRate: 0, halfHourRate: 0 });
+
+  // Boarding Location State
+  const [availableBoardingLocations, setAvailableBoardingLocations] = useState<BoardingLocation[]>([]);
+  const [selectedBoardingLocation, setSelectedBoardingLocation] = useState<BoardingLocation | null>(null);
 
   // Core State
   const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
@@ -53,6 +60,7 @@ export const useCreateEventViewModel = () => {
       if (editingEventId) {
         const event = await eventRepository.getById(editingEventId);
         if (event) {
+          // Be careful with date parsing, ensure correct timezone handling
           const eventDate = new Date(event.date);
           const userTimezoneOffset = eventDate.getTimezoneOffset() * 60000;
 
@@ -67,7 +75,7 @@ export const useCreateEventViewModel = () => {
           setClientSearchTerm(event.client.name);
         } else {
           console.error("Event to edit not found!");
-          setEditingEventId(null);
+          setEditingEventId(null); // Clear ID if not found
         }
       }
     };
@@ -81,15 +89,22 @@ export const useCreateEventViewModel = () => {
       const products = await productRepository.getAll();
       const boats = await boatRepository.getAll();
       const prices = await new PriceRepository().getPrices();
+      const boardingLocations = await new MockBoardingLocationRepository().getAll();
 
       setAvailableProducts(products);
       setAvailableBoats(boats);
       setRentalPrices(prices);
+      setAvailableBoardingLocations(boardingLocations);
 
       if (boats.length > 0) {
         setSelectedBoat(boats[0]);
       }
 
+      if (boardingLocations.length > 0) {
+        setSelectedBoardingLocation(boardingLocations[0]);
+      }
+
+      // Set default courtesies
       const defaultCourtesies = products
         .filter(p => p.isDefaultCourtesy)
         .map(p => ({ ...p, isCourtesy: true }));
@@ -107,7 +122,7 @@ export const useCreateEventViewModel = () => {
     }
   }, [selectedDate]);
 
-  // Handlers
+  // Handlers for Products, Discount, Passengers
   const toggleProduct = useCallback((product: Product) => {
     setSelectedProducts(prev =>
       prev.some(p => p.id === product.id)
@@ -142,6 +157,11 @@ export const useCreateEventViewModel = () => {
     setSelectedBoat(boat || null);
   };
 
+  const handleBoardingLocationSelection = (locationId: string) => {
+    const location = availableBoardingLocations.find(l => l.id === locationId);
+    setSelectedBoardingLocation(location || null);
+  };
+
   const updateHourlyProductTime = (productId: string, time: string, type: 'start' | 'end') => {
     setSelectedProducts(prev =>
       prev.map(p => {
@@ -157,6 +177,7 @@ export const useCreateEventViewModel = () => {
     );
   };
 
+  // Client Management Handlers
   const handleClientSearch = useCallback(async (term: string) => {
     setClientSearchTerm(term);
     if (term.length > 2) {
@@ -179,6 +200,8 @@ export const useCreateEventViewModel = () => {
     setSelectedClient(null);
     setClientSearchTerm('');
   }, []);
+
+  // --- Client CRUD Handlers ---
 
   const handleOpenModal = (client: ClientProfile | null = null) => {
     if (client) {
@@ -204,18 +227,22 @@ export const useCreateEventViewModel = () => {
     if (!newClientName || !newClientPhone) return;
 
     if (editingClient) {
+      // Update existing client
       const updatedClient = { ...editingClient, name: newClientName, phone: newClientPhone };
       const result = await clientRepository.update(updatedClient);
+      // If the edited client was selected, update the selection
       if (selectedClient?.id === result.id) {
         setSelectedClient(result);
         setClientSearchTerm(result.name);
       }
     } else {
+      // Add new client
       const newClient = await clientRepository.add({ id: '', name: newClientName, phone: newClientPhone });
       selectClient(newClient);
     }
 
     handleCloseModal();
+    // Refresh search results to show changes
     if (clientSearchTerm.length > 2) {
       handleClientSearch(clientSearchTerm);
     }
@@ -224,13 +251,17 @@ export const useCreateEventViewModel = () => {
   const handleDeleteClient = useCallback(async (clientId: string) => {
     if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
       await clientRepository.delete(clientId);
+      // If the deleted client was selected, clear the selection
       if (selectedClient?.id === clientId) {
         clearClientSelection();
       }
-      handleClientSearch(clientSearchTerm);
+      // Refresh search results
+       handleClientSearch(clientSearchTerm);
     }
   }, [selectedClient, clientSearchTerm, handleClientSearch, clearClientSelection]);
 
+
+  // Derived State: Calculations & Validations
   const isCapacityExceeded = useMemo(() => {
     if (!selectedBoat) return false;
     return passengerCount > selectedBoat.capacity;
@@ -255,10 +286,11 @@ export const useCreateEventViewModel = () => {
   }, [startTime, endTime, rentalPrices]);
 
   const subtotal = useMemo(() => {
-    const productsTotal = selectedProducts.reduce((acc, product) => {
+    return selectedProducts.reduce((acc, product) => {
       if (product.isCourtesy) {
         return acc;
       }
+
       switch (product.pricingType) {
         case 'PER_PERSON':
           return acc + (product.price || 0) * passengerCount;
@@ -268,6 +300,7 @@ export const useCreateEventViewModel = () => {
             const [endHour, endMinute] = product.endTime.split(':').map(Number);
             const durationInMinutes = (endHour - startHour) * 60 + (endMinute - startMinute);
             const durationInHours = durationInMinutes / 60;
+
             if (durationInHours > 0) {
               return acc + durationInHours * product.hourlyPrice;
             }
@@ -277,8 +310,7 @@ export const useCreateEventViewModel = () => {
         default:
           return acc + (product.price || 0);
       }
-    }, 0);
-    return productsTotal + boatRentalCost;
+    }, 0) + boatRentalCost;
   }, [selectedProducts, passengerCount, boatRentalCost]);
 
   const totalDiscount = useMemo(() => {
@@ -289,8 +321,8 @@ export const useCreateEventViewModel = () => {
   const total = useMemo(() => Math.max(0, subtotal - totalDiscount), [subtotal, totalDiscount]);
 
   const createEvent = useCallback(async () => {
-    if (!selectedDate || !selectedClient || !selectedBoat) {
-      // This will be replaced by a toast notification in the view.
+    if (!selectedDate || !selectedClient || !selectedBoat || !selectedBoardingLocation) {
+      alert('Por favor, preencha todos os campos obrigatórios: Data, Cliente, Lancha e Local de Embarque.');
       return;
     }
 
@@ -300,6 +332,7 @@ export const useCreateEventViewModel = () => {
       endTime: endTime,
       status: 'SCHEDULED' as const,
       boat: selectedBoat,
+      boardingLocation: selectedBoardingLocation,
       products: selectedProducts,
       discount,
       client: selectedClient,
@@ -312,13 +345,15 @@ export const useCreateEventViewModel = () => {
       if (editingEventId) {
         const updatedEvent = { ...eventData, id: editingEventId };
         await eventRepository.update(updatedEvent);
+        alert('Passeio atualizado com sucesso!');
       } else {
         await eventRepository.add(eventData);
+        alert('Passeio agendado com sucesso!');
       }
       navigate(`/clients?clientId=${selectedClient.id}`);
     } catch (error) {
       console.error('Erro ao salvar evento:', error);
-      // This will be replaced by a toast notification in the view.
+      alert('Ocorreu um erro ao salvar o passeio.');
     }
   }, [
     selectedDate,
@@ -335,6 +370,7 @@ export const useCreateEventViewModel = () => {
     editingEventId
   ]);
 
+  // Side Effects: Loyalty Checks (same as before)
   useEffect(() => {
     if (!selectedClient) {
       setLoyaltySuggestion(null);
@@ -354,14 +390,17 @@ export const useCreateEventViewModel = () => {
   }, [selectedClient]);
 
   return {
+    // Event State
     editingEventId,
     selectedDate,
     startTime,
     endTime,
     scheduledEvents,
+    // Boat State
     availableBoats,
     selectedBoat,
     isCapacityExceeded,
+    // State & Derived State
     availableProducts,
     selectedProducts,
     discount,
@@ -370,19 +409,23 @@ export const useCreateEventViewModel = () => {
     subtotal,
     totalDiscount,
     total,
+    // Client state
     selectedClient,
     clientSearchTerm,
     clientSearchResults,
     isSearching,
     loyaltySuggestion,
+    // Modal state
     isModalOpen,
     editingClient,
     newClientName,
     newClientPhone,
+    // Handlers
     setSelectedDate,
     setStartTime,
     setEndTime,
     handleBoatSelection,
+    handleBoardingLocationSelection,
     updateHourlyProductTime,
     toggleProduct,
     toggleCourtesy,

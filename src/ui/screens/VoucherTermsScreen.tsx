@@ -1,12 +1,12 @@
 // src/ui/screens/VoucherTermsScreen.tsx
 import React from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useVoucherTermsViewModel } from '../../viewmodels/useVoucherTermsViewModel';
 import { Bold, Italic, Strikethrough, List, ListOrdered, Heading2 } from 'lucide-react';
 import { useToastContext } from '../../ui/contexts/ToastContext';
 
-const MenuBar: React.FC<{ editor: any }> = ({ editor }) => {
+const MenuBar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
   if (!editor) {
     return null;
   }
@@ -33,7 +33,7 @@ export const VoucherTermsScreen: React.FC = () => {
   const editor = useEditor({
     extensions: [StarterKit],
     content: terms,
-    onUpdate: ({ editor }) => {
+    onUpdate: () => {
       // The content is saved on button click
     },
   });

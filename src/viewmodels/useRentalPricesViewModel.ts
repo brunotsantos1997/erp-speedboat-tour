@@ -1,6 +1,7 @@
 // src/viewmodels/useRentalPricesViewModel.ts
 import { useState, useEffect } from 'react';
-import { PriceRepository, RentalPrices } from '../core/repositories/PriceRepository';
+import { PriceRepository } from '../core/repositories/PriceRepository';
+import type { RentalPrices } from '../core/repositories/PriceRepository';
 
 export const useRentalPricesViewModel = () => {
   const [prices, setPrices] = useState<RentalPrices>({ hourlyRate: 0, halfHourRate: 0 });

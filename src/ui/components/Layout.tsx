@@ -1,7 +1,7 @@
 // src/ui/components/Layout.tsx
 import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { Menu, PlusCircle, Settings, Anchor, Users, LayoutDashboard } from 'lucide-react';
+import { Menu, PlusCircle, Settings, Users, LayoutDashboard } from 'lucide-react';
 
 const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>

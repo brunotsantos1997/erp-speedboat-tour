@@ -1,5 +1,5 @@
 // src/ui/components/Toast.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 interface ToastProps {
   message: string;
