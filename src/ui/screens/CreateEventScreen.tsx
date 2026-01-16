@@ -108,17 +108,6 @@ const NewClientModal: React.FC<{
   onSave: () => void;
   onClose: () => void;
 }> = ({ isOpen, editingClient, name, phone, setName, setPhone, onSave, onClose }) => {
-  const { showToast } = useToastContext();
-
-  const handleSaveClick = async () => {
-    try {
-      await onSave();
-      showToast(editingClient ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
-    } catch (error: any) {
-      showToast(error.message || 'Ocorreu um erro.');
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -154,7 +143,7 @@ const NewClientModal: React.FC<{
           <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
             Cancelar
           </button>
-          <button onClick={handleSaveClick} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button onClick={onSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
             {editingClient ? 'Atualizar' : 'Salvar Cliente'}
           </button>
         </div>
@@ -169,6 +158,15 @@ export const CreateEventScreen: React.FC = () => {
   const vm = useCreateEventViewModel();
   const { showToast } = useToastContext();
   const isProductSelected = (product: Product) => vm.selectedProducts.some(p => p.id === product.id);
+
+  const handleSaveClientWithToast = async () => {
+    try {
+      await vm.handleSaveClient();
+      showToast(vm.editingClient ? 'Cliente atualizado com sucesso!' : 'Cliente cadastrado com sucesso!');
+    } catch (error: any) {
+      showToast(error.message || 'Ocorreu um erro ao salvar o cliente.');
+    }
+  };
 
   const bookedDays = vm.scheduledEvents.map(event => new Date(event.date));
 
@@ -468,7 +466,7 @@ export const CreateEventScreen: React.FC = () => {
         phone={vm.newClientPhone}
         setName={vm.setNewClientName}
         setPhone={vm.setNewClientPhone}
-        onSave={vm.handleSaveClient}
+        onSave={handleSaveClientWithToast}
         onClose={vm.handleCloseModal}
       />
 

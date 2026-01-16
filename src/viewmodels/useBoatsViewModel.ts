@@ -55,7 +55,7 @@ export const useBoatsViewModel = () => {
   };
 
   const handleDelete = async (boatId: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta lancha?')) {
+    if (window.confirm('Tem certeza que deseja excluir esta embarcação?')) {
       await boatRepository.remove(boatId);
       await fetchBoats();
     }

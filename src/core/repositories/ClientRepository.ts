@@ -1,4 +1,5 @@
 // src/core/repositories/ClientRepository.ts
+import { v4 as uuidv4 } from 'uuid';
 import type { ClientProfile } from '../domain/types';
 import { MOCK_CLIENTS } from '../data/mocks';
 
@@ -41,8 +42,9 @@ class MockClientRepository implements IClientRepository {
     return client || null;
   }
 
-  async add(newClientData: Omit<ClientProfile, 'totalTrips'>): Promise<ClientProfile> {
+  async add(newClientData: Omit<ClientProfile, 'id' | 'totalTrips'>): Promise<ClientProfile> {
     const newClient: ClientProfile = {
+      id: uuidv4(),
       ...newClientData,
       totalTrips: 0,
     };

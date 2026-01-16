@@ -237,7 +237,7 @@ export const useCreateEventViewModel = () => {
           setClientSearchTerm(result.name);
         }
       } else {
-        const newClient = await clientRepository.add({ id: '', name: newClientName, phone: newClientPhone });
+        const newClient = await clientRepository.add({ name: newClientName, phone: newClientPhone });
         selectClient(newClient);
       }
 
@@ -386,7 +386,8 @@ export const useCreateEventViewModel = () => {
     total,
     navigate,
     editingEventId,
-    selectedBoardingLocation
+    selectedBoardingLocation,
+    observations
   ]);
 
   // Side Effects: Loyalty Checks (same as before)
