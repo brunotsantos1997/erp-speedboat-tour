@@ -4,10 +4,20 @@ import { v4 as uuid } from 'uuid';
 import { eventRepository } from './EventRepository'; // Import event repository
 
 export class MockBoardingLocationRepository {
+  private static instance: MockBoardingLocationRepository;
   private locations: BoardingLocation[] = [
     { id: uuid(), name: 'Marina da Glória', mapLink: 'https://maps.app.goo.gl/abcdef123' },
     { id: uuid(), name: 'Urca', mapLink: 'https://maps.app.goo.gl/ghijkl456' },
   ];
+
+  private constructor() {}
+
+  public static getInstance(): MockBoardingLocationRepository {
+    if (!MockBoardingLocationRepository.instance) {
+      MockBoardingLocationRepository.instance = new MockBoardingLocationRepository();
+    }
+    return MockBoardingLocationRepository.instance;
+  }
 
   async getAll(): Promise<BoardingLocation[]> {
     return Promise.resolve(this.locations.filter(l => !l.isArchived));
@@ -43,3 +53,5 @@ export class MockBoardingLocationRepository {
     return Promise.resolve();
   }
 }
+
+export const boardingLocationRepository = MockBoardingLocationRepository.getInstance();

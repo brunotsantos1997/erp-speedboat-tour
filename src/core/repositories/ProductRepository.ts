@@ -19,6 +19,17 @@ export interface IProductRepository {
  * A mock implementation of the product repository that operates on an in-memory array.
  */
 class MockProductRepository implements IProductRepository {
+  private static instance: MockProductRepository;
+
+  private constructor() {}
+
+  public static getInstance(): MockProductRepository {
+    if (!MockProductRepository.instance) {
+      MockProductRepository.instance = new MockProductRepository();
+    }
+    return MockProductRepository.instance;
+  }
+
   async getAll(): Promise<Product[]> {
     await new Promise(resolve => setTimeout(resolve, 200)); // Simulate delay
     // Return only non-archived products
@@ -62,4 +73,4 @@ class MockProductRepository implements IProductRepository {
 }
 
 // Export a singleton instance of the mock repository.
-export const productRepository = new MockProductRepository();
+export const productRepository = MockProductRepository.getInstance();

@@ -11,6 +11,7 @@ export interface IBoatRepository {
 }
 
 class MockBoatRepository implements IBoatRepository {
+  private static instance: MockBoatRepository;
   private boats: Boat[] = [
     {
       id: 'boat-1',
@@ -21,6 +22,15 @@ class MockBoatRepository implements IBoatRepository {
       pricePerHalfHour: 400,
     },
   ];
+
+  private constructor() {}
+
+  public static getInstance(): MockBoatRepository {
+    if (!MockBoatRepository.instance) {
+      MockBoatRepository.instance = new MockBoatRepository();
+    }
+    return MockBoatRepository.instance;
+  }
 
   async getAll(): Promise<Boat[]> {
     return this.boats.filter(b => !b.isArchived);
@@ -54,4 +64,4 @@ class MockBoatRepository implements IBoatRepository {
   }
 }
 
-export const boatRepository = new MockBoatRepository();
+export const boatRepository = MockBoatRepository.getInstance();

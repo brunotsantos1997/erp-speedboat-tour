@@ -32,27 +32,33 @@ export const useVoucherViewModel = () => {
 
       try {
         setIsLoading(true);
-        const companyRepo = CompanyDataRepository.getInstance();
-        const companyInfo = await companyRepo.get();
-        setCompanyData(companyInfo);
 
-        const eventData = await eventRepository.getById(eventId);
+        // This logic is now centralized in the view model
+        const companyRepo = CompanyDataRepository.getInstance();
+        const termsRepo = VoucherTermsRepository.getInstance();
+        const appearanceRepo = VoucherAppearanceRepository.getInstance();
+
+        const [companyInfo, terms, appearance, eventData] = await Promise.all([
+          companyRepo.get(),
+          termsRepo.get(),
+          appearanceRepo.get(),
+          eventRepository.getById(eventId),
+        ]);
+
         if (!eventData) {
           setError('Evento não encontrado.');
           return;
         }
 
+        setCompanyData(companyInfo);
+        setVoucherTerms(terms);
+        setWatermark(appearance.watermarkImage);
+
         const feePercentage = (companyInfo.reservationFeePercentage || 30) / 100;
         const reservationFee = eventData.total * feePercentage;
         const remainingBalance = eventData.total - reservationFee;
+
         setVoucher({ ...eventData, reservationFee, remainingBalance });
-
-        const termsRepo = VoucherTermsRepository.getInstance();
-        setVoucherTerms(await termsRepo.get());
-
-        const appearanceRepo = VoucherAppearanceRepository.getInstance();
-        const appearanceData = await appearanceRepo.get();
-        setWatermark(appearanceData.watermarkImage);
 
       } catch (err) {
         setError('Falha ao buscar os detalhes do voucher.');

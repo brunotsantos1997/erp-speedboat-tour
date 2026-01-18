@@ -10,7 +10,7 @@ import { eventRepository } from '../core/repositories/EventRepository';
 import { formatDate } from '../core/utils/formatDate';
 import { format } from 'date-fns';
 import type { BoardingLocation } from '../core/domain/types';
-import { MockBoardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
+import { boardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
 
 export const useCreateEventViewModel = () => {
   const navigate = useNavigate();
@@ -93,7 +93,7 @@ export const useCreateEventViewModel = () => {
     const loadInitialData = async () => {
       const products = await productRepository.getAll();
       const boats = await boatRepository.getAll();
-      const boardingLocations = await new MockBoardingLocationRepository().getAll();
+      const boardingLocations = await boardingLocationRepository.getAll();
 
       setAvailableProducts(products);
       setAvailableBoats(boats);
