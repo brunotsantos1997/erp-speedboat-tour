@@ -8,6 +8,7 @@ import { productRepository } from '../core/repositories/ProductRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { formatDate } from '../core/utils/formatDate';
+import { format } from 'date-fns';
 import type { BoardingLocation } from '../core/domain/types';
 import { MockBoardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
 
@@ -119,7 +120,7 @@ export const useCreateEventViewModel = () => {
   // Fetch scheduled events when selected date changes
   useEffect(() => {
     if (selectedDate) {
-      const dateString = formatDate(selectedDate);
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
       eventRepository.getEventsByDate(dateString).then(setScheduledEvents);
     }
   }, [selectedDate]);
@@ -211,9 +212,11 @@ export const useCreateEventViewModel = () => {
       setNewClientName(client.name);
       setNewClientPhone(client.phone);
     } else {
+      // Pre-fill from search term if creating a new client
       setEditingClient(null);
-      setNewClientName('');
-      setNewClientPhone('');
+      const isPhone = /^\d+$/.test(clientSearchTerm);
+      setNewClientName(isPhone ? '' : clientSearchTerm);
+      setNewClientPhone(isPhone ? clientSearchTerm : '');
     }
     setIsModalOpen(true);
   };
@@ -354,7 +357,7 @@ export const useCreateEventViewModel = () => {
 
     const eventStatus = isPreScheduled ? 'PRE_SCHEDULED' : 'SCHEDULED';
     const eventData = {
-      date: formatDate(selectedDate),
+      date: format(selectedDate, 'yyyy-MM-dd'),
       startTime: startTime,
       endTime: endTime,
       status: eventStatus as EventType['status'],
