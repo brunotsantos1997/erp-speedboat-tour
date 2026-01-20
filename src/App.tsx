@@ -13,23 +13,11 @@ import { VoucherTermsScreen } from './ui/screens/VoucherTermsScreen';
 import { CompanyDataScreen } from './ui/screens/CompanyDataScreen';
 import { VoucherAppearanceScreen } from './ui/screens/VoucherAppearanceScreen';
 import { initializeMockRepositories } from './core/repositories';
-import { useEffect, useState } from 'react';
+
+// Initialize mock data on app startup to prevent race conditions in development
+initializeMockRepositories();
 
 function App() {
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    const initializeApp = async () => {
-      await initializeMockRepositories();
-      setIsInitialized(true);
-    };
-    initializeApp();
-  }, []);
-
-  if (!isInitialized) {
-    return <div>Loading...</div>; // Or a proper splash screen
-  }
-
   return (
     <BrowserRouter>
       <Routes>

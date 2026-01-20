@@ -192,7 +192,11 @@ export const DashboardScreen: React.FC = () => {
           <DayPicker
             mode="single"
             selected={selectedDate}
-            onSelect={setSelectedDate}
+            onSelect={(date) => {
+              if (date) {
+                setSelectedDate(date);
+              }
+            }}
             modifiers={{ booked: calendarEvents }}
             modifiersStyles={{ booked: { color: 'red', fontWeight: 'bold' } }}
             className="w-full"

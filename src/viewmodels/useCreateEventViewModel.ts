@@ -1,7 +1,7 @@
 // src/viewmodels/useCreateEventViewModel.ts
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { BusinessHours, DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, EventType, PaymentStatus, CompanyData } from '../core/domain/types';
+import type { DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, EventType, PaymentStatus, CompanyData } from '../core/domain/types';
 import { LOYALTY_RULES } from '../core/data/mocks';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { productRepository } from '../core/repositories/ProductRepository';
