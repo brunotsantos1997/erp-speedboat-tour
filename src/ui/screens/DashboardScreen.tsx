@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { DollarSign, Hash, PlusCircle, Search, Clock, AlertTriangle, Anchor, CheckCircle, Bell, Ban } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
-import type { Event } from '../../core/domain/types';
+import type { EventType } from '../../core/domain/types';
 
 // --- Sub-components for the Dashboard ---
 
@@ -28,7 +28,7 @@ const QuickAccessButton: React.FC<{ to: string; title: string; icon: React.React
   </Link>
 );
 
-const EventListItem: React.FC<{ event: Event; onConfirmPayment: (id: string) => void; }> = ({ event, onConfirmPayment }) => (
+const EventListItem: React.FC<{ event: EventType; onConfirmPayment: (id: string) => void; }> = ({ event, onConfirmPayment }) => (
   <div className="bg-gray-50 p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center">
     <div className="mb-2 sm:mb-0">
       <Link to={`/clients?clientId=${event.client.id}`} className="font-semibold text-blue-600 hover:underline">{event.client.name}</Link>
@@ -68,7 +68,7 @@ export const DashboardScreen: React.FC = () => {
   } = useDashboardViewModel();
 
   // A new component for notifications
-  const NotificationCard: React.FC<{ event: Event; onAcknowledge: (id: string) => void; }> = ({ event, onAcknowledge }) => {
+  const NotificationCard: React.FC<{ event: EventType; onAcknowledge: (id: string) => void; }> = ({ event, onAcknowledge }) => {
     const styleMap = {
       CANCELLED: {
         container: 'bg-red-50 border-l-4 border-red-500',

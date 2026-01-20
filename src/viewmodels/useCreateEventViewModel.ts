@@ -1,13 +1,13 @@
 // src/viewmodels/useCreateEventViewModel.ts
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { BusinessHours, DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, Event as EventType, PaymentStatus } from '../core/domain/types';
+import type { BusinessHours, DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, EventType, PaymentStatus } from '../core/domain/types';
 import { LOYALTY_RULES } from '../core/data/mocks';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { productRepository } from '../core/repositories/ProductRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
-import { companyDataRepository } from '../core/repositories/CompanyDataRepository';
+import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
 import { format } from 'date-fns';
 import type { BoardingLocation } from '../core/domain/types';
 import { boardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
@@ -99,7 +99,7 @@ export const useCreateEventViewModel = () => {
       const products = await productRepository.getAll();
       const boats = await boatRepository.getAll();
       const boardingLocations = await boardingLocationRepository.getAll();
-      const companyData = await companyDataRepository.get();
+      const companyData = await CompanyDataRepository.getInstance().get();
 
       setBusinessHours(companyData.businessHours);
       setAvailableProducts(products);
@@ -368,7 +368,7 @@ export const useCreateEventViewModel = () => {
       startTime: startTime,
       endTime: endTime,
       status: eventStatus as EventType['status'],
-      paymentStatus: editingEventId && originalPaymentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING',
+      paymentStatus: (editingEventId && originalPaymentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING') as PaymentStatus,
       preScheduledAt: isPreScheduled ? Date.now() : undefined,
       boat: selectedBoat,
       boardingLocation: selectedBoardingLocation,

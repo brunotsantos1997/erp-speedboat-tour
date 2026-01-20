@@ -60,7 +60,7 @@ export type PaymentStatus = 'PENDING' | 'CONFIRMED';
 /**
  * Represents the main event being created.
  */
-export interface Event {
+export interface EventType {
   id: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:MM

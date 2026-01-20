@@ -1,5 +1,5 @@
 // src/ui/screens/CreateEventScreen.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package, Pencil, Trash2, AlertTriangle, Minus, Plus } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';

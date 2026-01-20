@@ -55,7 +55,7 @@ class MockProductRepository implements IProductRepository {
 
   async remove(productId: string): Promise<void> {
     // Check if the product is used in any event
-    const allEvents = await eventRepository.getAllEvents(); // Assuming getAllEvents exists
+    const allEvents = await eventRepository.getAll(); // Assuming getAllEvents exists
     const isProductInUse = allEvents.some(event => event.products.some(p => p.id === productId));
 
     if (isProductInUse) {

@@ -1,8 +1,8 @@
 // src/ui/screens/CompanyDataScreen.tsx
 import React, { useState, useEffect } from 'react';
+import type { DayOfWeek } from '../../core/domain/types';
 import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
 import { useToastContext } from '../contexts/ToastContext';
-import { DayOfWeek } from '../../core/domain/types';
 
 const weekDays: { key: DayOfWeek; label: string }[] = [
   { key: 'sunday', label: 'Domingo' },

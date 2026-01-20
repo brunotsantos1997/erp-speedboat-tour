@@ -1,14 +1,14 @@
 // src/viewmodels/useVoucherViewModel.ts
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import type { Event, CompanyData, VoucherTerms } from '../core/domain/types';
+import type { EventType, CompanyData, VoucherTerms } from '../core/domain/types';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
 import { VoucherTermsRepository } from '../core/repositories/VoucherTermsRepository';
 import { VoucherAppearanceRepository } from '../core/repositories/VoucherAppearanceRepository';
 import html2pdf from 'html2pdf.js';
 
-interface VoucherDetails extends Event {
+interface VoucherDetails extends EventType {
   reservationFee: number;
   remainingBalance: number;
 }
