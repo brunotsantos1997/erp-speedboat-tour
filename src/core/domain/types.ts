@@ -100,12 +100,30 @@ export interface LoyaltyRule {
   message: string;
 }
 
+export type DayOfWeek =
+  | 'sunday'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday';
+
+export interface BusinessDayHours {
+  startTime: string;
+  endTime: string;
+  isClosed: boolean;
+}
+
+export type BusinessHours = Record<DayOfWeek, BusinessDayHours>;
+
 export interface CompanyData {
   id: string;
   cnpj: string;
   phone: string;
   appName: string;
   reservationFeePercentage: number;
+  businessHours: BusinessHours;
 }
 
 export interface VoucherTerms {
