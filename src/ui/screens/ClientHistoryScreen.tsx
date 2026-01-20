@@ -74,7 +74,7 @@ const PaymentStatusBadge: React.FC<{ status: PaymentStatus }> = ({ status }) => 
 
 
 const StatusBadge: React.FC<{ status: EventStatus }> = ({ status }) => {
-  const statusMap: Record<EventStatus, { text: string; color: string; icon: JSX.Element }> = {
+  const statusMap: Record<EventStatus, { text: string; color: string; icon: React.ReactElement }> = {
     SCHEDULED: { text: 'Agendado', color: 'blue', icon: <Clock size={14} /> },
     PRE_SCHEDULED: { text: 'Pré-Agendado', color: 'yellow', icon: <Clock size={14} /> },
     COMPLETED: { text: 'Realizado', color: 'green', icon: <CheckCircle size={14} /> },

@@ -10,7 +10,7 @@ export const useDashboardViewModel = () => {
   const { showToast } = useToastContext();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(startOfDay(new Date()));
+  const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
@@ -118,10 +118,10 @@ export const useDashboardViewModel = () => {
       (event.status === 'COMPLETED' || event.status === 'CANCELLED' || event.status === 'PENDING_REFUND')
     ), [allEvents]);
 
-  const eventsForSelectedDate = useMemo(() => {
-    if (!selectedDate) return [];
-    return upcomingEvents.filter(event => isSameDay(new Date(event.date), selectedDate));
-  }, [upcomingEvents, selectedDate]);
+  const eventsForSelectedDate = useMemo(() =>
+    upcomingEvents.filter(event => isSameDay(new Date(event.date), selectedDate)),
+    [upcomingEvents, selectedDate]
+  );
 
   const eventsThisWeek = useMemo(() => {
     const start = startOfWeek(today);
