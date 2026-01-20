@@ -1,21 +1,21 @@
 // src/core/repositories/EventRepository.ts
 import { v4 as uuidv4 } from 'uuid';
-import type { Event } from '../domain/types';
+import type { EventType } from '../domain/types';
 import { MOCK_CLIENTS, AVAILABLE_PRODUCTS } from '../data/mocks';
 import { boatRepository } from './BoatRepository';
 import { MockBoardingLocationRepository } from './MockBoardingLocationRepository';
 
 export interface IEventRepository {
-  getById(eventId: string): Promise<Event | undefined>;
-  getEventsByDate(date: string): Promise<Event[]>;
-  getEventsByClient(clientId: string): Promise<Event[]>;
-  add(event: Omit<Event, 'id'>): Promise<Event>;
-  updateEvent(event: Event): Promise<Event>;
+  getById(eventId: string): Promise<EventType | undefined>;
+  getEventsByDate(date: string): Promise<EventType[]>;
+  getEventsByClient(clientId: string): Promise<EventType[]>;
+  add(event: Omit<EventType, 'id'>): Promise<EventType>;
+  updateEvent(event: EventType): Promise<EventType>;
 }
 
 class MockEventRepository implements IEventRepository {
   private static readonly STORAGE_KEY = 'events';
-  private events: Event[] = [];
+  private events: EventType[] = [];
   private initializationPromise: Promise<void>;
 
   constructor() {
@@ -38,7 +38,7 @@ class MockEventRepository implements IEventRepository {
 
   private async initializeMocks(): Promise<void> {
     const boats = await boatRepository.getAll();
-    const boardingLocations = await new MockBoardingLocationRepository().getAll();
+    const boardingLocations = await MockBoardingLocationRepository.getInstance().getAll();
     if (boats.length === 0 || boardingLocations.length === 0) return;
 
     const today = new Date();
@@ -85,22 +85,27 @@ class MockEventRepository implements IEventRepository {
     ];
   }
 
-  async getById(eventId: string): Promise<Event | undefined> {
+  async getById(eventId: string): Promise<EventType | undefined> {
     await this.initializationPromise;
     return this.events.find(e => e.id === eventId);
   }
 
-  async getEventsByDate(date: string): Promise<Event[]> {
+  async getEventsByDate(date: string): Promise<EventType[]> {
     await this.initializationPromise;
     return this.events.filter(e => e.date === date);
   }
 
-  async getEventsByClient(clientId: string): Promise<Event[]> {
+  async getEventsByClient(clientId: string): Promise<EventType[]> {
     await this.initializationPromise;
     return this.events.filter(e => e.client.id === clientId);
   }
 
-  private isTimeConflict(eventA: Omit<Event, 'id'>, eventB: Event): boolean {
+  async getAll(): Promise<EventType[]> {
+    await this.initializationPromise;
+    return this.events;
+  }
+
+  private isTimeConflict(eventA: Omit<EventType, 'id'>, eventB: EventType): boolean {
     if (eventA.date !== eventB.date || eventA.boat.id !== eventB.boat.id) {
       return false;
     }
@@ -113,7 +118,7 @@ class MockEventRepository implements IEventRepository {
     return startA < endB && endA > startB;
   }
 
-  async add(eventData: Omit<Event, 'id'>): Promise<Event> {
+  async add(eventData: Omit<EventType, 'id'>): Promise<EventType> {
     await this.initializationPromise;
 
     const now = Date.now();
@@ -137,13 +142,13 @@ class MockEventRepository implements IEventRepository {
       }
     }
 
-    const newEvent: Event = { ...eventData, id: uuidv4() };
+    const newEvent: EventType = { ...eventData, id: uuidv4() };
     this.events.push(newEvent);
     this.saveEvents();
     return newEvent;
   }
 
-  async updateEvent(updatedEvent: Event): Promise<Event> {
+  async updateEvent(updatedEvent: EventType): Promise<EventType> {
     await this.initializationPromise;
     const index = this.events.findIndex(e => e.id === updatedEvent.id);
     if (index === -1) throw new Error('Event not found');

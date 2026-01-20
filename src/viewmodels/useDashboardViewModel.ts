@@ -1,12 +1,12 @@
 // src/viewmodels/useDashboardViewModel.ts
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { Event } from '../core/domain/types';
+import type { EventType } from '../core/domain/types';
 import { eventRepository } from '../core/repositories/EventRepository';
-import { startOfDay, isToday, isWithinInterval, addDays, startOfWeek, endOfWeek, getMonth, isSameDay } from 'date-fns';
+import { startOfDay, isWithinInterval, addDays, startOfWeek, endOfWeek, getMonth, isSameDay } from 'date-fns';
 import { useToastContext } from '../ui/contexts/ToastContext';
 
 export const useDashboardViewModel = () => {
-  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [allEvents, setAllEvents] = useState<EventType[]>([]);
   const { showToast } = useToastContext();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export const useDashboardViewModel = () => {
       const eventToUpdate = allEvents.find(e => e.id === eventId);
       if (!eventToUpdate) return;
 
-      let updatedEvent: Event;
+      let updatedEvent: EventType;
       let toastMessage = '';
 
       if (eventToUpdate.status === 'COMPLETED') {

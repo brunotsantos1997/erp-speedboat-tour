@@ -39,7 +39,7 @@ export class MockBoardingLocationRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const allEvents = await eventRepository.getAllEvents();
+    const allEvents = await eventRepository.getAll();
     const isLocationInUse = allEvents.some(event => event.boardingLocation.id === id);
 
     if (isLocationInUse) {

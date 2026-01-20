@@ -1,5 +1,5 @@
 // src/ui/screens/CreateEventScreen.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package, Pencil, Trash2, AlertTriangle, Minus, Plus } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
@@ -17,13 +17,15 @@ const TimePicker: React.FC<{
   value: string;
   onChange: (value: string) => void;
   options: string[];
-}> = ({ label, value, onChange, options }) => (
+  disabled?: boolean;
+}> = ({ label, value, onChange, options, disabled }) => (
   <div>
     <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
     <select
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
+      disabled={disabled}
+      className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
     >
       {options.map(time => <option key={time} value={time}>{time}</option>)}
     </select>
@@ -404,18 +406,29 @@ export const CreateEventScreen: React.FC = () => {
 
               {/* Time Pickers */}
               <div className="grid grid-cols-2 gap-4 mt-4">
-                <TimePicker
-                  label="Início"
-                  value={vm.startTime}
-                  onChange={vm.setStartTime}
-                  options={vm.availableTimeSlots}
-                />
-                <TimePicker
-                  label="Término"
-                  value={vm.endTime}
-                  onChange={vm.setEndTime}
-                  options={vm.availableTimeSlots.filter(t => t > vm.startTime)}
-                />
+                {vm.isBusinessClosed ? (
+                  <div className="col-span-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-md">
+                    <p className="font-bold">Fechado neste dia</p>
+                    <p className="text-sm">Por favor, selecione outra data para ver os horários disponíveis.</p>
+                  </div>
+                ) : (
+                  <>
+                    <TimePicker
+                      label="Início"
+                      value={vm.startTime}
+                      onChange={vm.setStartTime}
+                      options={vm.availableTimeSlots}
+                      disabled={vm.isBusinessClosed}
+                    />
+                    <TimePicker
+                      label="Término"
+                      value={vm.endTime}
+                      onChange={vm.setEndTime}
+                      options={vm.availableEndTimeSlots}
+                      disabled={vm.isBusinessClosed}
+                    />
+                  </>
+                )}
               </div>
             </section>
           </aside>

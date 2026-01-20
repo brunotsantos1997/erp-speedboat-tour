@@ -163,12 +163,12 @@ export const VoucherScreen: React.FC = () => {
                     <div className="text-right">
                       <p className={`font-semibold ${item.isCourtesy ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                         {item.pricingType === 'PER_PERSON' && !item.isCourtesy
-                          ? `R$ ${(item.price * passengerCount).toFixed(2)}`
-                          : `R$ ${item.price?.toFixed(2)}`}
+                          ? `R$ ${((item.price || 0) * passengerCount).toFixed(2)}`
+                          : `R$ ${(item.price || 0).toFixed(2)}`}
                       </p>
                       {item.pricingType === 'PER_PERSON' && (
                         <p className="text-xs text-gray-500">
-                          {item.isCourtesy ? "" : `(${passengerCount}x R$ ${item.price?.toFixed(2)})`}
+                          {item.isCourtesy ? "" : `(${passengerCount}x R$ ${(item.price || 0).toFixed(2)})`}
                         </p>
                       )}
                     </div>

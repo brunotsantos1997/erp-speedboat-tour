@@ -60,7 +60,7 @@ export type PaymentStatus = 'PENDING' | 'CONFIRMED';
 /**
  * Represents the main event being created.
  */
-export interface Event {
+export interface EventType {
   id: string;
   date: string; // YYYY-MM-DD
   startTime: string; // HH:MM
@@ -100,12 +100,31 @@ export interface LoyaltyRule {
   message: string;
 }
 
+export type DayOfWeek =
+  | 'sunday'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday';
+
+export interface BusinessDayHours {
+  startTime: string;
+  endTime: string;
+  isClosed: boolean;
+}
+
+export type BusinessHours = Record<DayOfWeek, BusinessDayHours>;
+
 export interface CompanyData {
   id: string;
   cnpj: string;
   phone: string;
   appName: string;
   reservationFeePercentage: number;
+  businessHours: BusinessHours;
+  eventIntervalMinutes: number;
 }
 
 export interface VoucherTerms {

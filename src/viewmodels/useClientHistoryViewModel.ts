@@ -1,7 +1,7 @@
 // src/viewmodels/useClientHistoryViewModel.ts
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ClientProfile, Event as EventType } from '../core/domain/types';
+import type { ClientProfile, EventType } from '../core/domain/types';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 

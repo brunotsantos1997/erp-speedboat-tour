@@ -1,13 +1,13 @@
 // src/viewmodels/useCreateEventViewModel.ts
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { Product, Discount, SelectedProduct, ClientProfile, Boat, Event as EventType } from '../core/domain/types';
+import type { DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, EventType, PaymentStatus, CompanyData } from '../core/domain/types';
 import { LOYALTY_RULES } from '../core/data/mocks';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { productRepository } from '../core/repositories/ProductRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
-import { formatDate } from '../core/utils/formatDate';
+import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
 import { format } from 'date-fns';
 import type { BoardingLocation } from '../core/domain/types';
 import { boardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
@@ -58,6 +58,9 @@ export const useCreateEventViewModel = () => {
   const [confirmationAction, setConfirmationAction] = useState<(() => void) | null>(null);
   const [confirmationMessage, setConfirmationMessage] = useState({ title: '', message: '' });
 
+  // Company Data
+  const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+
   // Effect to load event for editing
   useEffect(() => {
     const loadEventForEditing = async () => {
@@ -96,7 +99,9 @@ export const useCreateEventViewModel = () => {
       const products = await productRepository.getAll();
       const boats = await boatRepository.getAll();
       const boardingLocations = await boardingLocationRepository.getAll();
+      const companyDataResponse = await CompanyDataRepository.getInstance().get();
 
+      setCompanyData(companyDataResponse);
       setAvailableProducts(products);
       setAvailableBoats(boats);
       setAvailableBoardingLocations(boardingLocations);
@@ -363,7 +368,7 @@ export const useCreateEventViewModel = () => {
       startTime: startTime,
       endTime: endTime,
       status: eventStatus as EventType['status'],
-      paymentStatus: editingEventId && originalPaymentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING',
+      paymentStatus: (editingEventId && originalPaymentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING') as PaymentStatus,
       preScheduledAt: isPreScheduled ? Date.now() : undefined,
       boat: selectedBoat,
       boardingLocation: selectedBoardingLocation,
@@ -420,45 +425,116 @@ export const useCreateEventViewModel = () => {
     setLoyaltySuggestion(suggestion);
   }, [selectedClient]);
 
+  const dayOfWeek = useMemo(() => {
+    if (!selectedDate) return null;
+    return format(selectedDate, 'EEEE').toLowerCase() as DayOfWeek;
+  }, [selectedDate]);
+
+  const isBusinessClosed = useMemo(() => {
+    if (!companyData?.businessHours || !dayOfWeek) return true;
+    const dayConfig = companyData.businessHours[dayOfWeek];
+    return dayConfig.isClosed || !dayConfig.startTime || !dayConfig.endTime;
+  }, [companyData, dayOfWeek]);
+
   const availableTimeSlots = useMemo(() => {
-    const allSlots = [];
-    for (let h = 8; h <= 20; h++) {
-      allSlots.push(`${h.toString().padStart(2, '0')}:00`);
-      allSlots.push(`${h.toString().padStart(2, '0')}:30`);
+    // 1. Generate all possible 30-minute slots
+    const allDaySlots = Array.from({ length: 48 }, (_, i) => {
+      const hours = Math.floor(i / 2).toString().padStart(2, '0');
+      const minutes = (i % 2 === 0 ? '00' : '30');
+      return `${hours}:${minutes}`;
+    });
+
+    // 2. Filter by business hours
+    if (!companyData || isBusinessClosed || !dayOfWeek) {
+      return [];
     }
+    const { startTime, endTime } = companyData.businessHours[dayOfWeek];
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    const closingDate = new Date();
+    closingDate.setHours(endHour, endMinute, 0, 0);
+    closingDate.setMinutes(closingDate.getMinutes() - 30); // Last event must start 30 mins before closing
+    const finalEndTime = `${closingDate.getHours().toString().padStart(2, '0')}:${closingDate.getMinutes().toString().padStart(2, '0')}`;
 
-    if (!selectedBoat || scheduledEvents.length === 0) {
-      return allSlots;
+    let businessHourSlots = allDaySlots.filter(slot => slot >= startTime && slot <= finalEndTime);
+
+    // 3. Filter by existing events for the selected boat, including interval
+    if (!selectedBoat) {
+      return businessHourSlots;
     }
-
-    const boatEvents = scheduledEvents.filter(event => event.boat.id === selectedBoat.id);
-
-    // An event can be edited, so we should not check for conflicts with itself
-    const otherBoatEvents = boatEvents.filter(event => event.id !== editingEventId);
+    const otherBoatEvents = scheduledEvents.filter(event => event.boat.id === selectedBoat.id && event.id !== editingEventId);
     if (otherBoatEvents.length === 0) {
-      return allSlots;
+      return businessHourSlots;
     }
+
+    const { eventIntervalMinutes } = companyData;
 
     const isSlotBooked = (slot: string) => {
+      const [slotHour, slotMinute] = slot.split(':').map(Number);
+      const slotTime = slotHour * 60 + slotMinute;
+
       return otherBoatEvents.some(event => {
-        return slot >= event.startTime && slot < event.endTime;
+        const [eventStartHour, eventStartMinute] = event.startTime.split(':').map(Number);
+        const eventStartTime = eventStartHour * 60 + eventStartMinute;
+
+        const [eventEndHour, eventEndMinute] = event.endTime.split(':').map(Number);
+        const eventEndTime = eventEndHour * 60 + eventEndMinute;
+
+        // Create a "blocked" window around the event
+        const blockedWindowStart = eventStartTime - eventIntervalMinutes;
+        const blockedWindowEnd = eventEndTime + eventIntervalMinutes;
+
+        // A new event cannot start if its start time falls within the blocked window
+        // Note: The check is `< blockedWindowEnd` because if an event ends at 14:00 and interval is 30,
+        // the next can start at 14:30. The blocked window is up to, but not including, 14:30.
+        return slotTime >= blockedWindowStart && slotTime < blockedWindowEnd;
       });
     };
 
-    return allSlots.filter(slot => !isSlotBooked(slot));
-  }, [scheduledEvents, selectedBoat, editingEventId]);
+    return businessHourSlots.filter(slot => !isSlotBooked(slot));
+  }, [scheduledEvents, selectedBoat, editingEventId, companyData, dayOfWeek, isBusinessClosed]);
+
+  const availableEndTimeSlots = useMemo(() => {
+    if (!startTime || !companyData || isBusinessClosed || !dayOfWeek) {
+      return [];
+    }
+
+    // All possible slots after the selected start time
+    const allPossibleSlots = availableTimeSlots.filter(slot => slot > startTime);
+
+    // Find the next scheduled event for the selected boat
+    const nextEvent = scheduledEvents
+      .filter(event => event.boat.id === selectedBoat?.id && event.id !== editingEventId && event.startTime > startTime)
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))[0];
+
+    if (!nextEvent) {
+      // No upcoming events, so all slots until the end of the business day are available
+      const { endTime: businessEndTime } = companyData.businessHours[dayOfWeek];
+      return allPossibleSlots.filter(slot => slot <= businessEndTime);
+    }
+
+    // Upcoming event exists, calculate the maximum allowed end time
+    const [nextStartHour, nextStartMinute] = nextEvent.startTime.split(':').map(Number);
+    const nextStartTimeInMinutes = nextStartHour * 60 + nextStartMinute;
+    const maxEndTimeInMinutes = nextStartTimeInMinutes - companyData.eventIntervalMinutes;
+
+    const maxEndHour = Math.floor(maxEndTimeInMinutes / 60);
+    const maxEndMinute = maxEndTimeInMinutes % 60;
+    const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${maxEndMinute.toString().padStart(2, '0').padEnd(2, '0')}`;
+
+    return allPossibleSlots.filter(slot => slot <= maxEndTime);
+  }, [startTime, availableTimeSlots, scheduledEvents, selectedBoat, editingEventId, companyData, dayOfWeek, isBusinessClosed]);
+
 
   // Effect to reset time if it becomes invalid
   useEffect(() => {
     if (!availableTimeSlots.includes(startTime)) {
       setStartTime(availableTimeSlots[0] || '');
     }
-    // Ensure endTime is always after startTime
-    const availableEndTimes = availableTimeSlots.filter(t => t > startTime);
-    if (!availableEndTimes.includes(endTime)) {
-      setEndTime(availableEndTimes[0] || '');
+    // Ensure endTime is always after startTime and is valid
+    if (!availableEndTimeSlots.includes(endTime) || endTime <= startTime) {
+      setEndTime(availableEndTimeSlots[0] || '');
     }
-  }, [availableTimeSlots, startTime, endTime]);
+  }, [availableTimeSlots, availableEndTimeSlots, startTime, endTime]);
 
 
   return {
@@ -473,6 +549,7 @@ export const useCreateEventViewModel = () => {
     availableBoats,
     selectedBoat,
     isCapacityExceeded,
+    isBusinessClosed,
     // Boarding Location State
     availableBoardingLocations,
     selectedBoardingLocation,
@@ -493,6 +570,7 @@ export const useCreateEventViewModel = () => {
     isSearching,
     loyaltySuggestion,
     availableTimeSlots,
+    availableEndTimeSlots,
     // Modal state
     isModalOpen,
     editingClient,

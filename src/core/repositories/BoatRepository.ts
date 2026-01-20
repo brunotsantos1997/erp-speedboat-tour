@@ -50,7 +50,7 @@ class MockBoatRepository implements IBoatRepository {
   }
 
   async remove(boatId: string): Promise<void> {
-    const allEvents = await eventRepository.getAllEvents();
+    const allEvents = await eventRepository.getAll();
     const isBoatInUse = allEvents.some(event => event.boat.id === boatId);
 
     if (isBoatInUse) {
