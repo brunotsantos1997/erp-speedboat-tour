@@ -1,7 +1,6 @@
 // src/ui/screens/CommissionReportScreen.tsx
 import React from 'react';
 import { useCommissionReportViewModel } from '../../viewmodels/useCommissionReportViewModel';
-import { Layout } from '../components/Layout';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 
@@ -21,31 +20,28 @@ export const CommissionReportScreen: React.FC = () => {
   } = useCommissionReportViewModel();
 
   if (loading) {
-    return <Layout><p>Carregando relatório...</p></Layout>;
+    return <p>Carregando relatório...</p>;
   }
 
   if (error) {
-    return <Layout><p style={{ color: 'red' }}>Erro: {error}</p></Layout>;
+    return <p style={{ color: 'red' }}>Erro: {error}</p>;
   }
 
   if (!currentUser || (currentUser.role !== 'OWNER' && currentUser.role !== 'ADMIN')) {
     return (
-      <Layout>
-        <div className="text-center p-8">
-          <h1 className="text-2xl font-bold text-red-600">Acesso Negado</h1>
-          <p className="mt-2">Você não tem permissão para visualizar esta página.</p>
-        </div>
-      </Layout>
+      <div className="text-center p-8">
+        <h1 className="text-2xl font-bold text-red-600">Acesso Negado</h1>
+        <p className="mt-2">Você não tem permissão para visualizar esta página.</p>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="p-4 md:p-6">
-        <h1 className="text-2xl font-bold mb-4">Relatório de Comissão</h1>
+    <div className="p-4 md:p-6">
+      <h1 className="text-2xl font-bold mb-4">Relatório de Comissão</h1>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg bg-gray-50">
+      {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 p-4 border rounded-lg bg-gray-50">
           <div>
             <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
             <DayPicker
@@ -124,6 +120,5 @@ export const CommissionReportScreen: React.FC = () => {
           </table>
         </div>
       </div>
-    </Layout>
   );
 };
