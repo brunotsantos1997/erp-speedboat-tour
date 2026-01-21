@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import type { User, UserRole, UserStatus } from '../../core/domain/User';
 import { Toast } from '../components/Toast';
+import { ConfirmationModal } from '../components/ConfirmationModal';
+import { InformationModal } from '../components/InformationModal';
 
 type EditableUser = User & { commissionInput?: string };
 
@@ -10,6 +12,10 @@ export function UserManagementScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [temporaryPassword, setTemporaryPassword] = useState<string>('');
   const { getAllUsers, updateUserStatus, updateUserRole, updateUserCommission, currentUser, resetPassword } = useAuth();
 
   const fetchUsers = useCallback(async () => {
@@ -77,15 +83,23 @@ export function UserManagementScreen() {
     }
   };
 
-  const handleResetPassword = async (userId: string) => {
-    if (confirm('Tem certeza que deseja resetar a senha deste usuário?')) {
-      try {
-        const tempPassword = await resetPassword(userId);
-        alert(`Senha resetada com sucesso! A nova senha temporária é: ${tempPassword}`);
-        setToastMessage('Senha resetada com sucesso!');
-      } catch (err) {
-        setToastMessage(err instanceof Error ? err.message : 'Falha ao resetar a senha.');
-      }
+  const handleResetPassword = (user: User) => {
+    setSelectedUser(user);
+    setIsConfirmModalOpen(true);
+  };
+
+  const confirmResetPassword = async () => {
+    if (!selectedUser) return;
+
+    try {
+      const tempPassword = await resetPassword(selectedUser.id);
+      setTemporaryPassword(tempPassword);
+      setIsInfoModalOpen(true);
+      setToastMessage('Senha resetada com sucesso!');
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Falha ao resetar a senha.');
+    } finally {
+      setIsConfirmModalOpen(false);
     }
   };
 
@@ -101,6 +115,31 @@ export function UserManagementScreen() {
           onClose={() => setToastMessage(null)}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={confirmResetPassword}
+        title="Resetar Senha"
+        message={`Tem certeza que deseja resetar a senha para o usuário ${selectedUser?.name}? Esta ação não pode ser desfeita.`}
+      />
+
+      <InformationModal
+        isOpen={isInfoModalOpen}
+        onClose={() => {
+          setIsInfoModalOpen(false);
+          setSelectedUser(null);
+        }}
+        title="Senha Resetada com Sucesso"
+        message={
+          <>
+            <p>A nova senha temporária para <strong>{selectedUser?.name}</strong> é:</p>
+            <p className="my-2 p-2 bg-gray-100 rounded font-mono text-center">{temporaryPassword}</p>
+            <p className="text-sm text-gray-500">Por favor, copie esta senha e a envie para o usuário. Ele será solicitado a trocá-la no próximo login.</p>
+          </>
+        }
+      />
+
       <h1 className="text-2xl font-bold mb-6">Gerenciamento de Usuários</h1>
       <div className="bg-white shadow-md rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -177,7 +216,7 @@ export function UserManagementScreen() {
                       </button>
                     )}
                     <button
-                      onClick={() => handleResetPassword(user.id)}
+                      onClick={() => handleResetPassword(user)}
                       className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
                       disabled={user.role === 'OWNER' || (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN')}
                     >

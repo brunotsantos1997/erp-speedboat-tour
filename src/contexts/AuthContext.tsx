@@ -149,6 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     const temporaryPassword = uuidv4().substring(0, 8);
     user.passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    user.mustChangePassword = true;
     await userRepository.update(user);
     return temporaryPassword;
   };
@@ -171,6 +172,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     if (data.password) {
       user.passwordHash = await bcrypt.hash(data.password, 10);
+      user.mustChangePassword = false;
     }
 
     await userRepository.update(user);
