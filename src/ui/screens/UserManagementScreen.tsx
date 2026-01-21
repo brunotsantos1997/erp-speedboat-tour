@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import type { User, UserRole, UserStatus } from '../../core/domain/User';
+import { Toast } from '../components/Toast';
 
 type EditableUser = User & { commissionInput?: string };
 
@@ -8,6 +9,7 @@ export function UserManagementScreen() {
   const [users, setUsers] = useState<EditableUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const { getAllUsers, updateUserStatus, updateUserRole, updateUserCommission, currentUser } = useAuth();
 
   const fetchUsers = useCallback(async () => {
@@ -62,16 +64,16 @@ export function UserManagementScreen() {
 
     const commissionValue = parseFloat(user.commissionInput);
     if (isNaN(commissionValue) || commissionValue < 0 || commissionValue > 100) {
-      alert('Please enter a valid commission percentage (0-100).');
+      setToastMessage('Please enter a valid commission percentage (0-100).');
       return;
     }
 
     try {
       await updateUserCommission(userId, commissionValue);
-      alert('Commission updated successfully!');
+      setToastMessage('Commission updated successfully!');
       fetchUsers(); // Refresh to confirm the change
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update commission.');
+      setToastMessage(err instanceof Error ? err.message : 'Failed to update commission.');
     }
   };
 
@@ -81,6 +83,12 @@ export function UserManagementScreen() {
 
   return (
     <div className="p-4 md:p-8">
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
       <h1 className="text-2xl font-bold mb-6">Gerenciamento de Usuários</h1>
       <div className="bg-white shadow-md rounded-lg overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
