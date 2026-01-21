@@ -13,15 +13,17 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 // --- Components ---
 
 const TimePicker: React.FC<{
+  id?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
   disabled?: boolean;
-}> = ({ label, value, onChange, options, disabled }) => (
+}> = ({ id, label, value, onChange, options, disabled }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
     <select
+      id={id}
       value={value}
       onChange={e => onChange(e.target.value)}
       disabled={disabled}
@@ -414,6 +416,7 @@ export const CreateEventScreen: React.FC = () => {
                 ) : (
                   <>
                     <TimePicker
+                      id="startTime"
                       label="Início"
                       value={vm.startTime}
                       onChange={vm.setStartTime}
@@ -421,6 +424,7 @@ export const CreateEventScreen: React.FC = () => {
                       disabled={vm.isBusinessClosed}
                     />
                     <TimePicker
+                      id="endTime"
                       label="Término"
                       value={vm.endTime}
                       onChange={vm.setEndTime}
