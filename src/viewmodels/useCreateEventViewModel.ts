@@ -540,9 +540,8 @@ export const useCreateEventViewModel = () => {
 
       const maxEndHour = Math.floor(maxEndTimeInMinutes / 60);
       const maxEndMinute = maxEndTimeInMinutes % 60;
-      // Ensure minutes are correctly formatted (e.g., '00', '30')
-      const formattedMaxEndMinute = maxEndMinute.toString().padStart(2, '0');
-      const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${formattedMaxEndMinute}`;
+      const formattedMaxEndMinute = (Math.round(maxEndMinute / 30) * 30) % 60;
+      const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${formattedMaxEndMinute.toString().padStart(2, '0')}`;
 
       possibleEndTimes = possibleEndTimes.filter(slot => slot <= maxEndTime);
     }
