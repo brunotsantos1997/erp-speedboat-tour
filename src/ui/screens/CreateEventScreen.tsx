@@ -14,14 +14,17 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 
 const TimePicker: React.FC<{
   label: string;
+  name: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
   disabled?: boolean;
-}> = ({ label, value, onChange, options, disabled }) => (
+}> = ({ label, name, value, onChange, options, disabled }) => (
   <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+    <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
     <select
+      id={name}
+      name={name}
       value={value}
       onChange={e => onChange(e.target.value)}
       disabled={disabled}
@@ -300,12 +303,14 @@ export const CreateEventScreen: React.FC = () => {
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             <TimePicker
                               label="Início"
+                              name={`product-start-time-${product.id}`}
                               value={selectedProd?.startTime || ''}
                               onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'start')}
                               options={vm.availableTimeSlots}
                             />
                             <TimePicker
                               label="Fim"
+                              name={`product-end-time-${product.id}`}
                               value={selectedProd?.endTime || ''}
                               onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'end')}
                               options={vm.availableTimeSlots.filter(t => t > (selectedProd?.startTime || ''))}
@@ -415,6 +420,7 @@ export const CreateEventScreen: React.FC = () => {
                   <>
                     <TimePicker
                       label="Início"
+                      name="startTime"
                       value={vm.startTime}
                       onChange={vm.setStartTime}
                       options={vm.availableTimeSlots}
@@ -422,6 +428,7 @@ export const CreateEventScreen: React.FC = () => {
                     />
                     <TimePicker
                       label="Término"
+                      name="endTime"
                       value={vm.endTime}
                       onChange={vm.setEndTime}
                       options={vm.availableEndTimeSlots}
