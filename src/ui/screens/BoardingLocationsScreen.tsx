@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { useBoardingLocationsViewModel } from '../../viewmodels/useBoardingLocationsViewModel';
 import type { BoardingLocation } from '../../core/domain/types';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export const BoardingLocationsScreen: React.FC = () => {
-  const { locations, isLoading, addLocation, updateLocation, deleteLocation } = useBoardingLocationsViewModel();
+  const { locations, isLoading, addLocation, updateLocation, deleteLocation, isConfirmModalOpen, confirmDelete, closeConfirmDeleteModal } = useBoardingLocationsViewModel();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<Partial<BoardingLocation> | null>(null);
 
@@ -75,6 +76,13 @@ export const BoardingLocationsScreen: React.FC = () => {
           onSave={handleSave}
         />
       )}
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza de que deseja excluir este local de embarque? Esta ação não pode ser desfeita."
+        onConfirm={confirmDelete}
+        onCancel={closeConfirmDeleteModal}
+      />
     </div>
   );
 };
