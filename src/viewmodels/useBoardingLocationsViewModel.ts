@@ -27,9 +27,29 @@ export const useBoardingLocationsViewModel = () => {
     );
   };
 
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [locationToDeleteId, setLocationToDeleteId] = useState<string | null>(null);
+
+  const openConfirmDeleteModal = (locationId: string) => {
+    setLocationToDeleteId(locationId);
+    setIsConfirmModalOpen(true);
+  };
+
+  const closeConfirmDeleteModal = () => {
+    setLocationToDeleteId(null);
+    setIsConfirmModalOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (locationToDeleteId) {
+      await repository.delete(locationToDeleteId);
+      setLocations(locations.filter((l) => l.id !== locationToDeleteId));
+      closeConfirmDeleteModal();
+    }
+  };
+
   const deleteLocation = async (id: string) => {
-    await repository.delete(id);
-    setLocations(locations.filter((l) => l.id !== id));
+    openConfirmDeleteModal(id);
   };
 
   return {
@@ -38,5 +58,8 @@ export const useBoardingLocationsViewModel = () => {
     addLocation,
     updateLocation,
     deleteLocation,
+    isConfirmModalOpen,
+    confirmDelete,
+    closeConfirmDeleteModal,
   };
 };

@@ -32,7 +32,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
   }, [currentUser, getAllUsers]);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center justify-between px-4 py-3 text-lg font-semibold rounded-lg transition-colors ${
+    `flex items-center px-4 py-3 text-lg font-semibold rounded-lg transition-colors ${
       isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-200'
     }`;
 
@@ -64,7 +64,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
           </NavLink>
 
           {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && (
-            <NavLink to="/admin/users" className={navLinkClass} onClick={onClose}>
+            <NavLink to="/admin/users" className={navLinkClass + ' justify-between'} onClick={onClose}>
               <div className="flex items-center">
                 <UserCog className="mr-3" />
                 <span>Gerenciar Usuários</span>
@@ -79,10 +79,8 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
 
           {(currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN') && (
             <NavLink to="/commission-report" className={navLinkClass} onClick={onClose}>
-              <div className="flex items-center">
-                <TrendingUp className="mr-3" />
-                <span>Relatório de Comissão</span>
-              </div>
+              <TrendingUp className="mr-3" />
+              <span>Relatório de Comissão</span>
             </NavLink>
           )}
 

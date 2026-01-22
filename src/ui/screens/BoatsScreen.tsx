@@ -3,6 +3,7 @@ import React from 'react';
 import { useBoatsViewModel } from '../../viewmodels/useBoatsViewModel';
 import { Plus, Edit, Trash2, Anchor, Users, Ruler } from 'lucide-react';
 import type { Boat } from '../../core/domain/types';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 // --- Components ---
 
@@ -112,6 +113,13 @@ export const BoatsScreen: React.FC = () => {
         onSave={vm.handleSave}
         onClose={vm.closeModal}
         onUpdate={vm.updateEditingBoat}
+      />
+      <ConfirmationModal
+        isOpen={vm.isConfirmModalOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza de que deseja excluir esta embarcação? Esta ação não pode ser desfeita."
+        onConfirm={vm.confirmDelete}
+        onCancel={vm.closeConfirmDeleteModal}
       />
     </div>
   );

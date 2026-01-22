@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../core/domain/types';
 import IconPicker from '../components/IconPicker';
 import type { IconKey } from '../components/IconPicker';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 // --- Components ---
 
@@ -113,6 +114,13 @@ export const ProductsScreen: React.FC = () => {
         onSave={vm.handleSave}
         onClose={vm.closeModal}
         onUpdate={vm.updateEditingProduct}
+      />
+      <ConfirmationModal
+        isOpen={vm.isConfirmModalOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza de que deseja excluir este produto? Esta ação não pode ser desfeita."
+        onConfirm={vm.confirmDelete}
+        onCancel={vm.closeConfirmDeleteModal}
       />
     </div>
   );

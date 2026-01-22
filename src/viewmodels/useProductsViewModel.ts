@@ -56,10 +56,29 @@ export const useProductsViewModel = () => {
     await fetchProducts(); // Refresh the list
   };
 
-  const handleDelete = async (productId: string) => {
-    // Optional: Add a confirmation dialog here in a real app
-    await productRepository.remove(productId);
-    await fetchProducts(); // Refresh the list
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [productToDeleteId, setProductToDeleteId] = useState<string | null>(null);
+
+  const openConfirmDeleteModal = (productId: string) => {
+    setProductToDeleteId(productId);
+    setIsConfirmModalOpen(true);
+  };
+
+  const closeConfirmDeleteModal = () => {
+    setProductToDeleteId(null);
+    setIsConfirmModalOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (productToDeleteId) {
+      await productRepository.remove(productToDeleteId);
+      await fetchProducts();
+      closeConfirmDeleteModal();
+    }
+  };
+
+  const handleDelete = (productId: string) => {
+    openConfirmDeleteModal(productId);
   };
 
   const updateEditingProduct = (field: keyof Product, value: any) => {
@@ -77,5 +96,8 @@ export const useProductsViewModel = () => {
     handleSave,
     handleDelete,
     updateEditingProduct,
+    isConfirmModalOpen,
+    confirmDelete,
+    closeConfirmDeleteModal,
   };
 };
