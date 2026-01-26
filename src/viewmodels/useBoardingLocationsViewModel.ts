@@ -1,19 +1,19 @@
 // src/viewmodels/useBoardingLocationsViewModel.ts
 import { useState, useEffect } from 'react';
 import type { BoardingLocation } from '../core/domain/types';
-import { MockBoardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
+import { boardingLocationRepository } from '../core/repositories/MockBoardingLocationRepository';
 
 export const useBoardingLocationsViewModel = () => {
   const [locations, setLocations] = useState<BoardingLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const repository = new MockBoardingLocationRepository();
+  const repository = boardingLocationRepository;
 
   useEffect(() => {
     repository.getAll().then((data) => {
       setLocations(data);
       setIsLoading(false);
     });
-  }, []);
+  }, [repository]);
 
   const addLocation = async (location: Omit<BoardingLocation, 'id'>) => {
     const newLocation = await repository.add(location);
@@ -27,9 +27,29 @@ export const useBoardingLocationsViewModel = () => {
     );
   };
 
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [locationToDeleteId, setLocationToDeleteId] = useState<string | null>(null);
+
+  const openConfirmDeleteModal = (locationId: string) => {
+    setLocationToDeleteId(locationId);
+    setIsConfirmModalOpen(true);
+  };
+
+  const closeConfirmDeleteModal = () => {
+    setLocationToDeleteId(null);
+    setIsConfirmModalOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (locationToDeleteId) {
+      await repository.delete(locationToDeleteId);
+      setLocations(locations.filter((l) => l.id !== locationToDeleteId));
+      closeConfirmDeleteModal();
+    }
+  };
+
   const deleteLocation = async (id: string) => {
-    await repository.delete(id);
-    setLocations(locations.filter((l) => l.id !== id));
+    openConfirmDeleteModal(id);
   };
 
   return {
@@ -38,5 +58,8 @@ export const useBoardingLocationsViewModel = () => {
     addLocation,
     updateLocation,
     deleteLocation,
+    isConfirmModalOpen,
+    confirmDelete,
+    closeConfirmDeleteModal,
   };
 };

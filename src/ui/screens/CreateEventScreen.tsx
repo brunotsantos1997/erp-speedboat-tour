@@ -1,11 +1,10 @@
 // src/ui/screens/CreateEventScreen.tsx
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package, Pencil, Trash2, AlertTriangle, Minus, Plus } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
 import { useToastContext } from '../../ui/contexts/ToastContext';
 import type { Product, ClientProfile } from '../../core/domain/types';
-import InputMask from 'react-input-mask';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { ptBR } from 'date-fns/locale';
@@ -13,22 +12,31 @@ import { ptBR } from 'date-fns/locale';
 // --- Components ---
 
 const TimePicker: React.FC<{
+  id?: string;
   label: string;
+  name: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
-}> = ({ label, value, onChange, options }) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-    <select
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500"
-    >
-      {options.map(time => <option key={time} value={time}>{time}</option>)}
-    </select>
-  </div>
-);
+  disabled?: boolean;
+}> = ({ id, label, name, value, onChange, options, disabled }) => {
+  const selectId = id || name;
+  return (
+    <div>
+      <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <select
+        id={selectId}
+        name={name}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        disabled={disabled}
+        className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
+      >
+        {options.map(time => <option key={time} value={time}>{time}</option>)}
+      </select>
+    </div>
+  );
+};
 
 
 const DynamicIcon = ({ name, ...props }: { name: string } & LucideProps) => {
@@ -160,19 +168,9 @@ export const CreateEventScreen: React.FC = () => {
 
   const bookedDays = vm.scheduledEvents.map(event => new Date(event.date));
 
-  // --- Time Slot Generation ---
-  const timeOptions = useMemo(() => {
-    const options = [];
-    for (let h = 8; h <= 20; h++) {
-      options.push(`${h.toString().padStart(2, '0')}:00`);
-      options.push(`${h.toString().padStart(2, '0')}:30`);
-    }
-    return options;
-  }, []);
-
   return (
     <div className="bg-gray-50 font-sans text-gray-800">
-      <main className="max-w-7xl mx-auto p-4 pb-48">
+      <main className="max-w-7xl mx-auto p-4 pb-64">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
           {/* Left Column: Event Details */}
@@ -306,15 +304,17 @@ export const CreateEventScreen: React.FC = () => {
                           <div className="grid grid-cols-2 gap-4 mt-3">
                             <TimePicker
                               label="Início"
+                              name={`product-start-time-${product.id}`}
                               value={selectedProd?.startTime || ''}
                               onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'start')}
-                              options={timeOptions}
+                              options={vm.availableTimeSlots}
                             />
                             <TimePicker
                               label="Fim"
+                              name={`product-end-time-${product.id}`}
                               value={selectedProd?.endTime || ''}
                               onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'end')}
-                              options={timeOptions.filter(t => t > (selectedProd?.startTime || ''))}
+                              options={vm.availableTimeSlots.filter(t => t > (selectedProd?.startTime || ''))}
                             />
                           </div>
                         )}
@@ -339,6 +339,15 @@ export const CreateEventScreen: React.FC = () => {
                     </div>
                   </div>
                 </div>
+                <div className="mt-6">
+                  <h3 className="text-md font-semibold mb-2">Taxa</h3>
+                  <NumericInput
+                    value={vm.tax}
+                    onChange={vm.updateTax}
+                    min={0}
+                    step={10}
+                  />
+                </div>
               </section>
             )}
           </div>
@@ -347,24 +356,25 @@ export const CreateEventScreen: React.FC = () => {
           <aside className="lg:col-span-1 space-y-6">
             <section className="bg-white p-4 rounded-lg shadow">
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">Agendamento</h2>
-              {/* Boat Selection */}
-              <div className="mb-4">
-                  <label htmlFor="boat-select" className="block text-sm font-medium text-gray-700 mb-1">Lancha</label>
-                  <select id="boat-select" value={vm.selectedBoat?.id || ''} onChange={(e) => vm.handleBoatSelection(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500">
-                      {vm.availableBoats.map(boat => (
-                          <option key={boat.id} value={boat.id}>{boat.name} (Cap: {boat.capacity})</option>
-                      ))}
-                  </select>
-              </div>
 
-              {/* Boarding Location Selection */}
+              {/* Pre-schedule Toggle */}
               <div className="mb-4">
-                  <label htmlFor="boarding-location-select" className="block text-sm font-medium text-gray-700 mb-1">Local de Embarque</label>
-                  <select id="boarding-location-select" value={vm.selectedBoardingLocation?.id || ''} onChange={(e) => vm.handleBoardingLocationSelection(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500">
-                      {vm.availableBoardingLocations.map(location => (
-                          <option key={location.id} value={location.id}>{location.name}</option>
-                      ))}
-                  </select>
+                <label htmlFor="pre-schedule-toggle" className="flex items-center justify-between cursor-pointer">
+                  <span className="font-medium text-gray-700">Pré-reserva</span>
+                  <div className="relative inline-flex items-center">
+                    <input
+                      type="checkbox"
+                      id="pre-schedule-toggle"
+                      className="sr-only peer"
+                      checked={vm.isPreScheduled}
+                      onChange={(e) => vm.setIsPreScheduled(e.target.checked)}
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-4 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                  </div>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  A pré-reserva fica pendente por 24h. Se não for confirmada, a vaga é liberada.
+                </p>
               </div>
 
               {/* Calendar */}
@@ -380,18 +390,53 @@ export const CreateEventScreen: React.FC = () => {
 
               {/* Time Pickers */}
               <div className="grid grid-cols-2 gap-4 mt-4">
-                <TimePicker
-                  label="Início"
-                  value={vm.startTime}
-                  onChange={vm.setStartTime}
-                  options={timeOptions}
-                />
-                <TimePicker
-                  label="Término"
-                  value={vm.endTime}
-                  onChange={vm.setEndTime}
-                  options={timeOptions.filter(t => t > vm.startTime)}
-                />
+                {vm.isBusinessClosed ? (
+                  <div className="col-span-2 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-3 rounded-md">
+                    <p className="font-bold">Fechado neste dia</p>
+                    <p className="text-sm">Por favor, selecione outra data para ver os horários disponíveis.</p>
+                  </div>
+                ) : (
+                  <>
+                    <TimePicker
+                      id="startTime"
+                      label="Início"
+                      name="startTime"
+                      value={vm.startTime}
+                      onChange={vm.setStartTime}
+                      options={vm.availableTimeSlots}
+                      disabled={vm.isBusinessClosed}
+                    />
+                    <TimePicker
+                      id="endTime"
+                      label="Término"
+                      name="endTime"
+                      value={vm.endTime}
+                      onChange={vm.setEndTime}
+                      options={vm.availableEndTimeSlots}
+                      disabled={vm.isBusinessClosed}
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Boat Selection */}
+              <div className="mt-4">
+                  <label htmlFor="boat-select" className="block text-sm font-medium text-gray-700 mb-1">Lancha</label>
+                  <select id="boat-select" value={vm.selectedBoat?.id || ''} onChange={(e) => vm.handleBoatSelection(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500">
+                      {vm.availableBoats.map(boat => (
+                          <option key={boat.id} value={boat.id}>{boat.name} (Cap: {boat.capacity})</option>
+                      ))}
+                  </select>
+              </div>
+
+              {/* Boarding Location Selection */}
+              <div className="mt-4">
+                  <label htmlFor="boarding-location-select" className="block text-sm font-medium text-gray-700 mb-1">Local de Embarque</label>
+                  <select id="boarding-location-select" value={vm.selectedBoardingLocation?.id || ''} onChange={(e) => vm.handleBoardingLocationSelection(e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500">
+                      {vm.availableBoardingLocations.map(location => (
+                          <option key={location.id} value={location.id}>{location.name}</option>
+                      ))}
+                  </select>
               </div>
             </section>
           </aside>
@@ -414,6 +459,12 @@ export const CreateEventScreen: React.FC = () => {
               <span>Desconto</span>
               <span className="font-medium">- R$ {vm.totalDiscount.toFixed(2)}</span>
             </div>
+            {vm.tax > 0 && (
+              <div className="flex justify-between items-center text-sm text-green-600">
+                <span>Taxa</span>
+                <span className="font-medium">+ R$ {vm.tax.toFixed(2)}</span>
+              </div>
+            )}
             <div className="border-t border-gray-200 my-2"></div>
             <div className="flex justify-between items-center text-xl font-bold">
               <span>Total</span>
@@ -429,9 +480,9 @@ export const CreateEventScreen: React.FC = () => {
                 showToast('Ocorreu um erro ao salvar o passeio.');
               });
             }}
-            className="px-8 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 text-lg font-bold shadow-lg"
+            className={`px-8 py-4 text-white rounded-lg text-lg font-bold shadow-lg transition-colors ${vm.isPreScheduled ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}
           >
-            Agendar Passeio
+            {vm.isPreScheduled ? 'Pré-agendar Passeio' : 'Agendar Passeio'}
           </button>
         </div>
       </footer>

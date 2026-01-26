@@ -105,6 +105,7 @@ export const VoucherScreen: React.FC = () => {
               </div>
             </div>
             <button
+              id="download-pdf-button"
               onClick={handleDownloadPdf}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
@@ -158,9 +159,18 @@ export const VoucherScreen: React.FC = () => {
                           )}
                       </div>
                     </div>
-                    <p className={`font-semibold ${item.isCourtesy ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                      R$ {item.price?.toFixed(2)}
-                    </p>
+                    <div className="text-right">
+                      <p className={`font-semibold ${item.isCourtesy ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                        {item.pricingType === 'PER_PERSON' && !item.isCourtesy
+                          ? `R$ ${((item.price || 0) * passengerCount).toFixed(2)}`
+                          : `R$ ${(item.price || 0).toFixed(2)}`}
+                      </p>
+                      {item.pricingType === 'PER_PERSON' && (
+                        <p className="text-xs text-gray-500">
+                          {item.isCourtesy ? "" : `(${passengerCount}x R$ ${(item.price || 0).toFixed(2)})`}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -171,7 +181,8 @@ export const VoucherScreen: React.FC = () => {
               <div className="w-full max-w-sm">
                   <div className="space-y-2 text-gray-700">
                       <div className="flex justify-between"><span>Subtotal</span> <span className="font-medium">R$ {subtotal.toFixed(2)}</span></div>
-                      <div className="flex justify-between text-red-600"><span>Desconto</span> <span className="font-medium">- R$ {(subtotal - total).toFixed(2)}</span></div>
+                      <div className="flex justify-between text-red-600"><span>Desconto</span> <span className="font-medium">- R$ {(voucher.discount.type === 'FIXED' ? voucher.discount.value : subtotal * (voucher.discount.value / 100)).toFixed(2)}</span></div>
+                      {voucher.tax > 0 && <div className="flex justify-between text-green-600"><span>Taxa</span> <span className="font-medium">+ R$ {voucher.tax.toFixed(2)}</span></div>}
                       <div className="flex justify-between font-bold text-lg border-t border-gray-200 pt-2 mt-2"><span>Total</span> <span>R$ {total.toFixed(2)}</span></div>
                       <div className="flex justify-between font-bold text-lg text-blue-600 bg-blue-50 p-3 rounded-lg">
                           <span>Sinal (Reserva 30%)</span>

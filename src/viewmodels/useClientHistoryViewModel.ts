@@ -1,6 +1,7 @@
 // src/viewmodels/useClientHistoryViewModel.ts
-import { useState, useCallback } from 'react';
-import type { ClientProfile, Event as EventType } from '../core/domain/types';
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import type { ClientProfile, EventType } from '../core/domain/types';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 
@@ -49,23 +50,45 @@ export const useClientHistoryViewModel = () => {
   };
 
   const cancelEvent = useCallback(async (eventId: string) => {
-    if (window.confirm('Tem certeza que deseja cancelar este evento?')) {
-      await eventRepository.updateStatus(eventId, 'CANCELLED');
-      if(selectedClient) {
-        selectClient(selectedClient);
+    const eventToUpdate = clientEvents.find(e => e.id === eventId);
+    if (!eventToUpdate) return;
+
+    const message = eventToUpdate.paymentStatus === 'CONFIRMED'
+      ? 'Este evento já foi pago. Ao cancelar, o status será alterado para "Pendente de Reembolso". Deseja continuar?'
+      : 'Tem certeza que deseja cancelar este evento?';
+
+    openConfirmationModal(
+      'Cancelar Evento',
+      message,
+      async () => {
+        const newStatus = eventToUpdate.paymentStatus === 'CONFIRMED' ? 'PENDING_REFUND' : 'CANCELLED';
+        const updatedEvent = { ...eventToUpdate, status: newStatus as EventType['status'] };
+        await eventRepository.updateEvent(updatedEvent);
+        if (selectedClient) {
+          selectClient(selectedClient);
+        }
       }
-    }
-  }, [selectedClient, selectClient]);
+    );
+  }, [clientEvents, selectedClient, selectClient]);
 
   const confirmPayment = useCallback(async (eventId: string) => {
-    if (window.confirm('Tem certeza que deseja confirmar o pagamento da reserva?')) {
-      await eventRepository.updatePaymentStatus(eventId, 'CONFIRMED');
-      if(selectedClient) {
-        // Re-fetch events to update the UI
-        selectClient(selectedClient);
+    openConfirmationModal(
+      'Confirmar Pagamento',
+      'Tem certeza que deseja confirmar o pagamento da reserva?',
+      async () => {
+        const eventToUpdate = clientEvents.find(e => e.id === eventId);
+        if (!eventToUpdate) return;
+        const updatedEvent = { ...eventToUpdate, paymentStatus: 'CONFIRMED' as const };
+        if (updatedEvent.status === 'PRE_SCHEDULED') {
+          updatedEvent.status = 'SCHEDULED';
+        }
+        await eventRepository.updateEvent(updatedEvent);
+        if(selectedClient) {
+          selectClient(selectedClient);
+        }
       }
-    }
-  }, [selectedClient, selectClient]);
+    );
+  }, [clientEvents, selectedClient, selectClient]);
 
   // --- Client Edit Handlers ---
   const openEditModal = () => {

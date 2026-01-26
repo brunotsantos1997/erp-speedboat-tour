@@ -52,11 +52,29 @@ export const useBoatsViewModel = () => {
     await fetchBoats();
   };
 
-  const handleDelete = async (boatId: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta lancha?')) {
-      await boatRepository.remove(boatId);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [boatToDeleteId, setBoatToDeleteId] = useState<string | null>(null);
+
+  const openConfirmDeleteModal = (boatId: string) => {
+    setBoatToDeleteId(boatId);
+    setIsConfirmModalOpen(true);
+  };
+
+  const closeConfirmDeleteModal = () => {
+    setBoatToDeleteId(null);
+    setIsConfirmModalOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (boatToDeleteId) {
+      await boatRepository.remove(boatToDeleteId);
       await fetchBoats();
+      closeConfirmDeleteModal();
     }
+  };
+
+  const handleDelete = async (boatId: string) => {
+    openConfirmDeleteModal(boatId);
   };
 
   const updateEditingBoat = (field: keyof Boat, value: any) => {
@@ -74,5 +92,8 @@ export const useBoatsViewModel = () => {
     handleSave,
     handleDelete,
     updateEditingBoat,
+    isConfirmModalOpen,
+    confirmDelete,
+    closeConfirmDeleteModal,
   };
 };

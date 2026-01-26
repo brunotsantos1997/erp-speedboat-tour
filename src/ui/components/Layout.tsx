@@ -1,10 +1,36 @@
 // src/ui/components/Layout.tsx
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { Menu, PlusCircle, Settings, Users, LayoutDashboard, Palette } from 'lucide-react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Menu, PlusCircle, Settings, Users, LayoutDashboard, Palette, UserCog, TrendingUp, LogOut } from 'lucide-react';
 import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
+import { useAuth } from '../../contexts/AuthContext';
+
 
 const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string }> = ({ isOpen, onClose, appName }) => {
+  const { currentUser, getAllUsers, logout } = useAuth();
+  const navigate = useNavigate();
+  const [pendingUsersCount, setPendingUsersCount] = useState(0);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  useEffect(() => {
+    if (currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') {
+      const fetchPendingUsers = async () => {
+        try {
+          const users = await getAllUsers();
+          const pendingCount = users.filter(u => u.status === 'PENDING').length;
+          setPendingUsersCount(pendingCount);
+        } catch (error) {
+          console.error("Failed to fetch pending users:", error);
+        }
+      };
+      fetchPendingUsers();
+    }
+  }, [currentUser, getAllUsers]);
+
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center px-4 py-3 text-lg font-semibold rounded-lg transition-colors ${
       isActive ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-200'
@@ -34,8 +60,30 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
           </NavLink>
           <NavLink to="/create-event" className={navLinkClass} onClick={onClose}>
             <PlusCircle className="mr-3" />
-            Criar Passeio
+            <span>Criar Passeio</span>
           </NavLink>
+
+          {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && (
+            <NavLink to="/admin/users" className={navLinkClass + ' justify-between'} onClick={onClose}>
+              <div className="flex items-center">
+                <UserCog className="mr-3" />
+                <span>Gerenciar Usuários</span>
+              </div>
+              {pendingUsersCount > 0 && (
+                <span className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full">
+                  {pendingUsersCount}
+                </span>
+              )}
+            </NavLink>
+          )}
+
+          {(currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN') && (
+            <NavLink to="/commission-report" className={navLinkClass} onClick={onClose}>
+              <TrendingUp className="mr-3" />
+              <span>Relatório de Comissão</span>
+            </NavLink>
+          )}
+
           {/* Settings Dropdown */}
           <div>
             <button
@@ -48,7 +96,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
               <Settings className="mr-3" />
               Configurações
             </button>
-            <div className="pl-8 space-y-2 hidden">
+            <div className="pl-10 space-y-2 hidden">
               <NavLink to="/products" className={navLinkClass} onClick={onClose}>
                 Produtos
               </NavLink>
@@ -78,7 +126,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
               <Palette className="mr-3" />
               Personalização
             </button>
-            <div className="pl-8 space-y-2 hidden">
+            <div className="pl-10 space-y-2 hidden">
               <NavLink to="/company-data" className={navLinkClass} onClick={onClose}>
                 Dados da Empresa
               </NavLink>
@@ -91,13 +139,26 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
             <Users className="mr-3" />
             Clientes
           </NavLink>
+          <NavLink to="/profile" className={navLinkClass} onClick={onClose}>
+            <UserCog className="mr-3" />
+            Meu Perfil
+          </NavLink>
         </nav>
+        <div className="p-4 mt-auto border-t">
+            <button
+                onClick={handleLogout}
+                className="flex items-center w-full px-4 py-3 text-lg font-semibold text-left text-red-600 rounded-lg hover:bg-red-100"
+            >
+                <LogOut className="mr-3" />
+                Sair
+            </button>
+        </div>
       </aside>
     </>
   );
 };
 
-export const Layout: React.FC = () => {
+export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const { companyData } = useCompanyDataViewModel();
   const [appName, setAppName] = useState('BoatManager');
@@ -123,7 +184,7 @@ export const Layout: React.FC = () => {
         </header>
 
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </div>
     </div>

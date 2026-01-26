@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../core/domain/types';
 import IconPicker from '../components/IconPicker';
 import type { IconKey } from '../components/IconPicker';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 // --- Components ---
 
@@ -13,7 +14,7 @@ const ProductModal: React.FC<{
   product: Partial<Product> | null;
   onSave: () => void;
   onClose: () => void;
-  onUpdate: (field: keyof Product, value: any) => void;
+  onUpdate: (field: keyof Product, value: string | number | boolean) => void;
 }> = ({ isOpen, product, onSave, onClose, onUpdate }) => {
   if (!isOpen || !product) return null;
 
@@ -29,7 +30,7 @@ const ProductModal: React.FC<{
             {product.pricingType === 'HOURLY' ? (
               <input type="number" placeholder="Preço por Hora" value={product.hourlyPrice} onChange={(e) => onUpdate('hourlyPrice', parseFloat(e.target.value) || 0)} className="w-full p-3 border rounded-lg" />
             ) : (
-              <input type="number" placeholder="Preço" value={product.price} onChange={(e) => onUpdate('price', parseFloat(e.target.value) || 0)} className="w-full p-3 border rounded-lg" />
+              <input type="number" placeholder={product.pricingType === 'PER_PERSON' ? 'Preço por Pessoa' : 'Preço Fixo'} value={product.price} onChange={(e) => onUpdate('price', parseFloat(e.target.value) || 0)} className="w-full p-3 border rounded-lg" />
             )}
             <select value={product.pricingType} onChange={(e) => onUpdate('pricingType', e.target.value)} className="w-full p-3 border rounded-lg bg-white">
               <option value="FIXED">Preço Fixo</option>
@@ -113,6 +114,13 @@ export const ProductsScreen: React.FC = () => {
         onSave={vm.handleSave}
         onClose={vm.closeModal}
         onUpdate={vm.updateEditingProduct}
+      />
+      <ConfirmationModal
+        isOpen={vm.isConfirmModalOpen}
+        title="Confirmar Exclusão"
+        message="Tem certeza de que deseja excluir este produto? Esta ação não pode ser desfeita."
+        onConfirm={vm.confirmDelete}
+        onCancel={vm.closeConfirmDeleteModal}
       />
     </div>
   );
