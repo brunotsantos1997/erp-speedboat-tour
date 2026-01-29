@@ -5,6 +5,7 @@ import { DashboardScreen } from './ui/screens/DashboardScreen';
 import { CreateEventScreen } from './ui/screens/CreateEventScreen';
 import { ProductsScreen } from './ui/screens/ProductsScreen';
 import { BoatsScreen } from './ui/screens/BoatsScreen';
+import { RentalPricesScreen } from './ui/screens/RentalPricesScreen';
 import { ClientHistoryScreen } from './ui/screens/ClientHistoryScreen';
 import { VoucherScreen } from './ui/screens/VoucherScreen';
 import { BoardingLocationsScreen } from './ui/screens/BoardingLocationsScreen';
@@ -21,6 +22,10 @@ import { ForgotPasswordScreen } from './ui/screens/ForgotPasswordScreen';
 import { ResetPasswordSecretScreen } from './ui/screens/ResetPasswordSecretScreen';
 import { SetNewPasswordScreen } from './ui/screens/SetNewPasswordScreen';
 import { ProtectedRoute } from './ui/components/ProtectedRoute';
+import { initializeMockRepositories } from './core/repositories';
+
+// Initialize mock data on app startup to prevent race conditions in development
+initializeMockRepositories();
 
 function App() {
   return (

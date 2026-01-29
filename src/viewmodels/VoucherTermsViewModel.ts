@@ -15,7 +15,7 @@ export const useVoucherTermsViewModel = () => {
       try {
         setIsLoading(true);
         const data = await repository.get();
-        setVoucherTerms(data || null);
+        setVoucherTerms(data);
       } catch {
         setError('Failed to load voucher terms.');
       } finally {
@@ -31,8 +31,7 @@ export const useVoucherTermsViewModel = () => {
       if (!voucherTerms) return;
 
       try {
-        const updatedData: VoucherTerms = { ...voucherTerms, terms };
-        await repository.update(updatedData);
+        const updatedData = await repository.update({ terms });
         setVoucherTerms(updatedData);
         return updatedData;
       } catch (e) {

@@ -1,27 +1,16 @@
 // src/core/repositories/MockBoardingLocationRepository.ts
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  doc,
-  onSnapshot,
-  query,
-  type Unsubscribe
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import type { BoardingLocation } from '../domain/types';
+import { v4 as uuid } from 'uuid';
+import { eventRepository } from './EventRepository'; // Import event repository
 
 export class MockBoardingLocationRepository {
   private static instance: MockBoardingLocationRepository;
-  private locations: BoardingLocation[] = [];
-  private collectionName = 'boarding_locations';
-  private unsubscribe: Unsubscribe | null = null;
-  private isInitialized = false;
+  private locations: BoardingLocation[] = [
+    { id: uuid(), name: 'Marina da Glória', mapLink: 'https://maps.app.goo.gl/abcdef123' },
+    { id: uuid(), name: 'Urca', mapLink: 'https://maps.app.goo.gl/ghijkl456' },
+  ];
 
-  private constructor() {
-    this.initListener();
-  }
+  private constructor() {}
 
   public static getInstance(): MockBoardingLocationRepository {
     if (!MockBoardingLocationRepository.instance) {
@@ -30,55 +19,38 @@ export class MockBoardingLocationRepository {
     return MockBoardingLocationRepository.instance;
   }
 
-  private initListener() {
-    const q = query(collection(db, this.collectionName));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      this.locations = snapshot.docs.map(doc => ({
-        ...doc.data() as BoardingLocation,
-        id: doc.id
-      }));
-      this.isInitialized = true;
-    });
-  }
-
-  dispose() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
-    }
-    this.isInitialized = false;
-    this.locations = [];
-  }
-
   async getAll(): Promise<BoardingLocation[]> {
-    if (this.isInitialized) {
-      return this.locations.filter(l => !l.isArchived);
-    }
-
-    const querySnapshot = await getDocs(collection(db, this.collectionName));
-    this.locations = querySnapshot.docs.map(doc => ({
-      ...doc.data() as BoardingLocation,
-      id: doc.id
-    }));
-    this.isInitialized = true;
-    return this.locations.filter(l => !l.isArchived);
+    return Promise.resolve(this.locations.filter(l => !l.isArchived));
   }
 
   async add(location: Omit<BoardingLocation, 'id'>): Promise<BoardingLocation> {
-    const docRef = await addDoc(collection(db, this.collectionName), location);
-    return { id: docRef.id, ...location };
+    const newLocation = { ...location, id: uuid() };
+    this.locations.push(newLocation);
+    return Promise.resolve(newLocation);
   }
 
   async update(location: BoardingLocation): Promise<BoardingLocation> {
-    const { id, ...data } = location;
-    const docRef = doc(db, this.collectionName, id);
-    await updateDoc(docRef, data as any);
-    return location;
+    const index = this.locations.findIndex((l) => l.id === location.id);
+    if (index !== -1) {
+      this.locations[index] = location;
+      return Promise.resolve(location);
+    }
+    throw new Error('Location not found');
   }
 
   async delete(id: string): Promise<void> {
-    const docRef = doc(db, this.collectionName, id);
-    await updateDoc(docRef, { isArchived: true });
+    const allEvents = await eventRepository.getAll();
+    const isLocationInUse = allEvents.some(event => event.boardingLocation.id === id);
+
+    if (isLocationInUse) {
+      const locationIndex = this.locations.findIndex(l => l.id === id);
+      if (locationIndex !== -1) {
+        this.locations[locationIndex].isArchived = true;
+      }
+    } else {
+      this.locations = this.locations.filter(l => l.id !== id);
+    }
+    return Promise.resolve();
   }
 }
 

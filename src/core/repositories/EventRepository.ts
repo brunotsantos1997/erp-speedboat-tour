@@ -1,17 +1,9 @@
 // src/core/repositories/EventRepository.ts
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  doc,
-  onSnapshot,
-  query,
-  getDoc,
-  type Unsubscribe
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
 import type { EventType } from '../domain/types';
+import { MOCK_CLIENTS, AVAILABLE_PRODUCTS } from '../data/mocks';
+import { boatRepository } from './BoatRepository';
+import { MockBoardingLocationRepository } from './MockBoardingLocationRepository';
 
 export interface IEventRepository {
   getById(eventId: string): Promise<EventType | undefined>;
@@ -19,68 +11,97 @@ export interface IEventRepository {
   getEventsByClient(clientId: string): Promise<EventType[]>;
   add(event: Omit<EventType, 'id'>): Promise<EventType>;
   updateEvent(event: EventType): Promise<EventType>;
-  getAll(): Promise<EventType[]>;
-  dispose(): void;
 }
 
-class EventRepositoryImpl implements IEventRepository {
+class MockEventRepository implements IEventRepository {
+  private static readonly STORAGE_KEY = 'events';
   private events: EventType[] = [];
-  private collectionName = 'events';
-  private unsubscribe: Unsubscribe | null = null;
-  private isInitialized = false;
+  private initializationPromise: Promise<void>;
 
   constructor() {
-    this.initListener();
+    this.initializationPromise = this.loadEvents();
   }
 
-  private initListener() {
-    const q = query(collection(db, this.collectionName));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      this.events = snapshot.docs.map(doc => ({
-        ...doc.data() as EventType,
-        id: doc.id
-      }));
-      this.isInitialized = true;
-    });
-  }
-
-  dispose() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
+  private async loadEvents(): Promise<void> {
+    const storedEvents = localStorage.getItem(MockEventRepository.STORAGE_KEY);
+    if (storedEvents) {
+      this.events = JSON.parse(storedEvents);
+    } else {
+      await this.initializeMocks();
+      this.saveEvents();
     }
-    this.isInitialized = false;
-    this.events = [];
+  }
+
+  private saveEvents(): void {
+    localStorage.setItem(MockEventRepository.STORAGE_KEY, JSON.stringify(this.events));
+  }
+
+  private async initializeMocks(): Promise<void> {
+    const boats = await boatRepository.getAll();
+    const boardingLocations = await MockBoardingLocationRepository.getInstance().getAll();
+    if (boats.length === 0 || boardingLocations.length === 0) return;
+
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+    this.events = [
+      {
+        id: "event-1-id",
+        date: formatDate(today),
+        startTime: '10:00',
+        endTime: '14:00',
+        status: 'SCHEDULED',
+        paymentStatus: 'PENDING',
+        boat: boats[0],
+        boardingLocation: boardingLocations[0],
+        client: MOCK_CLIENTS[0],
+        passengerCount: 5,
+        products: [
+          { ...AVAILABLE_PRODUCTS[1], isCourtesy: false },
+          { ...AVAILABLE_PRODUCTS[2], isCourtesy: true },
+        ],
+        discount: { type: 'FIXED', value: 0 },
+        subtotal: 2500,
+        total: 2500,
+      },
+      {
+        id: "event-2-id",
+        date: formatDate(tomorrow),
+        startTime: '14:00',
+        endTime: '18:00',
+        status: 'SCHEDULED',
+        paymentStatus: 'PENDING',
+        boat: boats[0],
+        boardingLocation: boardingLocations[1],
+        client: MOCK_CLIENTS[1],
+        passengerCount: 8,
+        products: [],
+        discount: { type: 'FIXED', value: 0 },
+        subtotal: 3000,
+        total: 3000,
+      },
+    ];
   }
 
   async getById(eventId: string): Promise<EventType | undefined> {
-    const docRef = doc(db, this.collectionName, eventId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return { ...docSnap.data() as EventType, id: docSnap.id };
-    }
-    return undefined;
+    await this.initializationPromise;
+    return this.events.find(e => e.id === eventId);
   }
 
   async getEventsByDate(date: string): Promise<EventType[]> {
-    const all = await this.getAll();
-    return all.filter(e => e.date === date);
+    await this.initializationPromise;
+    return this.events.filter(e => e.date === date);
   }
 
   async getEventsByClient(clientId: string): Promise<EventType[]> {
-    const all = await this.getAll();
-    return all.filter((e: EventType) => e.client.id === clientId);
+    await this.initializationPromise;
+    return this.events.filter(e => e.client.id === clientId);
   }
 
   async getAll(): Promise<EventType[]> {
-    if (this.isInitialized) return this.events;
-
-    const querySnapshot = await getDocs(collection(db, this.collectionName));
-    this.events = querySnapshot.docs.map(doc => ({
-      ...doc.data() as EventType,
-      id: doc.id
-    }));
-    this.isInitialized = true;
+    await this.initializationPromise;
     return this.events;
   }
 
@@ -98,11 +119,12 @@ class EventRepositoryImpl implements IEventRepository {
   }
 
   async add(eventData: Omit<EventType, 'id'>): Promise<EventType> {
-    const allEvents = await this.getAll();
+    await this.initializationPromise;
+
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
 
-    const conflictingEvents = allEvents.filter(existingEvent =>
+    const conflictingEvents = this.events.filter(existingEvent =>
       this.isTimeConflict(eventData, existingEvent)
     );
 
@@ -115,21 +137,26 @@ class EventRepositoryImpl implements IEventRepository {
       }
       if (conflict.status === 'PRE_SCHEDULED' && conflict.preScheduledAt && (now - conflict.preScheduledAt >= twentyFourHours)) {
         if (eventData.status === 'SCHEDULED') {
-          await this.updateEvent({ ...conflict, status: 'CANCELLED' });
+          conflict.status = 'CANCELLED';
         }
       }
     }
 
-    const docRef = await addDoc(collection(db, this.collectionName), eventData);
-    return { ...eventData, id: docRef.id };
+    const newEvent: EventType = { ...eventData, id: uuidv4() };
+    this.events.push(newEvent);
+    this.saveEvents();
+    return newEvent;
   }
 
   async updateEvent(updatedEvent: EventType): Promise<EventType> {
-    const allEvents = await this.getAll();
+    await this.initializationPromise;
+    const index = this.events.findIndex(e => e.id === updatedEvent.id);
+    if (index === -1) throw new Error('Event not found');
+
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
 
-    const conflictingEvents = allEvents.filter(existingEvent =>
+    const conflictingEvents = this.events.filter(existingEvent =>
       existingEvent.id !== updatedEvent.id && this.isTimeConflict(updatedEvent, existingEvent)
     );
 
@@ -142,11 +169,10 @@ class EventRepositoryImpl implements IEventRepository {
       }
     }
 
-    const { id, ...data } = updatedEvent;
-    const docRef = doc(db, this.collectionName, id);
-    await updateDoc(docRef, data as any);
+    this.events[index] = updatedEvent;
+    this.saveEvents();
     return updatedEvent;
   }
 }
 
-export const eventRepository = new EventRepositoryImpl();
+export const eventRepository = new MockEventRepository();

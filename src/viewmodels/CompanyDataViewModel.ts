@@ -15,7 +15,7 @@ export const useCompanyDataViewModel = () => {
       try {
         setIsLoading(true);
         const data = await repository.get();
-        setCompanyData(data || null);
+        setCompanyData(data);
       } catch {
         setError('Failed to load company data.');
       } finally {
@@ -31,13 +31,12 @@ export const useCompanyDataViewModel = () => {
       if (!companyData) return;
 
       try {
-        const updatedData: CompanyData = { ...companyData, ...data };
-        await repository.update(updatedData);
+        const updatedData = await repository.update(data);
         setCompanyData(updatedData);
         return updatedData;
       } catch (e) {
         setError('Failed to update company data.');
-        throw e;
+        throw e; // Re-throwing the original error is often useful for debugging
       }
     },
     [companyData, repository]

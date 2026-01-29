@@ -1,93 +1,65 @@
 // src/core/repositories/BoatRepository.ts
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  doc,
-  onSnapshot,
-  query,
-  type Unsubscribe
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
 import type { Boat } from '../domain/types';
+import { eventRepository } from './EventRepository'; // Import event repository
 
 export interface IBoatRepository {
   getAll(): Promise<Boat[]>;
   add(boat: Omit<Boat, 'id'>): Promise<Boat>;
   update(boat: Boat): Promise<Boat>;
   remove(boatId: string): Promise<void>;
-  dispose(): void;
 }
 
-class BoatRepositoryImpl implements IBoatRepository {
-  private static instance: BoatRepositoryImpl;
-  private boats: Boat[] = [];
-  private collectionName = 'boats';
-  private unsubscribe: Unsubscribe | null = null;
-  private isInitialized = false;
+class MockBoatRepository implements IBoatRepository {
+  private static instance: MockBoatRepository;
+  private boats: Boat[] = [
+    {
+      id: 'boat-1',
+      name: 'Focker 30 Pés',
+      capacity: 10,
+      size: 30,
+    },
+  ];
 
-  private constructor() {
-    this.initListener();
-  }
+  private constructor() {}
 
-  public static getInstance(): BoatRepositoryImpl {
-    if (!BoatRepositoryImpl.instance) {
-      BoatRepositoryImpl.instance = new BoatRepositoryImpl();
+  public static getInstance(): MockBoatRepository {
+    if (!MockBoatRepository.instance) {
+      MockBoatRepository.instance = new MockBoatRepository();
     }
-    return BoatRepositoryImpl.instance;
-  }
-
-  private initListener() {
-    const q = query(collection(db, this.collectionName));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      this.boats = snapshot.docs.map(doc => ({
-        ...doc.data() as Boat,
-        id: doc.id
-      }));
-      this.isInitialized = true;
-    });
-  }
-
-  dispose() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
-    }
-    this.isInitialized = false;
-    this.boats = [];
+    return MockBoatRepository.instance;
   }
 
   async getAll(): Promise<Boat[]> {
-    if (this.isInitialized) {
-      return this.boats.filter(b => !b.isArchived);
-    }
-
-    const querySnapshot = await getDocs(collection(db, this.collectionName));
-    this.boats = querySnapshot.docs.map(doc => ({
-      ...doc.data() as Boat,
-      id: doc.id
-    }));
-    this.isInitialized = true;
     return this.boats.filter(b => !b.isArchived);
   }
 
   async add(boatData: Omit<Boat, 'id'>): Promise<Boat> {
-    const docRef = await addDoc(collection(db, this.collectionName), boatData);
-    return { id: docRef.id, ...boatData };
+    const newBoat: Boat = { ...boatData, id: uuidv4() };
+    this.boats.push(newBoat);
+    return newBoat;
   }
 
   async update(updatedBoat: Boat): Promise<Boat> {
-    const { id, ...data } = updatedBoat;
-    const docRef = doc(db, this.collectionName, id);
-    await updateDoc(docRef, data as any);
+    const index = this.boats.findIndex(b => b.id === updatedBoat.id);
+    if (index === -1) throw new Error('Boat not found');
+    this.boats[index] = updatedBoat;
     return updatedBoat;
   }
 
   async remove(boatId: string): Promise<void> {
-    const docRef = doc(db, this.collectionName, boatId);
-    await updateDoc(docRef, { isArchived: true });
+    const allEvents = await eventRepository.getAll();
+    const isBoatInUse = allEvents.some(event => event.boat.id === boatId);
+
+    if (isBoatInUse) {
+      const boatIndex = this.boats.findIndex(b => b.id === boatId);
+      if (boatIndex !== -1) {
+        this.boats[boatIndex].isArchived = true;
+      }
+    } else {
+      this.boats = this.boats.filter(b => b.id !== boatId);
+    }
   }
 }
 
-export const boatRepository = BoatRepositoryImpl.getInstance();
+export const boatRepository = MockBoatRepository.getInstance();

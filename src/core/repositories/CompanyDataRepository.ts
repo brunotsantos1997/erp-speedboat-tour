@@ -1,31 +1,16 @@
 // src/core/repositories/CompanyDataRepository.ts
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import type { CompanyData } from '../domain/types';
+import { v4 as uuidv4 } from 'uuid';
+
+const STORAGE_KEY = 'companyData';
 
 export class CompanyDataRepository {
   private static instance: CompanyDataRepository;
-  private docId = 'default';
-  private collectionName = 'company_data';
+  private data: CompanyData;
 
-  private constructor() {}
-
-  public static getInstance(): CompanyDataRepository {
-    if (!CompanyDataRepository.instance) {
-      CompanyDataRepository.instance = new CompanyDataRepository();
-    }
-    return CompanyDataRepository.instance;
-  }
-
-  async get(): Promise<CompanyData | undefined> {
-    const docRef = doc(db, this.collectionName, this.docId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return { ...docSnap.data() as CompanyData, id: docSnap.id };
-    }
-
-    return {
-      id: this.docId,
+  private constructor() {
+    const defaultData: CompanyData = {
+      id: uuidv4(),
       cnpj: '00.000.000/0001-00',
       phone: '(00) 00000-0000',
       appName: 'BoatManager',
@@ -41,12 +26,53 @@ export class CompanyDataRepository {
       },
       eventIntervalMinutes: 30,
     };
+
+    const storedData = localStorage.getItem(STORAGE_KEY);
+    let loadedData = defaultData;
+
+    if (storedData) {
+      try {
+        const parsedData = JSON.parse(storedData);
+        // Ensure parsedData is a valid object before merging
+        if (parsedData && typeof parsedData === 'object') {
+          loadedData = {
+            ...defaultData,
+            ...parsedData,
+            businessHours: {
+              ...defaultData.businessHours,
+              ...(parsedData.businessHours || {}),
+            },
+          };
+        }
+      } catch (error) {
+        console.error('Failed to parse company data from localStorage, falling back to default.', error);
+        // If parsing fails, we stick with the default data
+        loadedData = defaultData;
+      }
+    }
+
+    this.data = loadedData;
+    this.saveToLocalStorage();
   }
 
-  async update(updatedData: CompanyData): Promise<CompanyData> {
-    const { id, ...data } = updatedData;
-    const docRef = doc(db, this.collectionName, this.docId);
-    await setDoc(docRef, data, { merge: true });
-    return updatedData;
+  public static getInstance(): CompanyDataRepository {
+    if (!CompanyDataRepository.instance) {
+      CompanyDataRepository.instance = new CompanyDataRepository();
+    }
+    return CompanyDataRepository.instance;
+  }
+
+  private saveToLocalStorage(): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+  }
+
+  async get(): Promise<CompanyData> {
+    return Promise.resolve(this.data);
+  }
+
+  async update(updatedData: Partial<CompanyData>): Promise<CompanyData> {
+    this.data = { ...this.data, ...updatedData };
+    this.saveToLocalStorage();
+    return Promise.resolve(this.data);
   }
 }

@@ -1,99 +1,81 @@
 // src/core/repositories/ClientRepository.ts
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  doc,
-  onSnapshot,
-  query,
-  deleteDoc,
-  type Unsubscribe
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
 import type { ClientProfile } from '../domain/types';
+import { MOCK_CLIENTS } from '../data/mocks';
 
+// The repository interface defines the contract for data operations.
 export interface IClientRepository {
   search(term: string): Promise<ClientProfile[]>;
   add(newClient: Omit<ClientProfile, 'id' | 'totalTrips'>): Promise<ClientProfile>;
   update(client: ClientProfile): Promise<ClientProfile>;
   delete(clientId: string): Promise<void>;
-  getAll(): Promise<ClientProfile[]>;
-  dispose(): void;
 }
 
-class ClientRepositoryImpl implements IClientRepository {
+/**
+ * A mock implementation of the client repository that operates on an in-memory array.
+ * Simulates asynchronous operations.
+ */
+class MockClientRepository implements IClientRepository {
+  private static readonly STORAGE_KEY = 'clients';
   private clients: ClientProfile[] = [];
-  private collectionName = 'clients';
-  private unsubscribe: Unsubscribe | null = null;
-  private isInitialized = false;
 
   constructor() {
-    this.initListener();
+    this.loadClients();
   }
 
-  private initListener() {
-    const q = query(collection(db, this.collectionName));
-    this.unsubscribe = onSnapshot(q, (snapshot) => {
-      this.clients = snapshot.docs.map(doc => ({
-        ...doc.data() as ClientProfile,
-        id: doc.id
-      }));
-      this.isInitialized = true;
-    });
-  }
-
-  dispose() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
+  private loadClients(): void {
+    const storedClients = localStorage.getItem(MockClientRepository.STORAGE_KEY);
+    if (storedClients) {
+      this.clients = JSON.parse(storedClients);
+    } else {
+      this.clients = MOCK_CLIENTS;
+      this.saveClients();
     }
-    this.isInitialized = false;
-    this.clients = [];
   }
 
-  async getAll(): Promise<ClientProfile[]> {
-    if (this.isInitialized) return this.clients;
-
-    const querySnapshot = await getDocs(collection(db, this.collectionName));
-    this.clients = querySnapshot.docs.map(doc => ({
-      ...doc.data() as ClientProfile,
-      id: doc.id
-    }));
-    this.isInitialized = true;
-    return this.clients;
+  private saveClients(): void {
+    localStorage.setItem(MockClientRepository.STORAGE_KEY, JSON.stringify(this.clients));
   }
 
   async search(term: string): Promise<ClientProfile[]> {
-    const all = await this.getAll();
     if (!term) return [];
     const lowercasedTerm = term.toLowerCase();
-    return all.filter(client =>
-      client.name.toLowerCase().includes(lowercasedTerm) ||
-      client.phone.includes(term)
+    const results = this.clients.filter(
+      (client) =>
+        client.name.toLowerCase().includes(lowercasedTerm) ||
+        client.phone.includes(term)
     );
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return results;
   }
 
-  async add(newClientData: Omit<ClientProfile, 'id' | 'totalTrips'>): Promise<ClientProfile> {
-    const data = {
+  async add(newClientData: Omit<ClientProfile, 'totalTrips'>): Promise<ClientProfile> {
+    const newClient: ClientProfile = {
       ...newClientData,
       totalTrips: 0,
     };
-    const docRef = await addDoc(collection(db, this.collectionName), data);
-    return { id: docRef.id, ...data };
+    this.clients.push(newClient);
+    this.saveClients();
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return newClient;
   }
 
   async update(updatedClient: ClientProfile): Promise<ClientProfile> {
-    const { id, ...data } = updatedClient;
-    const docRef = doc(db, this.collectionName, id);
-    await updateDoc(docRef, data as any);
+    const index = this.clients.findIndex(c => c.id === updatedClient.id);
+    if (index === -1) throw new Error("Client not found");
+    this.clients[index] = updatedClient;
+    this.saveClients();
+    await new Promise(resolve => setTimeout(resolve, 300));
     return updatedClient;
   }
 
   async delete(clientId: string): Promise<void> {
-    const docRef = doc(db, this.collectionName, clientId);
-    await deleteDoc(docRef);
+    const index = this.clients.findIndex(c => c.id === clientId);
+    if (index === -1) throw new Error("Client not found");
+    this.clients.splice(index, 1);
+    this.saveClients();
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
 }
 
-export const clientRepository = new ClientRepositoryImpl();
+// Export a singleton instance of the mock repository.
+export const clientRepository = new MockClientRepository();

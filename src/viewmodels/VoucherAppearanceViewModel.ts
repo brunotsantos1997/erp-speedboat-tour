@@ -1,4 +1,4 @@
-// src/viewmodels/VoucherAppearanceViewModel.ts
+// src/viewmodels/VsoucherAppearanceViewModel.ts
 import { useState, useEffect, useCallback } from 'react';
 import type { VoucherAppearanceData } from '../core/repositories/VoucherAppearanceRepository';
 import { VoucherAppearanceRepository } from '../core/repositories/VoucherAppearanceRepository';
@@ -15,7 +15,7 @@ export const useVoucherAppearanceViewModel = () => {
       try {
         setIsLoading(true);
         const data = await repository.get();
-        setAppearanceData(data || null);
+        setAppearanceData(data);
       } catch {
         setError('Failed to load voucher appearance data.');
       } finally {
@@ -36,8 +36,7 @@ export const useVoucherAppearanceViewModel = () => {
         reader.onload = async () => {
           try {
             const base64Image = reader.result as string;
-            const updatedData: VoucherAppearanceData = { ...appearanceData, watermarkImage: base64Image };
-            await repository.update(updatedData);
+            const updatedData = await repository.update({ watermarkImage: base64Image });
             setAppearanceData(updatedData);
             resolve(base64Image);
           } catch (e) {

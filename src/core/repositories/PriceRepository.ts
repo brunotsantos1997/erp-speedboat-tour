@@ -1,34 +1,28 @@
 // src/core/repositories/PriceRepository.ts
-import { CompanyDataRepository } from './CompanyDataRepository';
-
 export interface RentalPrices {
   hourlyRate: number;
   halfHourRate: number;
 }
 
-// Default values as fallback
-const DEFAULT_HOURLY_RATE = 2500;
-const DEFAULT_HALF_HOUR_RATE = 1300;
+const HOURLY_RATE_KEY = 'rentalHourlyRate';
+const HALF_HOUR_RATE_KEY = 'rentalHalfHourRate';
+
+import { BOAT_HOURLY_RATE, BOAT_HALF_HOUR_RATE } from '../config';
 
 export class PriceRepository {
-  private companyDataRepository = CompanyDataRepository.getInstance();
-
   async getPrices(): Promise<RentalPrices> {
-    const data = await this.companyDataRepository.get();
-    return {
-      hourlyRate: data?.rentalHourlyRate ?? DEFAULT_HOURLY_RATE,
-      halfHourRate: data?.rentalHalfHourRate ?? DEFAULT_HALF_HOUR_RATE,
-    };
+    const hourlyRate = localStorage.getItem(HOURLY_RATE_KEY);
+    const halfHourRate = localStorage.getItem(HALF_HOUR_RATE_KEY);
+
+    return Promise.resolve({
+      hourlyRate: hourlyRate ? parseFloat(hourlyRate) : BOAT_HOURLY_RATE,
+      halfHourRate: halfHourRate ? parseFloat(halfHourRate) : BOAT_HALF_HOUR_RATE,
+    });
   }
 
   async savePrices(prices: RentalPrices): Promise<void> {
-    const data = await this.companyDataRepository.get();
-    if (data) {
-      await this.companyDataRepository.update({
-        ...data,
-        rentalHourlyRate: prices.hourlyRate,
-        rentalHalfHourRate: prices.halfHourRate,
-      });
-    }
+    localStorage.setItem(HOURLY_RATE_KEY, prices.hourlyRate.toString());
+    localStorage.setItem(HALF_HOUR_RATE_KEY, prices.halfHourRate.toString());
+    return Promise.resolve();
   }
 }

@@ -1,9 +1,11 @@
 // src/core/repositories/CommissionRepository.ts
 import type { CommissionReportEntry } from '../domain/types';
 import { eventRepository } from './EventRepository';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { MockUserRepository } from '../infra/repositories/MockUserRepository';
 import type { User } from '../domain/User';
+
+// Get the singleton instance of the user repository
+const userRepository = MockUserRepository.getInstance();
 
 export interface ICommissionRepository {
   getCommissionReport(
@@ -20,10 +22,7 @@ class CommissionRepository implements ICommissionRepository {
     userId?: string
   ): Promise<CommissionReportEntry[]> {
     const allEvents = await eventRepository.getAll();
-
-    // Fetch all users/profiles
-    const profilesSnap = await getDocs(collection(db, 'profiles'));
-    const allUsers = profilesSnap.docs.map(doc => ({ ...doc.data() as User, id: doc.id }));
+    const allUsers = await userRepository.findAll();
 
     const userMap = new Map<string, User>(allUsers.map(user => [user.id, user]));
 
@@ -31,7 +30,7 @@ class CommissionRepository implements ICommissionRepository {
       if (event.status !== 'COMPLETED') {
         return false;
       }
-      const eventDate = new Date(event.date + 'T00:00:00');
+      const eventDate = new Date(event.date + 'T00:00:00'); // Ensure local timezone
       const isAfterStartDate = eventDate >= startDate;
       const isBeforeEndDate = eventDate <= endDate;
       const matchesUser = !userId || event.createdByUserId === userId;

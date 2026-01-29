@@ -2,11 +2,12 @@
 // src/ui/screens/ClientHistoryScreen.tsx
 import React from 'react';
 import { useClientHistoryViewModel } from '../../viewmodels/useClientHistoryViewModel';
-import { useToastContext } from '../contexts/ToastContext';
 import { Search, X, Calendar, Edit, Ban, CheckCircle, Clock, Pencil, FileText, Share2, DollarSign, AlertTriangle } from 'lucide-react';
 import type { EventStatus, PaymentStatus, EventType, ClientProfile } from '../../core/domain/types';
 import { useNavigate } from 'react-router-dom';
 
+// This is the shared modal component. Let's define it here for simplicity,
+// but in a real app, it would be in its own file.
 const ClientModal: React.FC<{
   isOpen: boolean;
   editingClient: ClientProfile | null;
@@ -97,6 +98,7 @@ const EventCard: React.FC<{
   onEdit: (id: string) => void;
   onConfirmPayment: (id: string) => void;
 }> = ({ eventType, onCancel, onEdit, onConfirmPayment }) => {
+  const { showToast } = useToastContext();
 
   const shareVoucher = (eventId: string) => {
     const url = `${window.location.origin}/voucher/${eventId}`;
@@ -147,7 +149,6 @@ const EventCard: React.FC<{
 
 export const ClientHistoryScreen: React.FC = () => {
     const vm = useClientHistoryViewModel();
-    const { showToast } = useToastContext();
     const navigate = useNavigate();
 
     const handleEditEvent = (eventId: string) => {
@@ -219,9 +220,7 @@ export const ClientHistoryScreen: React.FC = () => {
                 phone={vm.clientPhone}
                 setName={vm.setClientName}
                 setPhone={vm.setClientPhone}
-                onSave={() => {
-                  vm.handleSaveChanges().then(() => showToast('Dados atualizados com sucesso!'));
-                }}
+                onSave={vm.handleSaveChanges}
                 onClose={vm.closeEditModal}
             />
         </div>

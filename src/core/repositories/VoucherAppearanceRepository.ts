@@ -1,6 +1,7 @@
 // src/core/repositories/VoucherAppearanceRepository.ts
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { v4 as uuidv4 } from 'uuid';
+
+const STORAGE_KEY = 'voucherAppearance';
 
 export interface VoucherAppearanceData {
   id: string;
@@ -9,10 +10,20 @@ export interface VoucherAppearanceData {
 
 export class VoucherAppearanceRepository {
   private static instance: VoucherAppearanceRepository;
-  private docId = 'default';
-  private collectionName = 'voucher_appearance';
+  private data: VoucherAppearanceData;
 
-  private constructor() {}
+  private constructor() {
+    const storedData = localStorage.getItem(STORAGE_KEY);
+    if (storedData) {
+      this.data = JSON.parse(storedData);
+    } else {
+      this.data = {
+        id: uuidv4(),
+        watermarkImage: null,
+      };
+      this.saveToLocalStorage();
+    }
+  }
 
   public static getInstance(): VoucherAppearanceRepository {
     if (!VoucherAppearanceRepository.instance) {
@@ -21,19 +32,17 @@ export class VoucherAppearanceRepository {
     return VoucherAppearanceRepository.instance;
   }
 
-  async get(): Promise<VoucherAppearanceData> {
-    const docRef = doc(db, this.collectionName, this.docId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return { ...docSnap.data() as VoucherAppearanceData, id: docSnap.id };
-    }
-    return { id: this.docId, watermarkImage: null };
+  private saveToLocalStorage(): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
   }
 
-  async update(updatedData: VoucherAppearanceData): Promise<VoucherAppearanceData> {
-    const { id, ...data } = updatedData;
-    const docRef = doc(db, this.collectionName, this.docId);
-    await setDoc(docRef, data, { merge: true });
-    return updatedData;
+  async get(): Promise<VoucherAppearanceData> {
+    return Promise.resolve(this.data);
+  }
+
+  async update(updatedData: Partial<VoucherAppearanceData>): Promise<VoucherAppearanceData> {
+    this.data = { ...this.data, ...updatedData };
+    this.saveToLocalStorage();
+    return Promise.resolve(this.data);
   }
 }

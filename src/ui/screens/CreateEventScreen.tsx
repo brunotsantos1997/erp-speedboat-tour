@@ -1,7 +1,5 @@
 // src/ui/screens/CreateEventScreen.tsx
 import React from 'react';
-// @ts-ignore
-import InputMask from 'react-input-mask';
 import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package, Pencil, Trash2, AlertTriangle, Minus, Plus } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
@@ -136,7 +134,7 @@ const NewClientModal: React.FC<{
           <InputMask
             mask="+55 (99) 99999-9999"
             value={phone}
-            onChange={(e: any) => setPhone(e.target.value)}
+            onChange={(e) => setPhone(e.target.value)}
           >
             {(inputProps: any) => (
               <input

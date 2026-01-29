@@ -33,6 +33,7 @@ export const useVoucherViewModel = () => {
       try {
         setIsLoading(true);
 
+        // This logic is now centralized in the view model
         const companyRepo = CompanyDataRepository.getInstance();
         const termsRepo = VoucherTermsRepository.getInstance();
         const appearanceRepo = VoucherAppearanceRepository.getInstance();
@@ -49,11 +50,11 @@ export const useVoucherViewModel = () => {
           return;
         }
 
-        if (companyInfo) setCompanyData(companyInfo);
-        if (terms) setVoucherTerms(terms);
-        if (appearance) setWatermark(appearance?.watermarkImage || null);
+        setCompanyData(companyInfo);
+        setVoucherTerms(terms);
+        setWatermark(appearance.watermarkImage);
 
-        const feePercentage = (companyInfo?.reservationFeePercentage || 30) / 100;
+        const feePercentage = (companyInfo.reservationFeePercentage || 30) / 100;
         const reservationFee = eventData.total * feePercentage;
         const remainingBalance = eventData.total - reservationFee;
 
@@ -74,6 +75,7 @@ export const useVoucherViewModel = () => {
     const element = document.getElementById('voucher-content');
     const button = document.getElementById('download-pdf-button');
     if (element && voucher) {
+      // Hide the button before generating the PDF
       if (button) button.style.display = 'none';
 
       const opt = {
@@ -85,6 +87,7 @@ export const useVoucherViewModel = () => {
       };
 
       html2pdf().from(element).set(opt).save().then(() => {
+        // Show the button again after the PDF is generated
         if (button) button.style.display = 'flex';
       });
     }

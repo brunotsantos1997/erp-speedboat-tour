@@ -182,7 +182,7 @@ export const VoucherScreen: React.FC = () => {
                   <div className="space-y-2 text-gray-700">
                       <div className="flex justify-between"><span>Subtotal</span> <span className="font-medium">R$ {subtotal.toFixed(2)}</span></div>
                       <div className="flex justify-between text-red-600"><span>Desconto</span> <span className="font-medium">- R$ {(voucher.discount.type === 'FIXED' ? voucher.discount.value : subtotal * (voucher.discount.value / 100)).toFixed(2)}</span></div>
-                      {(voucher.tax ?? 0) > 0 && <div className="flex justify-between text-green-600"><span>Taxa</span> <span className="font-medium">+ R$ {(voucher.tax ?? 0).toFixed(2)}</span></div>}
+                      {voucher.tax > 0 && <div className="flex justify-between text-green-600"><span>Taxa</span> <span className="font-medium">+ R$ {voucher.tax.toFixed(2)}</span></div>}
                       <div className="flex justify-between font-bold text-lg border-t border-gray-200 pt-2 mt-2"><span>Total</span> <span>R$ {total.toFixed(2)}</span></div>
                       <div className="flex justify-between font-bold text-lg text-blue-600 bg-blue-50 p-3 rounded-lg">
                           <span>Sinal (Reserva 30%)</span>
