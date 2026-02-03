@@ -39,7 +39,7 @@ function App() {
         <Route path="/voucher/:eventId" element={<PublicLayout><VoucherScreen /></PublicLayout>} />
 
         {/* Protected Admin Routes with the main Layout */}
-        <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER']} />}>
+        <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER', 'SELLER']} />}>
           <Route element={<Layout />}>
             <Route index element={<DashboardScreen />} />
             <Route path="create-event" element={<CreateEventScreen />} />

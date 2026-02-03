@@ -85,17 +85,18 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
           )}
 
           {/* Settings Dropdown */}
-          <div>
-            <button
-              className="flex items-center w-full px-4 py-3 text-lg font-semibold text-left text-gray-700 rounded-lg hover:bg-gray-200"
-              onClick={(e) => {
-                const submenu = e.currentTarget.nextElementSibling;
-                submenu?.classList.toggle('hidden');
-              }}
-            >
-              <Settings className="mr-3" />
-              Configurações
-            </button>
+          {(currentUser?.role !== 'SELLER') && (
+            <div>
+              <button
+                className="flex items-center w-full px-4 py-3 text-lg font-semibold text-left text-gray-700 rounded-lg hover:bg-gray-200"
+                onClick={(e) => {
+                  const submenu = e.currentTarget.nextElementSibling;
+                  submenu?.classList.toggle('hidden');
+                }}
+              >
+                <Settings className="mr-3" />
+                Configurações
+              </button>
             <div className="pl-10 space-y-2 hidden">
               <NavLink to="/products" className={navLinkClass} onClick={onClose}>
                 Produtos
@@ -118,6 +119,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
               )}
             </div>
           </div>
+          )}
           {/* Personalization Dropdown */}
           {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
             <div>
@@ -141,10 +143,12 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
               </div>
             </div>
           )}
-          <NavLink to="/clients" className={navLinkClass} onClick={onClose}>
-            <Users className="mr-3" />
-            Clientes
-          </NavLink>
+          {(currentUser?.role !== 'SELLER') && (
+            <NavLink to="/clients" className={navLinkClass} onClick={onClose}>
+              <Users className="mr-3" />
+              Clientes
+            </NavLink>
+          )}
           <NavLink to="/profile" className={navLinkClass} onClick={onClose}>
             <UserCog className="mr-3" />
             Meu Perfil

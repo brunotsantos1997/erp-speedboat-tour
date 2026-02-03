@@ -20,7 +20,7 @@ export interface IClientRepository {
   delete(clientId: string): Promise<void>;
   getAll(): Promise<ClientProfile[]>;
   dispose(): void;
-  initialize(): void;
+  initialize(user?: any): void;
 }
 
 class ClientRepositoryImpl implements IClientRepository {
@@ -28,10 +28,12 @@ class ClientRepositoryImpl implements IClientRepository {
   private collectionName = 'clients';
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
+  private currentUser: any = null;
 
   constructor() {}
 
-  initialize() {
+  initialize(user?: any) {
+    this.currentUser = user;
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -54,6 +56,7 @@ class ClientRepositoryImpl implements IClientRepository {
     }
     this.isInitialized = false;
     this.clients = [];
+    this.currentUser = null;
   }
 
   async getAll(): Promise<ClientProfile[]> {
@@ -79,7 +82,14 @@ class ClientRepositoryImpl implements IClientRepository {
     );
   }
 
+  private checkPermission() {
+    if (!this.currentUser) {
+      throw new Error('Você deve estar logado.');
+    }
+  }
+
   async add(newClientData: Omit<ClientProfile, 'id' | 'totalTrips'>): Promise<ClientProfile> {
+    this.checkPermission();
     const data = {
       ...newClientData,
       totalTrips: 0,
@@ -89,6 +99,7 @@ class ClientRepositoryImpl implements IClientRepository {
   }
 
   async update(updatedClient: ClientProfile): Promise<ClientProfile> {
+    this.checkPermission();
     const { id, ...data } = updatedClient;
     const docRef = doc(db, this.collectionName, id);
     await updateDoc(docRef, data as any);
@@ -96,6 +107,9 @@ class ClientRepositoryImpl implements IClientRepository {
   }
 
   async delete(clientId: string): Promise<void> {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para excluir clientes.');
+    }
     const docRef = doc(db, this.collectionName, clientId);
     await deleteDoc(docRef);
   }

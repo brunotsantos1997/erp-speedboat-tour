@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     productRepository.initialize(user);
     boatRepository.initialize(user);
     boardingLocationRepository.initialize(user);
-    clientRepository.initialize();
+    clientRepository.initialize(user);
     eventRepository.initialize(user);
     VoucherAppearanceRepository.getInstance().initialize(user);
     VoucherTermsRepository.getInstance().initialize(user);

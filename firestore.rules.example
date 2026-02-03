@@ -23,6 +23,10 @@ service cloud.firestore {
       return isAuthenticated() && getUserData().status == 'APPROVED';
     }
 
+    function isSeller() {
+      return hasRole(['SELLER']);
+    }
+
     // Regras para a coleção de perfis
     match /profiles/{userId} {
       // Qualquer usuário logado e aprovado pode ler perfis (necessário para listagens e relatórios)
@@ -50,7 +54,7 @@ service cloud.firestore {
     // Regras para Eventos
     match /events/{eventId} {
       allow read: if isApproved();
-      allow create: if isApproved() && request.resource.data.createdByUserId == request.auth.uid;
+      allow create: if isApproved() && (isOwner() || isSeller() || hasRole(['ADMIN']));
       allow update: if isApproved() && (
         isOwner() || resource.data.createdByUserId == request.auth.uid
       );
