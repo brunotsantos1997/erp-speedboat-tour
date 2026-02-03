@@ -18,7 +18,7 @@ export interface IBoatRepository {
   update(boat: Boat): Promise<Boat>;
   remove(boatId: string): Promise<void>;
   dispose(): void;
-  initialize(): void;
+  initialize(user?: any): void;
 }
 
 class BoatRepositoryImpl implements IBoatRepository {
@@ -27,6 +27,7 @@ class BoatRepositoryImpl implements IBoatRepository {
   private collectionName = 'boats';
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
+  private currentUser: any = null;
 
   private constructor() {}
 
@@ -37,7 +38,8 @@ class BoatRepositoryImpl implements IBoatRepository {
     return BoatRepositoryImpl.instance;
   }
 
-  initialize() {
+  initialize(user?: any) {
+    this.currentUser = user;
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -60,6 +62,7 @@ class BoatRepositoryImpl implements IBoatRepository {
     }
     this.isInitialized = false;
     this.boats = [];
+    this.currentUser = null;
   }
 
   async getAll(): Promise<Boat[]> {
@@ -75,12 +78,20 @@ class BoatRepositoryImpl implements IBoatRepository {
     return this.boats.filter(b => !b.isArchived);
   }
 
+  private checkAdminPermission() {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para realizar esta ação.');
+    }
+  }
+
   async add(boatData: Omit<Boat, 'id'>): Promise<Boat> {
+    this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), boatData);
     return { id: docRef.id, ...boatData };
   }
 
   async update(updatedBoat: Boat): Promise<Boat> {
+    this.checkAdminPermission();
     const { id, ...data } = updatedBoat;
     const docRef = doc(db, this.collectionName, id);
     await updateDoc(docRef, data as any);
@@ -88,6 +99,7 @@ class BoatRepositoryImpl implements IBoatRepository {
   }
 
   async remove(boatId: string): Promise<void> {
+    this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, boatId);
     await updateDoc(docRef, { isArchived: true });
   }

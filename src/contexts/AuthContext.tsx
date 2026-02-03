@@ -94,15 +94,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     CompanyDataRepository.getInstance().dispose();
   };
 
-  const initializeRepositories = () => {
-    productRepository.initialize();
-    boatRepository.initialize();
-    boardingLocationRepository.initialize();
+  const initializeRepositories = (user: User) => {
+    productRepository.initialize(user);
+    boatRepository.initialize(user);
+    boardingLocationRepository.initialize(user);
     clientRepository.initialize();
-    eventRepository.initialize();
-    VoucherAppearanceRepository.getInstance().initialize();
-    VoucherTermsRepository.getInstance().initialize();
-    CompanyDataRepository.getInstance().initialize();
+    eventRepository.initialize(user);
+    VoucherAppearanceRepository.getInstance().initialize(user);
+    VoucherTermsRepository.getInstance().initialize(user);
+    CompanyDataRepository.getInstance().initialize(user);
   };
 
   useEffect(() => {
@@ -114,8 +114,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (profileSnap.exists()) {
           const profileData = profileSnap.data() as User;
           if (profileData.status === 'APPROVED') {
-            setCurrentUser({ ...profileData, id: firebaseUser.uid });
-            initializeRepositories();
+            const user = { ...profileData, id: firebaseUser.uid };
+            setCurrentUser(user);
+            initializeRepositories(user);
           } else {
             setCurrentUser(null);
             await logout();
@@ -153,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const user = { ...profileData, id: firebaseUser.uid };
     setCurrentUser(user);
-    initializeRepositories();
+    initializeRepositories(user);
     return user;
   };
 
@@ -194,11 +195,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getAllUsers = async (): Promise<User[]> => {
+    if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
+      throw new Error('Você não tem permissão para listar usuários.');
+    }
     const querySnapshot = await getDocs(collection(db, 'profiles'));
     return querySnapshot.docs.map(doc => ({ ...doc.data() as User, id: doc.id }));
   };
 
   const updateUserStatus = async (userId: string, status: UserStatus): Promise<void> => {
+    if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
+      throw new Error('Você não tem permissão para alterar o status de usuários.');
+    }
     const profileRef = doc(db, 'profiles', userId);
     await updateDoc(profileRef, { status });
 
@@ -216,6 +223,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserCommission = async (userId: string, commission: number): Promise<void> => {
+    if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
+      throw new Error('Você não tem permissão para alterar comissões.');
+    }
     if (commission < 0 || commission > 100) {
       throw new Error('A porcentagem de comissão deve estar entre 0 e 100.');
     }
@@ -245,6 +255,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setSecretQuestion = async (userId: string, question: string, answer: string): Promise<void> => {
+    if (!currentUser || currentUser.id !== userId) {
+      throw new Error('Você só pode configurar a pergunta secreta para sua própria conta.');
+    }
     const profileRef = doc(db, 'profiles', userId);
     const secretAnswerHash = await bcrypt.hash(answer, 10);
     await updateDoc(profileRef, {
@@ -280,6 +293,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateProfile = async (userId: string, data: { name?: string; email?: string; newPassword?: string, oldPassword?: string }): Promise<void> => {
+    if (!currentUser || (currentUser.id !== userId && currentUser.role !== 'OWNER' && currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para atualizar este perfil.');
+    }
+
     const profileRef = doc(db, 'profiles', userId);
     const updates: any = {};
 

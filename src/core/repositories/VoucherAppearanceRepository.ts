@@ -13,6 +13,7 @@ export class VoucherAppearanceRepository {
   private collectionName = 'voucher_appearance';
   private data: VoucherAppearanceData | null = null;
   private unsubscribe: Unsubscribe | null = null;
+  private currentUser: any = null;
 
   private constructor() {}
 
@@ -23,7 +24,8 @@ export class VoucherAppearanceRepository {
     return VoucherAppearanceRepository.instance;
   }
 
-  initialize() {
+  initialize(user?: any) {
+    this.currentUser = user;
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -43,6 +45,7 @@ export class VoucherAppearanceRepository {
       this.unsubscribe = null;
     }
     this.data = null;
+    this.currentUser = null;
   }
 
   async get(): Promise<VoucherAppearanceData> {
@@ -58,6 +61,9 @@ export class VoucherAppearanceRepository {
   }
 
   async update(updatedData: VoucherAppearanceData): Promise<VoucherAppearanceData> {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para alterar a aparência do voucher.');
+    }
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
     await setDoc(docRef, data, { merge: true });

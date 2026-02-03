@@ -77,7 +77,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
             </NavLink>
           )}
 
-          {(currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN') && (
+          {(currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
             <NavLink to="/commission-report" className={navLinkClass} onClick={onClose}>
               <TrendingUp className="mr-3" />
               <span>Relatório de Comissão</span>
@@ -106,35 +106,41 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
               <NavLink to="/boarding-locations" className={navLinkClass} onClick={onClose}>
                 Locais de Embarque
               </NavLink>
-              <NavLink to="/voucher-terms" className={navLinkClass} onClick={onClose}>
-                Termos do Voucher
-              </NavLink>
-              <NavLink to="/rental-prices" className={navLinkClass} onClick={onClose}>
-                Preços de Aluguel
-              </NavLink>
+              {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
+                <>
+                  <NavLink to="/voucher-terms" className={navLinkClass} onClick={onClose}>
+                    Termos do Voucher
+                  </NavLink>
+                  <NavLink to="/rental-prices" className={navLinkClass} onClick={onClose}>
+                    Preços de Aluguel
+                  </NavLink>
+                </>
+              )}
             </div>
           </div>
           {/* Personalization Dropdown */}
-          <div>
-            <button
-              className="flex items-center w-full px-4 py-3 text-lg font-semibold text-left text-gray-700 rounded-lg hover:bg-gray-200"
-              onClick={(e) => {
-                const submenu = e.currentTarget.nextElementSibling;
-                submenu?.classList.toggle('hidden');
-              }}
-            >
-              <Palette className="mr-3" />
-              Personalização
-            </button>
-            <div className="pl-10 space-y-2 hidden">
-              <NavLink to="/company-data" className={navLinkClass} onClick={onClose}>
-                Dados da Empresa
-              </NavLink>
-              <NavLink to="/voucher-appearance" className={navLinkClass} onClick={onClose}>
-                Aparência do Voucher
-              </NavLink>
+          {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
+            <div>
+              <button
+                className="flex items-center w-full px-4 py-3 text-lg font-semibold text-left text-gray-700 rounded-lg hover:bg-gray-200"
+                onClick={(e) => {
+                  const submenu = e.currentTarget.nextElementSibling;
+                  submenu?.classList.toggle('hidden');
+                }}
+              >
+                <Palette className="mr-3" />
+                Personalização
+              </button>
+              <div className="pl-10 space-y-2 hidden">
+                <NavLink to="/company-data" className={navLinkClass} onClick={onClose}>
+                  Dados da Empresa
+                </NavLink>
+                <NavLink to="/voucher-appearance" className={navLinkClass} onClick={onClose}>
+                  Aparência do Voucher
+                </NavLink>
+              </div>
             </div>
-          </div>
+          )}
           <NavLink to="/clients" className={navLinkClass} onClick={onClose}>
             <Users className="mr-3" />
             Clientes

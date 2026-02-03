@@ -9,6 +9,7 @@ export class CompanyDataRepository {
   private collectionName = 'company_data';
   private data: CompanyData | null = null;
   private unsubscribe: Unsubscribe | null = null;
+  private currentUser: any = null;
 
   private constructor() {}
 
@@ -19,7 +20,8 @@ export class CompanyDataRepository {
     return CompanyDataRepository.instance;
   }
 
-  initialize() {
+  initialize(user?: any) {
+    this.currentUser = user;
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -39,6 +41,7 @@ export class CompanyDataRepository {
       this.unsubscribe = null;
     }
     this.data = null;
+    this.currentUser = null;
   }
 
   async get(): Promise<CompanyData | undefined> {
@@ -72,6 +75,9 @@ export class CompanyDataRepository {
   }
 
   async update(updatedData: CompanyData): Promise<CompanyData> {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para alterar as configurações da empresa.');
+    }
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
     await setDoc(docRef, data, { merge: true });

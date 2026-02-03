@@ -18,7 +18,7 @@ export interface IProductRepository {
   update(updatedProduct: Product): Promise<Product>;
   remove(productId: string): Promise<void>;
   dispose(): void;
-  initialize(): void;
+  initialize(user?: any): void;
 }
 
 class ProductRepositoryImpl implements IProductRepository {
@@ -27,6 +27,7 @@ class ProductRepositoryImpl implements IProductRepository {
   private collectionName = 'products';
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
+  private currentUser: any = null;
 
   private constructor() {}
 
@@ -37,7 +38,8 @@ class ProductRepositoryImpl implements IProductRepository {
     return ProductRepositoryImpl.instance;
   }
 
-  initialize() {
+  initialize(user?: any) {
+    this.currentUser = user;
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -60,6 +62,7 @@ class ProductRepositoryImpl implements IProductRepository {
     }
     this.isInitialized = false;
     this.products = [];
+    this.currentUser = null;
   }
 
   async getAll(): Promise<Product[]> {
@@ -75,12 +78,20 @@ class ProductRepositoryImpl implements IProductRepository {
     return this.products.filter(p => !p.isArchived);
   }
 
+  private checkAdminPermission() {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para realizar esta ação.');
+    }
+  }
+
   async add(productData: Omit<Product, 'id'>): Promise<Product> {
+    this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), productData);
     return { id: docRef.id, ...productData };
   }
 
   async update(updatedProduct: Product): Promise<Product> {
+    this.checkAdminPermission();
     const { id, ...data } = updatedProduct;
     const docRef = doc(db, this.collectionName, id);
     await updateDoc(docRef, data as any);
@@ -88,6 +99,7 @@ class ProductRepositoryImpl implements IProductRepository {
   }
 
   async remove(productId: string): Promise<void> {
+    this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, productId);
     await updateDoc(docRef, { isArchived: true });
   }

@@ -1,6 +1,7 @@
 // src/ui/screens/BoatsScreen.tsx
 import React from 'react';
 import { useBoatsViewModel } from '../../viewmodels/useBoatsViewModel';
+import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Edit, Trash2, Anchor, Users, Ruler } from 'lucide-react';
 import type { Boat } from '../../core/domain/types';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -42,15 +43,19 @@ const BoatModal: React.FC<{
 
 export const BoatsScreen: React.FC = () => {
   const vm = useBoatsViewModel();
+  const { currentUser } = useAuth();
+  const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN';
 
   return (
     <div className="p-4 md:p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Configurar Lanchas</h1>
-        <button onClick={vm.openNewBoatModal} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
-          <Plus size={20} className="mr-2" />
-          Adicionar Lancha
-        </button>
+        {isAuthorized && (
+          <button onClick={vm.openNewBoatModal} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
+            <Plus size={20} className="mr-2" />
+            Adicionar Lancha
+          </button>
+        )}
       </div>
 
       {vm.isLoading ? (
@@ -72,14 +77,16 @@ export const BoatsScreen: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex space-x-2 self-end md:self-auto">
-                  <button onClick={() => vm.openEditBoatModal(boat)} className="p-2 text-gray-600 hover:text-blue-600">
-                    <Edit size={20} />
-                  </button>
-                  <button onClick={() => vm.handleDelete(boat.id)} className="p-2 text-gray-600 hover:text-red-600">
-                    <Trash2 size={20} />
-                  </button>
-                </div>
+                {isAuthorized && (
+                  <div className="flex space-x-2 self-end md:self-auto">
+                    <button onClick={() => vm.openEditBoatModal(boat)} className="p-2 text-gray-600 hover:text-blue-600">
+                      <Edit size={20} />
+                    </button>
+                    <button onClick={() => vm.handleDelete(boat.id)} className="p-2 text-gray-600 hover:text-red-600">
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

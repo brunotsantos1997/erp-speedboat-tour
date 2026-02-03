@@ -21,7 +21,7 @@ export interface IEventRepository {
   updateEvent(event: EventType): Promise<EventType>;
   getAll(): Promise<EventType[]>;
   dispose(): void;
-  initialize(): void;
+  initialize(user?: any): void;
 }
 
 class EventRepositoryImpl implements IEventRepository {
@@ -29,10 +29,12 @@ class EventRepositoryImpl implements IEventRepository {
   private collectionName = 'events';
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
+  private currentUser: any = null;
 
   constructor() {}
 
-  initialize() {
+  initialize(user?: any) {
+    this.currentUser = user;
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -55,6 +57,7 @@ class EventRepositoryImpl implements IEventRepository {
     }
     this.isInitialized = false;
     this.events = [];
+    this.currentUser = null;
   }
 
   async getById(eventId: string): Promise<EventType | undefined> {
@@ -103,6 +106,9 @@ class EventRepositoryImpl implements IEventRepository {
   }
 
   async add(eventData: Omit<EventType, 'id'>): Promise<EventType> {
+    if (!this.currentUser) {
+      throw new Error('Você deve estar logado para agendar eventos.');
+    }
     const allEvents = await this.getAll();
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
@@ -130,6 +136,12 @@ class EventRepositoryImpl implements IEventRepository {
   }
 
   async updateEvent(updatedEvent: EventType): Promise<EventType> {
+    if (!this.currentUser) {
+      throw new Error('Você deve estar logado para atualizar eventos.');
+    }
+    if (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN' && updatedEvent.createdByUserId !== this.currentUser.id) {
+      throw new Error('Você não tem permissão para alterar este evento.');
+    }
     const allEvents = await this.getAll();
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;

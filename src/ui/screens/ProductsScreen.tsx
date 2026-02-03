@@ -1,6 +1,7 @@
 // src/ui/screens/ProductsScreen.tsx
 import React from 'react';
 import { useProductsViewModel } from '../../viewmodels/useProductsViewModel';
+import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../core/domain/types';
 import IconPicker from '../components/IconPicker';
@@ -60,15 +61,19 @@ const ProductModal: React.FC<{
 
 export const ProductsScreen: React.FC = () => {
   const vm = useProductsViewModel();
+  const { currentUser } = useAuth();
+  const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN';
 
   return (
     <div className="p-4 md:p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Configurar Produtos</h1>
-        <button onClick={vm.openNewProductModal} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
-          <Plus size={20} className="mr-2" />
-          Adicionar Produto
-        </button>
+        {isAuthorized && (
+          <button onClick={vm.openNewProductModal} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow">
+            <Plus size={20} className="mr-2" />
+            Adicionar Produto
+          </button>
+        )}
       </div>
 
       {vm.isLoading ? (
@@ -94,14 +99,16 @@ export const ProductsScreen: React.FC = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex space-x-2 self-end md:self-auto">
-                  <button onClick={() => vm.openEditProductModal(product)} className="p-2 text-gray-600 hover:text-blue-600">
-                    <Edit size={20} />
-                  </button>
-                  <button onClick={() => vm.handleDelete(product.id)} className="p-2 text-gray-600 hover:text-red-600">
-                    <Trash2 size={20} />
-                  </button>
-                </div>
+                {isAuthorized && (
+                  <div className="flex space-x-2 self-end md:self-auto">
+                    <button onClick={() => vm.openEditProductModal(product)} className="p-2 text-gray-600 hover:text-blue-600">
+                      <Edit size={20} />
+                    </button>
+                    <button onClick={() => vm.handleDelete(product.id)} className="p-2 text-gray-600 hover:text-red-600">
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

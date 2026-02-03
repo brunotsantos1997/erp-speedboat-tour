@@ -27,7 +27,7 @@ export const CommissionReportScreen: React.FC = () => {
     return <p style={{ color: 'red' }}>Erro: {error}</p>;
   }
 
-  if (!currentUser || (currentUser.role !== 'OWNER' && currentUser.role !== 'ADMIN')) {
+  if (!currentUser || (currentUser.role !== 'OWNER' && currentUser.role !== 'ADMIN' && currentUser.role !== 'SUPER_ADMIN')) {
     return (
       <div className="text-center p-8">
         <h1 className="text-2xl font-bold text-red-600">Acesso Negado</h1>

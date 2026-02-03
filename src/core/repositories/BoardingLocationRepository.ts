@@ -18,6 +18,7 @@ export class BoardingLocationRepository {
   private collectionName = 'boarding_locations';
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
+  private currentUser: any = null;
 
   private constructor() {}
 
@@ -28,7 +29,8 @@ export class BoardingLocationRepository {
     return BoardingLocationRepository.instance;
   }
 
-  initialize() {
+  initialize(user?: any) {
+    this.currentUser = user;
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -51,6 +53,7 @@ export class BoardingLocationRepository {
     }
     this.isInitialized = false;
     this.locations = [];
+    this.currentUser = null;
   }
 
   async getAll(): Promise<BoardingLocation[]> {
@@ -67,12 +70,20 @@ export class BoardingLocationRepository {
     return this.locations.filter(l => !l.isArchived);
   }
 
+  private checkAdminPermission() {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para realizar esta ação.');
+    }
+  }
+
   async add(location: Omit<BoardingLocation, 'id'>): Promise<BoardingLocation> {
+    this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), location);
     return { id: docRef.id, ...location };
   }
 
   async update(location: BoardingLocation): Promise<BoardingLocation> {
+    this.checkAdminPermission();
     const { id, ...data } = location;
     const docRef = doc(db, this.collectionName, id);
     await updateDoc(docRef, data as any);
@@ -80,6 +91,7 @@ export class BoardingLocationRepository {
   }
 
   async delete(id: string): Promise<void> {
+    this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, id);
     await updateDoc(docRef, { isArchived: true });
   }
