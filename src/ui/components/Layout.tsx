@@ -63,7 +63,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
             <span>Criar Passeio</span>
           </NavLink>
 
-          {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER') && (
+          {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN') && (
             <NavLink to="/admin/users" className={navLinkClass + ' justify-between'} onClick={onClose}>
               <div className="flex items-center">
                 <UserCog className="mr-3" />
@@ -77,7 +77,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
             </NavLink>
           )}
 
-          {(currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
+          {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
             <NavLink to="/commission-report" className={navLinkClass} onClick={onClose}>
               <TrendingUp className="mr-3" />
               <span>Relatório de Comissão</span>

@@ -23,9 +23,6 @@ export function UserManagementScreen() {
     setLoading(true);
     try {
       let allUsers = await getAllUsers();
-      if (currentUser?.role === 'SUPER_ADMIN') {
-        allUsers = allUsers.filter(user => user.role !== 'OWNER');
-      }
       const editableUsers = allUsers
         .filter(user => user.id !== currentUser?.id)
         .map(user => ({ ...user, commissionInput: (user.commissionPercentage ?? 0).toString() }));
@@ -42,6 +39,11 @@ export function UserManagementScreen() {
   }, [fetchUsers]);
 
   const handleStatusChange = async (userId: string, status: UserStatus) => {
+    const user = users.find(u => u.id === userId);
+    if (user?.role === 'OWNER' && currentUser?.role !== 'OWNER') {
+        alert('Você não tem permissão para alterar o status do proprietário.');
+        return;
+    }
     try {
       await updateUserStatus(userId, status);
       fetchUsers();
@@ -51,6 +53,11 @@ export function UserManagementScreen() {
   };
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
+    const user = users.find(u => u.id === userId);
+    if (user?.role === 'OWNER' && currentUser?.role !== 'OWNER') {
+        alert('Você não tem permissão para alterar o cargo do proprietário.');
+        return;
+    }
     try {
       await updateUserRole(userId, role);
       fetchUsers();

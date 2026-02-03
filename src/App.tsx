@@ -49,17 +49,19 @@ function App() {
             <Route path="clients" element={<ClientHistoryScreen />} />
             <Route path="profile" element={<ProfileScreen />} />
 
-            {/* Routes for SUPER_ADMIN and OWNER only */}
+            {/* Routes for SUPER_ADMIN and OWNER only (Sensitive Settings) */}
             <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'OWNER']} />}>
               <Route path="voucher-terms" element={<VoucherTermsScreen />} />
               <Route path="company-data" element={<CompanyDataScreen />} />
               <Route path="voucher-appearance" element={<VoucherAppearanceScreen />} />
               <Route path="rental-prices" element={<RentalPricesScreen />} />
-              <Route path="admin/users" element={<UserManagementScreen />} />
+              <Route path="commission-report" element={<CommissionReportScreen />} />
             </Route>
 
-            {/* Routes for ADMIN, SUPER_ADMIN and OWNER */}
-            <Route path="commission-report" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER']}><CommissionReportScreen /></ProtectedRoute>} />
+            {/* Routes for ADMIN, SUPER_ADMIN and OWNER (User management) */}
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER']} />}>
+              <Route path="admin/users" element={<UserManagementScreen />} />
+            </Route>
           </Route>
         </Route>
 

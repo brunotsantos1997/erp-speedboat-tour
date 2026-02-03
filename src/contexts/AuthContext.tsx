@@ -199,13 +199,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       throw new Error('Você não tem permissão para listar usuários.');
     }
     const querySnapshot = await getDocs(collection(db, 'profiles'));
-    return querySnapshot.docs.map(doc => ({ ...doc.data() as User, id: doc.id }));
+    let users = querySnapshot.docs.map(doc => ({ ...doc.data() as User, id: doc.id }));
+
+    // Super Admins cannot see Owners
+    if (currentUser.role === 'SUPER_ADMIN') {
+      users = users.filter(u => u.role !== 'OWNER');
+    }
+
+    return users;
   };
 
   const updateUserStatus = async (userId: string, status: UserStatus): Promise<void> => {
     if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
       throw new Error('Você não tem permissão para alterar o status de usuários.');
     }
+
+    // Check if target user is OWNER
+    const targetSnap = await getDoc(doc(db, 'profiles', userId));
+    const targetData = targetSnap.data() as User;
+    if (targetData?.role === 'OWNER' && currentUser.role !== 'OWNER') {
+      throw new Error('Você não tem permissão para alterar o status do proprietário.');
+    }
+
     const profileRef = doc(db, 'profiles', userId);
     await updateDoc(profileRef, { status });
 
@@ -218,6 +233,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
       throw new Error('Você não tem permissão para alterar cargos.');
     }
+
+    // Check if target user is OWNER
+    const targetSnap = await getDoc(doc(db, 'profiles', userId));
+    const targetData = targetSnap.data() as User;
+    if (targetData?.role === 'OWNER' && currentUser.role !== 'OWNER') {
+      throw new Error('Você não tem permissão para alterar o cargo do proprietário.');
+    }
+
     const profileRef = doc(db, 'profiles', userId);
     await updateDoc(profileRef, { role });
   };

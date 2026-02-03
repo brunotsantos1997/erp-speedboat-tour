@@ -30,8 +30,10 @@ service cloud.firestore {
     // Regras para a coleção de perfis
     match /profiles/{userId} {
       // Qualquer usuário logado e aprovado pode ler perfis (necessário para listagens e relatórios)
-      // Idealmente, restringir o que pode ser lido se não for o dono ou admin
-      allow read: if isApproved();
+      // Super Admin não pode ler o perfil do Owner
+      allow read: if isApproved() && (
+        resource.data.role != 'OWNER' || isOwner() || request.auth.uid == userId
+      );
 
       // Criar perfil: Apenas se o UID bater com o usuário autenticado (autocadastro)
       // E forçando status PENDING e role ADMIN por padrão
@@ -46,8 +48,8 @@ service cloud.firestore {
          !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['role', 'status', 'commissionPercentage', 'email']))
         ||
-        // Administradores podem atualizar quase tudo
-        (isOwner() && userId != request.auth.uid) // Evita que o dono mude o próprio status por acidente
+        // Administradores podem atualizar quase tudo, mas Super Admin não mexe no Owner
+        (isOwner() && userId != request.auth.uid && (resource.data.role != 'OWNER' || getUserData().role == 'OWNER'))
       );
     }
 
