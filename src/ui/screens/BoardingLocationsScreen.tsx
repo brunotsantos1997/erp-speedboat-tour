@@ -2,12 +2,14 @@
 import React, { useState } from 'react';
 import { useBoardingLocationsViewModel } from '../../viewmodels/useBoardingLocationsViewModel';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToastContext } from '../contexts/ToastContext';
 import type { BoardingLocation } from '../../core/domain/types';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export const BoardingLocationsScreen: React.FC = () => {
   const { locations, isLoading, addLocation, updateLocation, deleteLocation, isConfirmModalOpen, confirmDelete, closeConfirmDeleteModal } = useBoardingLocationsViewModel();
   const { currentUser } = useAuth();
+  const { showToast } = useToastContext();
   const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN';
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<Partial<BoardingLocation> | null>(null);
@@ -22,13 +24,29 @@ export const BoardingLocationsScreen: React.FC = () => {
     setCurrentLocation(null);
   };
 
-  const handleSave = (locationData: Omit<BoardingLocation, 'id'>) => {
+  const handleSave = async (locationData: Omit<BoardingLocation, 'id'>) => {
+    let result;
     if (currentLocation && 'id' in currentLocation) {
-      updateLocation({ ...locationData, id: currentLocation.id as string });
+      result = await updateLocation({ ...locationData, id: currentLocation.id as string });
     } else {
-      addLocation(locationData);
+      result = await addLocation(locationData);
     }
-    closeModal();
+
+    if (result && !result.success) {
+      showToast(result.error || 'Erro ao salvar local.');
+    } else {
+      showToast('Local salvo com sucesso!');
+      closeModal();
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    const result = await confirmDelete();
+    if (result && !result.success) {
+      showToast(result.error || 'Erro ao excluir local.');
+    } else {
+      showToast('Local excluído com sucesso!');
+    }
   };
 
   if (isLoading) {
@@ -87,7 +105,7 @@ export const BoardingLocationsScreen: React.FC = () => {
         isOpen={isConfirmModalOpen}
         title="Confirmar Exclusão"
         message="Tem certeza de que deseja excluir este local de embarque? Esta ação não pode ser desfeita."
-        onConfirm={confirmDelete}
+        onConfirm={handleConfirmDelete}
         onCancel={closeConfirmDeleteModal}
       />
     </div>

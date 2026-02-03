@@ -2,6 +2,7 @@
 import React from 'react';
 import { useProductsViewModel } from '../../viewmodels/useProductsViewModel';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToastContext } from '../contexts/ToastContext';
 import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../core/domain/types';
 import IconPicker from '../components/IconPicker';
@@ -62,7 +63,26 @@ const ProductModal: React.FC<{
 export const ProductsScreen: React.FC = () => {
   const vm = useProductsViewModel();
   const { currentUser } = useAuth();
+  const { showToast } = useToastContext();
   const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN';
+
+  const handleSave = async () => {
+    const result = await vm.handleSave();
+    if (result && !result.success) {
+      showToast(result.error || 'Erro ao salvar produto.');
+    } else {
+      showToast('Produto salvo com sucesso!');
+    }
+  };
+
+  const confirmDelete = async () => {
+    const result = await vm.confirmDelete();
+    if (result && !result.success) {
+      showToast(result.error || 'Erro ao excluir produto.');
+    } else {
+      showToast('Produto excluído com sucesso!');
+    }
+  };
 
   return (
     <div className="p-4 md:p-6">
@@ -118,7 +138,7 @@ export const ProductsScreen: React.FC = () => {
       <ProductModal
         isOpen={vm.isModalOpen}
         product={vm.editingProduct}
-        onSave={vm.handleSave}
+        onSave={handleSave}
         onClose={vm.closeModal}
         onUpdate={vm.updateEditingProduct}
       />
@@ -126,7 +146,7 @@ export const ProductsScreen: React.FC = () => {
         isOpen={vm.isConfirmModalOpen}
         title="Confirmar Exclusão"
         message="Tem certeza de que deseja excluir este produto? Esta ação não pode ser desfeita."
-        onConfirm={vm.confirmDelete}
+        onConfirm={confirmDelete}
         onCancel={vm.closeConfirmDeleteModal}
       />
     </div>

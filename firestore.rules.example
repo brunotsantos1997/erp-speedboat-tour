@@ -66,17 +66,17 @@ service cloud.firestore {
     // Regras para Cadastros (Produtos, Barcos, Locais)
     match /products/{id} {
       allow read: if isApproved();
-      allow write: if isOwner();
+      allow write: if isOwner() || hasRole(['ADMIN']);
     }
 
     match /boats/{id} {
       allow read: if isApproved();
-      allow write: if isOwner();
+      allow write: if isOwner() || hasRole(['ADMIN']);
     }
 
     match /boarding_locations/{id} {
       allow read: if isApproved();
-      allow write: if isOwner();
+      allow write: if isOwner() || hasRole(['ADMIN']);
     }
 
     // Regras para Configurações da Empresa e Vouchers
@@ -98,6 +98,14 @@ service cloud.firestore {
     // Regras para Clientes
     match /clients/{clientId} {
       allow read, write: if isApproved();
+    }
+
+    // Regras para Logs de Auditoria
+    match /audit_logs/{logId} {
+      // Apenas criação é permitida pelo frontend
+      allow create: if isAuthenticated();
+      // Leitura permitida apenas para Owner e Super Admin
+      allow read: if isOwner();
     }
   }
 }

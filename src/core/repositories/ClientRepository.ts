@@ -8,10 +8,12 @@ import {
   onSnapshot,
   query,
   deleteDoc,
+  getDoc,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { ClientProfile } from '../domain/types';
+import { auditLogRepository } from './AuditLogRepository';
 
 export interface IClientRepository {
   search(term: string): Promise<ClientProfile[]>;
@@ -95,14 +97,40 @@ class ClientRepositoryImpl implements IClientRepository {
       totalTrips: 0,
     };
     const docRef = await addDoc(collection(db, this.collectionName), data);
-    return { id: docRef.id, ...data };
+    const newClient = { id: docRef.id, ...data };
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'CREATE',
+      collection: this.collectionName,
+      docId: docRef.id,
+      newData: newClient,
+    });
+
+    return newClient;
   }
 
   async update(updatedClient: ClientProfile): Promise<ClientProfile> {
     this.checkPermission();
     const { id, ...data } = updatedClient;
     const docRef = doc(db, this.collectionName, id);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await updateDoc(docRef, data as any);
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'UPDATE',
+      collection: this.collectionName,
+      docId: id,
+      oldData,
+      newData: updatedClient,
+    });
+
     return updatedClient;
   }
 
@@ -111,7 +139,20 @@ class ClientRepositoryImpl implements IClientRepository {
       throw new Error('Você não tem permissão para excluir clientes.');
     }
     const docRef = doc(db, this.collectionName, clientId);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await deleteDoc(docRef);
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'DELETE',
+      collection: this.collectionName,
+      docId: clientId,
+      oldData,
+    });
   }
 }
 

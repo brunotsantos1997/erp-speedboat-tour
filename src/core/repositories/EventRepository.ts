@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { EventType } from '../domain/types';
+import { auditLogRepository } from './AuditLogRepository';
 
 export interface IEventRepository {
   getById(eventId: string): Promise<EventType | undefined>;
@@ -132,7 +133,18 @@ class EventRepositoryImpl implements IEventRepository {
     }
 
     const docRef = await addDoc(collection(db, this.collectionName), eventData);
-    return { ...eventData, id: docRef.id };
+    const newEvent = { ...eventData, id: docRef.id };
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'CREATE',
+      collection: this.collectionName,
+      docId: docRef.id,
+      newData: newEvent,
+    });
+
+    return newEvent;
   }
 
   async updateEvent(updatedEvent: EventType): Promise<EventType> {
@@ -161,7 +173,22 @@ class EventRepositoryImpl implements IEventRepository {
 
     const { id, ...data } = updatedEvent;
     const docRef = doc(db, this.collectionName, id);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await updateDoc(docRef, data as any);
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'UPDATE',
+      collection: this.collectionName,
+      docId: id,
+      oldData,
+      newData: updatedEvent,
+    });
+
     return updatedEvent;
   }
 }

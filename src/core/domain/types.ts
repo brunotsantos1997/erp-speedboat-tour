@@ -146,3 +146,15 @@ export interface CommissionReportEntry {
   commissionValue: number;
   clientName: string;
 }
+
+export interface AuditLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT';
+  collection?: string;
+  docId?: string;
+  oldData?: any;
+  newData?: any;
+  timestamp: number;
+}

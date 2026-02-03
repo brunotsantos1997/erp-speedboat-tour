@@ -41,28 +41,30 @@ export function UserManagementScreen() {
   const handleStatusChange = async (userId: string, status: UserStatus) => {
     const user = users.find(u => u.id === userId);
     if (user?.role === 'OWNER' && currentUser?.role !== 'OWNER') {
-        alert('Você não tem permissão para alterar o status do proprietário.');
+        setToastMessage('Você não tem permissão para alterar o status do proprietário.');
         return;
     }
     try {
       await updateUserStatus(userId, status);
+      setToastMessage('Status do usuário atualizado!');
       fetchUsers();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'An error occurred.');
+      setToastMessage(err instanceof Error ? err.message : 'Erro ao atualizar status.');
     }
   };
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
     const user = users.find(u => u.id === userId);
     if (user?.role === 'OWNER' && currentUser?.role !== 'OWNER') {
-        alert('Você não tem permissão para alterar o cargo do proprietário.');
+        setToastMessage('Você não tem permissão para alterar o cargo do proprietário.');
         return;
     }
     try {
       await updateUserRole(userId, role);
+      setToastMessage('Cargo do usuário atualizado!');
       fetchUsers();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'An error occurred.');
+      setToastMessage(err instanceof Error ? err.message : 'Erro ao atualizar cargo.');
     }
   };
 
@@ -177,10 +179,15 @@ export function UserManagementScreen() {
                     value={user.role}
                     onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
                     className="border border-gray-300 rounded-md p-1"
-                    disabled={ (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') || user.role === 'OWNER' }
+                    disabled={
+                        (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') ||
+                        (currentUser?.role === 'ADMIN' && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) ||
+                        user.role === 'OWNER'
+                    }
                   >
+                    <option value="SELLER">SELLER</option>
                     <option value="ADMIN">ADMIN</option>
-                    {currentUser?.role === 'OWNER' && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
+                    {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && <option value="SUPER_ADMIN">SUPER_ADMIN</option>}
                   </select>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

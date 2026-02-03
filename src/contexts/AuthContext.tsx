@@ -26,6 +26,7 @@ import {
 } from 'firebase/firestore';
 import bcrypt from 'bcryptjs';
 import DOMPurify from 'dompurify';
+import { auditLogRepository } from '../core/repositories/AuditLogRepository';
 import { productRepository } from '../core/repositories/ProductRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
 import { boardingLocationRepository } from '../core/repositories/BoardingLocationRepository';
@@ -155,6 +156,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const user = { ...profileData, id: firebaseUser.uid };
     setCurrentUser(user);
     initializeRepositories(user);
+
+    await auditLogRepository.log({
+      userId: user.id,
+      userName: user.name,
+      action: 'LOGIN',
+    });
+
     return user;
   };
 
@@ -183,6 +191,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    if (currentUser) {
+      await auditLogRepository.log({
+        userId: currentUser.id,
+        userName: currentUser.name,
+        action: 'LOGOUT',
+      });
+    }
     setCurrentUser(null);
     disposeRepositories();
     await signOut(auth);
@@ -195,34 +210,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getAllUsers = async (): Promise<User[]> => {
-    if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
+    if (!currentUser || (currentUser.role === 'SELLER')) {
       throw new Error('Você não tem permissão para listar usuários.');
     }
     const querySnapshot = await getDocs(collection(db, 'profiles'));
     let users = querySnapshot.docs.map(doc => ({ ...doc.data() as User, id: doc.id }));
 
-    // Super Admins cannot see Owners
+    // hierarchy restrictions
     if (currentUser.role === 'SUPER_ADMIN') {
       users = users.filter(u => u.role !== 'OWNER');
+    } else if (currentUser.role === 'ADMIN') {
+      users = users.filter(u => u.role !== 'OWNER' && u.role !== 'SUPER_ADMIN');
     }
 
     return users;
   };
 
   const updateUserStatus = async (userId: string, status: UserStatus): Promise<void> => {
-    if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
+    if (!currentUser || (currentUser.role === 'SELLER')) {
       throw new Error('Você não tem permissão para alterar o status de usuários.');
     }
 
-    // Check if target user is OWNER
-    const targetSnap = await getDoc(doc(db, 'profiles', userId));
+    const profileRef = doc(db, 'profiles', userId);
+    const targetSnap = await getDoc(profileRef);
     const targetData = targetSnap.data() as User;
+
     if (targetData?.role === 'OWNER' && currentUser.role !== 'OWNER') {
       throw new Error('Você não tem permissão para alterar o status do proprietário.');
     }
+    if (targetData?.role === 'SUPER_ADMIN' && currentUser.role === 'ADMIN') {
+      throw new Error('Você não tem permissão para alterar o status de um Super Administrador.');
+    }
 
-    const profileRef = doc(db, 'profiles', userId);
     await updateDoc(profileRef, { status });
+
+    await auditLogRepository.log({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'UPDATE',
+      collection: 'profiles',
+      docId: userId,
+      oldData: { ...targetData, id: userId },
+      newData: { ...targetData, id: userId, status },
+    });
 
     if (currentUser?.id === userId) {
       setCurrentUser(prev => prev ? { ...prev, status } : null);
@@ -230,30 +260,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserRole = async (userId: string, role: UserRole): Promise<void> => {
-    if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
+    if (!currentUser || (currentUser.role === 'SELLER')) {
       throw new Error('Você não tem permissão para alterar cargos.');
     }
 
-    // Check if target user is OWNER
-    const targetSnap = await getDoc(doc(db, 'profiles', userId));
+    const profileRef = doc(db, 'profiles', userId);
+    const targetSnap = await getDoc(profileRef);
     const targetData = targetSnap.data() as User;
+
     if (targetData?.role === 'OWNER' && currentUser.role !== 'OWNER') {
       throw new Error('Você não tem permissão para alterar o cargo do proprietário.');
     }
+    if (targetData?.role === 'SUPER_ADMIN' && currentUser.role === 'ADMIN') {
+      throw new Error('Você não tem permissão para alterar o cargo de um Super Administrador.');
+    }
 
-    const profileRef = doc(db, 'profiles', userId);
     await updateDoc(profileRef, { role });
+
+    await auditLogRepository.log({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'UPDATE',
+      collection: 'profiles',
+      docId: userId,
+      oldData: { ...targetData, id: userId },
+      newData: { ...targetData, id: userId, role },
+    });
   };
 
   const updateUserCommission = async (userId: string, commission: number): Promise<void> => {
-    if (!currentUser || (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'OWNER')) {
+    if (!currentUser || (currentUser.role === 'SELLER')) {
       throw new Error('Você não tem permissão para alterar comissões.');
     }
     if (commission < 0 || commission > 100) {
       throw new Error('A porcentagem de comissão deve estar entre 0 e 100.');
     }
     const profileRef = doc(db, 'profiles', userId);
+    const targetSnap = await getDoc(profileRef);
+    const targetData = targetSnap.data() as User;
+
     await updateDoc(profileRef, { commissionPercentage: commission });
+
+    await auditLogRepository.log({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'UPDATE',
+      collection: 'profiles',
+      docId: userId,
+      oldData: { ...targetData, id: userId },
+      newData: { ...targetData, id: userId, commissionPercentage: commission },
+    });
   };
 
   const requestPasswordReset = async (email: string): Promise<User | null> => {
@@ -339,7 +395,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (auth.currentUser) await firebaseUpdatePassword(auth.currentUser, data.newPassword);
     }
 
+    const oldSnap = await getDoc(profileRef);
+    const oldData = oldSnap.data();
+
     await updateDoc(profileRef, updates);
+
+    await auditLogRepository.log({
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'UPDATE',
+      collection: 'profiles',
+      docId: userId,
+      oldData: { ...oldData, id: userId },
+      newData: { ...oldData, ...updates, id: userId },
+    });
 
     if (currentUser?.id === userId) {
       setCurrentUser(prev => prev ? { ...prev, ...updates } : null);

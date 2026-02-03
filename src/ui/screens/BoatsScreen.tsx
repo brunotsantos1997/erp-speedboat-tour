@@ -2,6 +2,7 @@
 import React from 'react';
 import { useBoatsViewModel } from '../../viewmodels/useBoatsViewModel';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToastContext } from '../contexts/ToastContext';
 import { Plus, Edit, Trash2, Anchor, Users, Ruler } from 'lucide-react';
 import type { Boat } from '../../core/domain/types';
 import { ConfirmationModal } from '../components/ConfirmationModal';
@@ -44,7 +45,26 @@ const BoatModal: React.FC<{
 export const BoatsScreen: React.FC = () => {
   const vm = useBoatsViewModel();
   const { currentUser } = useAuth();
+  const { showToast } = useToastContext();
   const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN';
+
+  const handleSave = async () => {
+    const result = await vm.handleSave();
+    if (result && !result.success) {
+      showToast(result.error || 'Erro ao salvar lancha.');
+    } else {
+      showToast('Lancha salva com sucesso!');
+    }
+  };
+
+  const confirmDelete = async () => {
+    const result = await vm.confirmDelete();
+    if (result && !result.success) {
+      showToast(result.error || 'Erro ao excluir lancha.');
+    } else {
+      showToast('Lancha excluída com sucesso!');
+    }
+  };
 
   return (
     <div className="p-4 md:p-6">
@@ -96,7 +116,7 @@ export const BoatsScreen: React.FC = () => {
       <BoatModal
         isOpen={vm.isModalOpen}
         boat={vm.editingBoat}
-        onSave={vm.handleSave}
+        onSave={handleSave}
         onClose={vm.closeModal}
         onUpdate={vm.updateEditingBoat}
       />
@@ -104,7 +124,7 @@ export const BoatsScreen: React.FC = () => {
         isOpen={vm.isConfirmModalOpen}
         title="Confirmar Exclusão"
         message="Tem certeza de que deseja excluir esta embarcação? Esta ação não pode ser desfeita."
-        onConfirm={vm.confirmDelete}
+        onConfirm={confirmDelete}
         onCancel={vm.closeConfirmDeleteModal}
       />
     </div>

@@ -5,12 +5,14 @@ import {
   addDoc,
   updateDoc,
   doc,
+  getDoc,
   onSnapshot,
   query,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Boat } from '../domain/types';
+import { auditLogRepository } from './AuditLogRepository';
 
 export interface IBoatRepository {
   getAll(): Promise<Boat[]>;
@@ -87,21 +89,61 @@ class BoatRepositoryImpl implements IBoatRepository {
   async add(boatData: Omit<Boat, 'id'>): Promise<Boat> {
     this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), boatData);
-    return { id: docRef.id, ...boatData };
+    const newBoat = { id: docRef.id, ...boatData };
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'CREATE',
+      collection: this.collectionName,
+      docId: docRef.id,
+      newData: newBoat,
+    });
+
+    return newBoat;
   }
 
   async update(updatedBoat: Boat): Promise<Boat> {
     this.checkAdminPermission();
     const { id, ...data } = updatedBoat;
     const docRef = doc(db, this.collectionName, id);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await updateDoc(docRef, data as any);
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'UPDATE',
+      collection: this.collectionName,
+      docId: id,
+      oldData,
+      newData: updatedBoat,
+    });
+
     return updatedBoat;
   }
 
   async remove(boatId: string): Promise<void> {
     this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, boatId);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await updateDoc(docRef, { isArchived: true });
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'DELETE',
+      collection: this.collectionName,
+      docId: boatId,
+      oldData,
+      newData: { ...oldData, isArchived: true },
+    });
   }
 }
 
