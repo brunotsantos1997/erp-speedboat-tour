@@ -4,39 +4,18 @@ import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Pac
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
 import { useToastContext } from '../../ui/contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
 import type { Product, ClientProfile } from '../../core/domain/types';
+import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
+import { MoneyInput } from '../components/MoneyInput';
+import { CustomTimePicker } from '../components/CustomTimePicker';
+import { EndTimePicker } from '../components/EndTimePicker';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { ptBR } from 'date-fns/locale';
 
 // --- Components ---
 
-const TimePicker: React.FC<{
-  id?: string;
-  label: string;
-  name: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  disabled?: boolean;
-}> = ({ id, label, name, value, onChange, options, disabled }) => {
-  const selectId = id || name;
-  return (
-    <div>
-      <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <select
-        id={selectId}
-        name={name}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
-      >
-        {options.map(time => <option key={time} value={time}>{time}</option>)}
-      </select>
-    </div>
-  );
-};
 
 
 const DynamicIcon = ({ name, ...props }: { name: string } & LucideProps) => {
@@ -84,6 +63,7 @@ const NumericInput: React.FC<{
         type="number"
         value={value}
         onChange={handleChange}
+        onFocus={(e) => e.target.select()}
         min={min}
         max={max}
         step={step}
@@ -112,10 +92,40 @@ const NewClientModal: React.FC<{
   phone: string;
   setName: (name: string) => void;
   setPhone: (phone: string) => void;
-  onSave: () => void;
+  onSave: () => Promise<void> | void;
   onClose: () => void;
-}> = ({ isOpen, editingClient, name, phone, setName, setPhone, onSave, onClose }) => {
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+}> = ({ isOpen, editingClient, name, phone, setName, setPhone, onSave, onClose, showToast }) => {
   if (!isOpen) return null;
+
+  const formatPhone = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Limit to 13 digits (55 + 2 for DDD + 9 for number)
+    const limited = digits.slice(0, 13);
+
+    // +55 (99) 99999-9999
+    let formatted = '';
+    if (limited.length > 0) {
+      formatted = '+' + limited.slice(0, 2);
+    }
+    if (limited.length > 2) {
+      formatted += ' (' + limited.slice(2, 4);
+    }
+    if (limited.length > 4) {
+      formatted += ') ' + limited.slice(4, 9);
+    }
+    if (limited.length > 9) {
+      formatted += '-' + limited.slice(9, 13);
+    }
+    return formatted;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhone(e.target.value);
+    setPhone(formatted);
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -131,26 +141,29 @@ const NewClientModal: React.FC<{
             onChange={(e) => setName(e.target.value)}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
-          <InputMask
-            mask="+55 (99) 99999-9999"
+          <input
+            type="tel"
+            placeholder="Telefone (WhatsApp)"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          >
-            {(inputProps: any) => (
-              <input
-                {...inputProps}
-                type="tel"
-                placeholder="Telefone (WhatsApp)"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
-            )}
-          </InputMask>
+            onChange={handlePhoneChange}
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
         </div>
         <div className="flex justify-end space-x-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
             Cancelar
           </button>
-          <button onClick={onSave} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button
+            onClick={async () => {
+              try {
+                await onSave();
+              } catch (error) {
+                console.error(error);
+                showToast('Erro ao salvar cliente. Verifique os dados e tente novamente.', 'error');
+              }
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
             {editingClient ? 'Atualizar' : 'Salvar Cliente'}
           </button>
         </div>
@@ -164,6 +177,7 @@ const NewClientModal: React.FC<{
 export const CreateEventScreen: React.FC = () => {
   const vm = useCreateEventViewModel();
   const { showToast } = useToastContext();
+  const navigate = useNavigate();
   const isProductSelected = (product: Product) => vm.selectedProducts.some(p => p.id === product.id);
 
   const bookedDays = vm.scheduledEvents.map(event => new Date(event.date));
@@ -261,8 +275,8 @@ export const CreateEventScreen: React.FC = () => {
                       <p className="font-semibold">{product.name}</p>
                       <p className="text-sm text-gray-500">
                         {product.pricingType === 'HOURLY'
-                          ? `R$ ${product.hourlyPrice?.toFixed(2)} / hora`
-                          : `R$ ${(product.price || 0).toFixed(2)}`}
+                          ? `${formatCurrencyBRL(product.hourlyPrice || 0)} / hora`
+                          : `${formatCurrencyBRL(product.price || 0)}`}
                         {product.pricingType === 'PER_PERSON' && ' / pessoa'}
                       </p>
                     </div>
@@ -286,8 +300,8 @@ export const CreateEventScreen: React.FC = () => {
                             <p className="font-semibold">{product.name}</p>
                             <p className={`text-sm ${product.isCourtesy ? 'line-through text-gray-400' : 'text-gray-600'}`}>
                               {product.pricingType === 'HOURLY'
-                                ? `R$ ${product.hourlyPrice?.toFixed(2)} / hora`
-                                : `R$ ${(product.price || 0).toFixed(2)}`}
+                                ? `${formatCurrencyBRL(product.hourlyPrice || 0)} / hora`
+                                : `${formatCurrencyBRL(product.price || 0)}`}
                               {product.pricingType === 'PER_PERSON' && ` x ${vm.passengerCount} passageiros`}
                             </p>
                           </div>
@@ -302,20 +316,20 @@ export const CreateEventScreen: React.FC = () => {
 
                         {product.pricingType === 'HOURLY' && (
                           <div className="grid grid-cols-2 gap-4 mt-3">
-                            <TimePicker
-                              label="Início"
-                              name={`product-start-time-${product.id}`}
-                              value={selectedProd?.startTime || ''}
-                              onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'start')}
-                              options={vm.availableTimeSlots}
-                            />
-                            <TimePicker
-                              label="Fim"
-                              name={`product-end-time-${product.id}`}
-                              value={selectedProd?.endTime || ''}
-                              onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'end')}
-                              options={vm.availableTimeSlots.filter(t => t > (selectedProd?.startTime || ''))}
-                            />
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Início</label>
+                              <CustomTimePicker
+                                value={selectedProd?.startTime || '09:00'}
+                                onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'start')}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Fim</label>
+                              <CustomTimePicker
+                                value={selectedProd?.endTime || '10:00'}
+                                onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'end')}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -330,22 +344,26 @@ export const CreateEventScreen: React.FC = () => {
                       <button onClick={() => vm.updateDiscountType('PERCENTAGE')} className={`w-full px-4 py-2 text-sm rounded-r-md ${vm.discount.type === 'PERCENTAGE' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>%</button>
                     </div>
                     <div className="col-span-2">
-                      <NumericInput
-                        value={vm.discount.value}
-                        onChange={vm.updateDiscountValue}
-                        min={0}
-                        step={vm.discount.type === 'PERCENTAGE' ? 1 : 10}
-                      />
+                      {vm.discount.type === 'PERCENTAGE' ? (
+                        <NumericInput
+                          value={vm.discount.value}
+                          onChange={vm.updateDiscountValue}
+                          min={0}
+                        />
+                      ) : (
+                        <MoneyInput
+                          value={vm.discount.value}
+                          onChange={vm.updateDiscountValue}
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="mt-6">
                   <h3 className="text-md font-semibold mb-2">Taxa</h3>
-                  <NumericInput
+                  <MoneyInput
                     value={vm.tax}
                     onChange={vm.updateTax}
-                    min={0}
-                    step={10}
                   />
                 </div>
               </section>
@@ -397,24 +415,23 @@ export const CreateEventScreen: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <TimePicker
-                      id="startTime"
-                      label="Início"
-                      name="startTime"
-                      value={vm.startTime}
-                      onChange={vm.setStartTime}
-                      options={vm.availableTimeSlots}
-                      disabled={vm.isBusinessClosed}
-                    />
-                    <TimePicker
-                      id="endTime"
-                      label="Término"
-                      name="endTime"
-                      value={vm.endTime}
-                      onChange={vm.setEndTime}
-                      options={vm.availableEndTimeSlots}
-                      disabled={vm.isBusinessClosed}
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Início</label>
+                      <CustomTimePicker
+                        value={vm.startTime}
+                        onChange={vm.setStartTime}
+                        disabled={vm.isBusinessClosed}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Término</label>
+                      <EndTimePicker
+                        value={vm.endTime}
+                        onChange={vm.setEndTime}
+                        options={vm.availableEndTimeSlots}
+                        disabled={vm.isBusinessClosed}
+                      />
+                    </div>
                   </>
                 )}
               </div>
@@ -443,41 +460,48 @@ export const CreateEventScreen: React.FC = () => {
         </div>
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-10">
+      <footer className="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-gray-200 shadow-lg z-10">
         <div className="max-w-7xl mx-auto p-4 flex justify-between items-center">
           {/* Pricing Summary */}
           <div className="flex-grow pr-4">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Custo do Aluguel da Lancha</span>
-              <span className="font-medium">R$ {vm.boatRentalCost.toFixed(2)}</span>
+              <span className="font-medium">{formatCurrencyBRL(vm.boatRentalCost)}</span>
             </div>
             <div className="flex justify-between items-center text-sm mb-1">
               <span className="text-gray-600">Subtotal (Produtos)</span>
-              <span className="font-medium">R$ {(vm.subtotal - vm.boatRentalCost).toFixed(2)}</span>
+              <span className="font-medium">{formatCurrencyBRL(vm.subtotal - vm.boatRentalCost)}</span>
             </div>
             <div className="flex justify-between items-center text-sm mb-2 text-red-600">
               <span>Desconto</span>
-              <span className="font-medium">- R$ {vm.totalDiscount.toFixed(2)}</span>
+              <span className="font-medium">- {formatCurrencyBRL(vm.totalDiscount)}</span>
             </div>
             {vm.tax > 0 && (
               <div className="flex justify-between items-center text-sm text-green-600">
                 <span>Taxa</span>
-                <span className="font-medium">+ R$ {vm.tax.toFixed(2)}</span>
+                <span className="font-medium">+ {formatCurrencyBRL(vm.tax)}</span>
               </div>
             )}
             <div className="border-t border-gray-200 my-2"></div>
             <div className="flex justify-between items-center text-xl font-bold">
               <span>Total</span>
-              <span>R$ {vm.total.toFixed(2)}</span>
+              <span>{formatCurrencyBRL(vm.total)}</span>
             </div>
           </div>
           {/* Action Button */}
           <button
             onClick={() => {
-              vm.createEvent().then(() => {
+              vm.createEvent().then((client) => {
                 showToast(vm.editingEventId ? 'Passeio atualizado com sucesso!' : 'Passeio agendado com sucesso!');
-              }).catch(() => {
-                showToast('Ocorreu um erro ao salvar o passeio.');
+                if (client) {
+                  navigate(`/clients?clientId=${client.id}`);
+                }
+              }).catch((err) => {
+                if (err.message === 'Campos obrigatórios ausentes.') {
+                  showToast('Por favor, preencha todos os campos obrigatórios: Data, Cliente, Lancha e Local de Embarque.');
+                } else {
+                  showToast('Ocorreu um erro ao salvar o passeio: ' + (err.message || 'Erro desconhecido'));
+                }
               });
             }}
             className={`px-8 py-4 text-white rounded-lg text-lg font-bold shadow-lg transition-colors ${vm.isPreScheduled ? 'bg-orange-500 hover:bg-orange-600' : 'bg-green-600 hover:bg-green-700'}`}
@@ -496,6 +520,7 @@ export const CreateEventScreen: React.FC = () => {
         setPhone={vm.setNewClientPhone}
         onSave={vm.handleSaveClient}
         onClose={vm.handleCloseModal}
+        showToast={showToast}
       />
     </div>
   );

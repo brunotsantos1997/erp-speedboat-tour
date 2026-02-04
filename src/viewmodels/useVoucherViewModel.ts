@@ -33,28 +33,56 @@ export const useVoucherViewModel = () => {
       try {
         setIsLoading(true);
 
-        // This logic is now centralized in the view model
         const companyRepo = CompanyDataRepository.getInstance();
         const termsRepo = VoucherTermsRepository.getInstance();
         const appearanceRepo = VoucherAppearanceRepository.getInstance();
 
-        const [companyInfo, terms, appearance, eventData] = await Promise.all([
+        // Use Promise.allSettled to catch individual failures but try to proceed
+        const results = await Promise.allSettled([
           companyRepo.get(),
           termsRepo.get(),
           appearanceRepo.get(),
           eventRepository.getById(eventId),
         ]);
 
-        if (!eventData) {
-          setError('Evento não encontrado.');
+        const companyInfo = results[0].status === 'fulfilled' ? results[0].value : {
+          id: 'default',
+          cnpj: '',
+          phone: '',
+          appName: 'Voucher Online',
+          reservationFeePercentage: 30,
+          businessHours: {} as any,
+          eventIntervalMinutes: 30,
+        } as CompanyData;
+
+        const terms = results[1].status === 'fulfilled' ? results[1].value : {
+          id: 'default',
+          terms: '<p>Termos e condições de uso do voucher.</p>'
+        } as VoucherTerms;
+
+        const appearance = results[2].status === 'fulfilled' ? results[2].value : undefined;
+        const eventData = results[3].status === 'fulfilled' ? results[3].value : undefined;
+
+        if (results[3].status === 'rejected') {
+          const error = results[3].reason;
+          if (error?.code === 'permission-denied') {
+            setError('Acesso negado ao voucher. Verifique se o link está correto ou se as permissões do banco de dados permitem acesso público.');
+          } else {
+            setError('Falha ao buscar os detalhes do evento.');
+          }
           return;
         }
 
-        setCompanyData(companyInfo);
-        setVoucherTerms(terms);
-        setWatermark(appearance.watermarkImage);
+        if (!eventData) {
+          setError('Evento não encontrado ou ID inválido.');
+          return;
+        }
 
-        const feePercentage = (companyInfo.reservationFeePercentage || 30) / 100;
+        if (companyInfo) setCompanyData(companyInfo);
+        if (terms) setVoucherTerms(terms);
+        if (appearance) setWatermark(appearance?.watermarkImage || null);
+
+        const feePercentage = (companyInfo?.reservationFeePercentage || 30) / 100;
         const reservationFee = eventData.total * feePercentage;
         const remainingBalance = eventData.total - reservationFee;
 
@@ -75,7 +103,6 @@ export const useVoucherViewModel = () => {
     const element = document.getElementById('voucher-content');
     const button = document.getElementById('download-pdf-button');
     if (element && voucher) {
-      // Hide the button before generating the PDF
       if (button) button.style.display = 'none';
 
       const opt = {
@@ -87,7 +114,6 @@ export const useVoucherViewModel = () => {
       };
 
       html2pdf().from(element).set(opt).save().then(() => {
-        // Show the button again after the PDF is generated
         if (button) button.style.display = 'flex';
       });
     }

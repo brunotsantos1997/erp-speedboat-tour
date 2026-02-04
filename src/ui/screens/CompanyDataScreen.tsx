@@ -119,23 +119,8 @@ export const CompanyDataScreen: React.FC = () => {
                 name="reservationFeePercentage"
                 value={formData.reservationFeePercentage}
                 onChange={handleChange}
-                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="eventIntervalMinutes"
-                className="block text-lg font-medium text-gray-700"
-              >
-                Intervalo Mínimo entre Eventos (minutos)
-              </label>
-              <input
-                type="number"
-                id="eventIntervalMinutes"
-                name="eventIntervalMinutes"
-                value={formData.eventIntervalMinutes}
-                onChange={handleChange}
-                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                onFocus={(e) => e.target.select()}
+                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
           </div>
