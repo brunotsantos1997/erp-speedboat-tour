@@ -107,22 +107,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Mock mode for verification
-    if (localStorage.getItem('MOCK_MODE') === 'true') {
-      const mockUser: User = {
-        id: 'mock-id',
-        name: 'Mock User',
-        email: 'mock@example.com',
-        role: 'OWNER',
-        status: 'APPROVED',
-        commissionPercentage: 0
-      };
-      setCurrentUser(mockUser);
-      initializeRepositories(mockUser);
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         const profileRef = doc(db, 'profiles', firebaseUser.uid);
