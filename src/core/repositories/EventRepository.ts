@@ -13,6 +13,7 @@ import {
 import { db } from '../../lib/firebase';
 import type { EventType } from '../domain/types';
 import { auditLogRepository } from './AuditLogRepository';
+import { timeToMinutes } from '../utils/timeUtils';
 
 export interface IEventRepository {
   getById(eventId: string): Promise<EventType | undefined>;
@@ -99,12 +100,17 @@ class EventRepositoryImpl implements IEventRepository {
       return false;
     }
 
-    const startA = eventA.startTime;
-    const endA = eventA.endTime;
-    const startB = eventB.startTime;
-    const endB = eventB.endTime;
+    const orgTime = eventA.boat?.organizationTimeMinutes || 0;
 
-    return startA < endB && endA > startB;
+    const startA = timeToMinutes(eventA.startTime);
+    const endA = timeToMinutes(eventA.endTime);
+    const startB = timeToMinutes(eventB.startTime);
+    const endB = timeToMinutes(eventB.endTime);
+
+    // Overlap considering organization time on both ends for both events
+    // Busy window for A: [startA - orgTime, endA + orgTime]
+    // Busy window for B: [startB - orgTime, endB + orgTime]
+    return (startA - orgTime) < (endB + orgTime) && (endA + orgTime) > (startB - orgTime);
   }
 
   async add(eventData: Omit<EventType, 'id'>): Promise<EventType> {

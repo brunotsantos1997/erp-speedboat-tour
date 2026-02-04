@@ -9,6 +9,7 @@ import { boatRepository } from '../core/repositories/BoatRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
 import { format } from 'date-fns';
+import { timeToMinutes, minutesToTime } from '../core/utils/timeUtils';
 import type { BoardingLocation } from '../core/domain/types';
 import { boardingLocationRepository } from '../core/repositories/BoardingLocationRepository';
 
@@ -282,11 +283,11 @@ export const useCreateEventViewModel = () => {
   }, [passengerCount, selectedBoat]);
 
   const boatRentalCost = useMemo(() => {
-    if (!selectedBoat) return 0;
+    if (!selectedBoat || !startTime || !endTime) return 0;
 
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-    const durationInMinutes = (endHour - startHour) * 60 + (endMinute - startMinute);
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+    const durationInMinutes = endMin - startMin;
 
     if (durationInMinutes <= 0) return 0;
 
@@ -312,9 +313,9 @@ export const useCreateEventViewModel = () => {
           return acc + (product.price || 0) * passengerCount;
         case 'HOURLY':
           if (product.startTime && product.endTime && product.hourlyPrice) {
-            const [startHour, startMinute] = product.startTime.split(':').map(Number);
-            const [endHour, endMinute] = product.endTime.split(':').map(Number);
-            const durationInMinutes = (endHour - startHour) * 60 + (endMinute - startMinute);
+            const startMin = timeToMinutes(product.startTime);
+            const endMin = timeToMinutes(product.endTime);
+            const durationInMinutes = endMin - startMin;
             const durationInHours = durationInMinutes / 60;
 
             if (durationInHours > 0) {
@@ -416,99 +417,112 @@ export const useCreateEventViewModel = () => {
   }, [companyData, dayOfWeek]);
 
   const availableTimeSlots = useMemo(() => {
-    const allDaySlots = Array.from({ length: 48 }, (_, i) => {
-      const hours = Math.floor(i / 2).toString().padStart(2, '0');
-      const minutes = (i % 2 === 0 ? '00' : '30');
-      return `${hours}:${minutes}`;
-    });
+    // Generate all minutes of the day (1440 slots)
+    const allDaySlots = Array.from({ length: 1440 }, (_, i) => minutesToTime(i));
 
     if (!companyData || isBusinessClosed || !dayOfWeek) {
       return [];
     }
-    const { startTime, endTime } = companyData.businessHours[dayOfWeek];
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-    const closingDate = new Date();
-    closingDate.setHours(endHour, endMinute, 0, 0);
-    closingDate.setMinutes(closingDate.getMinutes() - 30);
-    const finalEndTime = `${closingDate.getHours().toString().padStart(2, '0')}:${closingDate.getMinutes().toString().padStart(2, '0')}`;
+    const { startTime: businessStartTime, endTime: businessEndTime } = companyData.businessHours[dayOfWeek];
+    const businessStartMin = timeToMinutes(businessStartTime);
+    const businessEndMin = timeToMinutes(businessEndTime);
 
-    const businessHourSlots = allDaySlots.filter(slot => slot >= startTime && slot <= finalEndTime);
+    // Initial filter by business hours (start time must be within business hours)
+    // and must allow at least 30 min before closing.
+    let validSlots = allDaySlots.filter(slot => {
+      const min = timeToMinutes(slot);
+      return min >= businessStartMin && min <= (businessEndMin - 30);
+    });
 
     if (!selectedBoat) {
-      return businessHourSlots;
+      return validSlots;
     }
+
+    const orgTime = selectedBoat.organizationTimeMinutes || 0;
     const otherBoatEvents = scheduledEvents.filter(event => event.boat?.id === selectedBoat.id && event.id !== editingEventId);
-    if (otherBoatEvents.length === 0) {
-      return businessHourSlots;
-    }
 
-    const { eventIntervalMinutes } = companyData;
+    return validSlots.filter(slot => {
+      const slotMin = timeToMinutes(slot);
+      const slotEndMin = slotMin + 30; // Minimum duration
 
-    const isSlotBooked = (slot: string) => {
-      const [slotHour, slotMinute] = slot.split(':').map(Number);
-      const slotTime = slotHour * 60 + slotMinute;
+      return !otherBoatEvents.some(event => {
+        const eventStartMin = timeToMinutes(event.startTime);
+        const eventEndMin = timeToMinutes(event.endTime);
 
-      return otherBoatEvents.some(event => {
-        if (!event.startTime || !event.endTime) return false;
-        const [eventStartHour, eventStartMinute] = event.startTime.split(':').map(Number);
-        const eventStartTime = eventStartHour * 60 + eventStartMinute;
+        // An event starting at slotMin is valid if its blocked window [slotMin - org, slotEndMin + org]
+        // doesn't overlap with existing event's blocked window [eventStart - org, eventEnd + org].
+        // This is equivalent to:
+        // slotEndMin + org <= eventStartMin - org  => slotEndMin <= eventStartMin - 2*org
+        // OR
+        // slotMin - org >= eventEndMin + org  => slotMin >= eventEndMin + 2*org
 
-        const [eventEndHour, eventEndMinute] = event.endTime.split(':').map(Number);
-        const eventEndTime = eventEndHour * 60 + eventEndMinute;
+        const isBefore = slotEndMin <= (eventStartMin - 2 * orgTime);
+        const isAfter = slotMin >= (eventEndMin + 2 * orgTime);
 
-        const blockedWindowStart = eventStartTime - eventIntervalMinutes;
-        const blockedWindowEnd = eventEndTime + eventIntervalMinutes;
-
-        return slotTime >= blockedWindowStart && slotTime < blockedWindowEnd;
+        return !isBefore && !isAfter;
       });
-    };
-
-    return businessHourSlots.filter(slot => !isSlotBooked(slot));
+    });
   }, [scheduledEvents, selectedBoat, editingEventId, companyData, dayOfWeek, isBusinessClosed]);
 
   const availableEndTimeSlots = useMemo(() => {
-    if (!startTime || !companyData || isBusinessClosed || !dayOfWeek) {
+    if (!startTime || !selectedBoat) {
       return [];
     }
 
-    const allDaySlots = Array.from({ length: 48 }, (_, i) => {
-      const hours = Math.floor(i / 2).toString().padStart(2, '0');
-      const minutes = (i % 2 === 0 ? '00' : '30');
-      return `${hours}:${minutes}`;
-    });
+    const startMin = timeToMinutes(startTime);
+    const orgTime = selectedBoat.organizationTimeMinutes || 0;
 
-    const { endTime: businessEndTime } = companyData.businessHours[dayOfWeek];
-    let possibleEndTimes = allDaySlots.filter(slot => slot > startTime && slot <= businessEndTime);
+    // Generate options: startTime + n * 30
+    const options: string[] = [];
+    for (let n = 1; ; n++) {
+      const endMin = startMin + n * 30;
+      if (endMin > 1440) break; // End of day
 
-    const nextEvent = scheduledEvents
-      .filter(event => event.boat?.id === selectedBoat?.id && event.id !== editingEventId && event.startTime > startTime)
-      .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))[0];
+      const endTimeStr = minutesToTime(endMin);
 
-    if (nextEvent) {
-      const [nextStartHour, nextStartMinute] = nextEvent.startTime.split(':').map(Number);
-      const nextStartTimeInMinutes = nextStartHour * 60 + nextStartMinute;
-      const maxEndTimeInMinutes = nextStartTimeInMinutes - companyData.eventIntervalMinutes;
+      // Check if this endTime exceeds business hours (if we want to enforce it)
+      if (companyData && dayOfWeek) {
+        const { endTime: businessEndTime } = companyData.businessHours[dayOfWeek];
+        if (endMin > timeToMinutes(businessEndTime)) break;
+      }
 
-      const maxEndHour = Math.floor(maxEndTimeInMinutes / 60);
-      const maxEndMinute = maxEndTimeInMinutes % 60;
-      const formattedMaxEndMinute = (Math.round(maxEndMinute / 30) * 30) % 60;
-      const maxEndTime = `${maxEndHour.toString().padStart(2, '0')}:${formattedMaxEndMinute.toString().padStart(2, '0')}`;
+      // Check for conflicts with next events
+      const hasConflict = scheduledEvents
+        .filter(event => event.boat?.id === selectedBoat.id && event.id !== editingEventId)
+        .some(event => {
+          const eventStartMin = timeToMinutes(event.startTime);
+          // Gap must be at least 2 * orgTime
+          return endMin > (eventStartMin - 2 * orgTime) && startMin < (timeToMinutes(event.endTime) + 2 * orgTime);
+        });
 
-      possibleEndTimes = possibleEndTimes.filter(slot => slot <= maxEndTime);
+      if (hasConflict) break; // Cannot go further if we hit a conflict
+
+      options.push(endTimeStr);
     }
 
-    return possibleEndTimes;
-  }, [startTime, scheduledEvents, selectedBoat, editingEventId, companyData, dayOfWeek, isBusinessClosed]);
+    return options;
+  }, [startTime, scheduledEvents, selectedBoat, editingEventId, companyData, dayOfWeek]);
 
 
+  // Reset endTime when startTime changes
   useEffect(() => {
-    if (!availableTimeSlots.includes(startTime)) {
-      setStartTime(availableTimeSlots[0] || '');
+    if (availableEndTimeSlots.length > 0) {
+      // If current endTime is not in the new available list, or if it's invalid, reset it.
+      if (!availableEndTimeSlots.includes(endTime)) {
+        setEndTime(availableEndTimeSlots[0]);
+      }
+    } else {
+      setEndTime('');
     }
-    if (!availableEndTimeSlots.includes(endTime) || endTime <= startTime) {
-      setEndTime(availableEndTimeSlots[0] || '');
+  }, [availableEndTimeSlots]);
+
+  // Initial validation for startTime
+  useEffect(() => {
+    if (availableTimeSlots.length > 0 && !availableTimeSlots.includes(startTime)) {
+      // Find closest available time or just pick first
+       setStartTime(availableTimeSlots[0]);
     }
-  }, [availableTimeSlots, availableEndTimeSlots, startTime, endTime]);
+  }, [availableTimeSlots]);
 
 
   return {

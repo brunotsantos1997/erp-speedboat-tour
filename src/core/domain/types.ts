@@ -41,6 +41,7 @@ export interface Boat {
   size: number; // in feet
   pricePerHour: number;
   pricePerHalfHour: number;
+  organizationTimeMinutes: number;
   isArchived?: boolean;
 }
 
@@ -126,7 +127,6 @@ export interface CompanyData {
   appName: string;
   reservationFeePercentage: number;
   businessHours: BusinessHours;
-  eventIntervalMinutes: number;
   rentalHourlyRate?: number;
   rentalHalfHourRate?: number;
 }

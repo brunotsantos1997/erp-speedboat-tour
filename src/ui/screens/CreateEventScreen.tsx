@@ -7,38 +7,14 @@ import { useToastContext } from '../../ui/contexts/ToastContext';
 import type { Product, ClientProfile } from '../../core/domain/types';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { MoneyInput } from '../components/MoneyInput';
+import { CustomTimePicker } from '../components/CustomTimePicker';
+import { EndTimePicker } from '../components/EndTimePicker';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { ptBR } from 'date-fns/locale';
 
 // --- Components ---
 
-const TimePicker: React.FC<{
-  id?: string;
-  label: string;
-  name: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  disabled?: boolean;
-}> = ({ id, label, name, value, onChange, options, disabled }) => {
-  const selectId = id || name;
-  return (
-    <div>
-      <label htmlFor={selectId} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <select
-        id={selectId}
-        name={name}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full p-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
-      >
-        {options.map(time => <option key={time} value={time}>{time}</option>)}
-      </select>
-    </div>
-  );
-};
 
 
 const DynamicIcon = ({ name, ...props }: { name: string } & LucideProps) => {
@@ -338,20 +314,20 @@ export const CreateEventScreen: React.FC = () => {
 
                         {product.pricingType === 'HOURLY' && (
                           <div className="grid grid-cols-2 gap-4 mt-3">
-                            <TimePicker
-                              label="Início"
-                              name={`product-start-time-${product.id}`}
-                              value={selectedProd?.startTime || ''}
-                              onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'start')}
-                              options={vm.availableTimeSlots}
-                            />
-                            <TimePicker
-                              label="Fim"
-                              name={`product-end-time-${product.id}`}
-                              value={selectedProd?.endTime || ''}
-                              onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'end')}
-                              options={vm.availableTimeSlots.filter(t => t > (selectedProd?.startTime || ''))}
-                            />
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Início</label>
+                              <CustomTimePicker
+                                value={selectedProd?.startTime || '09:00'}
+                                onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'start')}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">Fim</label>
+                              <CustomTimePicker
+                                value={selectedProd?.endTime || '10:00'}
+                                onChange={(time) => vm.updateHourlyProductTime(product.id, time, 'end')}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -437,24 +413,23 @@ export const CreateEventScreen: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <TimePicker
-                      id="startTime"
-                      label="Início"
-                      name="startTime"
-                      value={vm.startTime}
-                      onChange={vm.setStartTime}
-                      options={vm.availableTimeSlots}
-                      disabled={vm.isBusinessClosed}
-                    />
-                    <TimePicker
-                      id="endTime"
-                      label="Término"
-                      name="endTime"
-                      value={vm.endTime}
-                      onChange={vm.setEndTime}
-                      options={vm.availableEndTimeSlots}
-                      disabled={vm.isBusinessClosed}
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Início</label>
+                      <CustomTimePicker
+                        value={vm.startTime}
+                        onChange={vm.setStartTime}
+                        disabled={vm.isBusinessClosed}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Término</label>
+                      <EndTimePicker
+                        value={vm.endTime}
+                        onChange={vm.setEndTime}
+                        options={vm.availableEndTimeSlots}
+                        disabled={vm.isBusinessClosed}
+                      />
+                    </div>
                   </>
                 )}
               </div>

@@ -123,23 +123,6 @@ export const CompanyDataScreen: React.FC = () => {
                 className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
-            <div>
-              <label
-                htmlFor="eventIntervalMinutes"
-                className="block text-lg font-medium text-gray-700"
-              >
-                Intervalo Mínimo entre Eventos (minutos)
-              </label>
-              <input
-                type="number"
-                id="eventIntervalMinutes"
-                name="eventIntervalMinutes"
-                value={formData.eventIntervalMinutes}
-                onChange={handleChange}
-                onFocus={(e) => e.target.select()}
-                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
           </div>
 
           <div className="mt-8 pt-6 border-t border-gray-200">
