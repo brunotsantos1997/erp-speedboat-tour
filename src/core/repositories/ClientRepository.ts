@@ -20,6 +20,7 @@ export interface IClientRepository {
   add(newClient: Omit<ClientProfile, 'id' | 'totalTrips'>): Promise<ClientProfile>;
   update(client: ClientProfile): Promise<ClientProfile>;
   delete(clientId: string): Promise<void>;
+  getById(clientId: string): Promise<ClientProfile | null>;
   getAll(): Promise<ClientProfile[]>;
   dispose(): void;
   initialize(user?: any): void;
@@ -83,6 +84,11 @@ class ClientRepositoryImpl implements IClientRepository {
       (client.name || '').toLowerCase().includes(lowercasedTerm) ||
       (client.phone || '').includes(term)
     );
+  }
+
+  async getById(clientId: string): Promise<ClientProfile | null> {
+    const all = await this.getAll();
+    return all.find(c => c.id === clientId) || null;
   }
 
   private checkPermission() {
