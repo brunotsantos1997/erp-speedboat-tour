@@ -28,22 +28,26 @@ const BoatModal: React.FC<{
         <h2 className="text-xl font-bold mb-6">{isNew ? 'Adicionar Nova Lancha' : 'Editar Lancha'}</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nome da Lancha</label>
-            <input type="text" placeholder="Ex: Focker 300" value={boat.name} onChange={(e) => onUpdate('name', e.target.value)} className="w-full p-3 border rounded-lg" />
+            <label htmlFor="boat-name" className="block text-sm font-medium text-gray-700 mb-1">Nome da Lancha</label>
+            <input id="boat-name" type="text" placeholder="Ex: Focker 300" value={boat.name} onChange={(e) => onUpdate('name', e.target.value)} className="w-full p-3 border rounded-lg" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Capacidade (pessoas)</label>
-              <input type="number" placeholder="Capacidade" value={boat.capacity} onChange={(e) => onUpdate('capacity', parseInt(e.target.value) || 0)} onFocus={(e) => e.target.select()} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label htmlFor="boat-capacity" className="block text-sm font-medium text-gray-700 mb-1">Capacidade (pessoas)</label>
+              <input id="boat-capacity" type="number" placeholder="Capacidade" value={boat.capacity} onChange={(e) => onUpdate('capacity', parseInt(e.target.value) || 0)} onFocus={(e) => e.target.select()} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tamanho (pés)</label>
-              <input type="number" placeholder="Tamanho" value={boat.size} onChange={(e) => onUpdate('size', parseInt(e.target.value) || 0)} onFocus={(e) => e.target.select()} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+              <label htmlFor="boat-size" className="block text-sm font-medium text-gray-700 mb-1">Tamanho (pés)</label>
+              <input id="boat-size" type="number" placeholder="Tamanho" value={boat.size} onChange={(e) => onUpdate('size', parseInt(e.target.value) || 0)} onFocus={(e) => e.target.select()} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 border-t pt-4">
-            <MoneyInput label="Preço por Hora" value={boat.pricePerHour || 0} onChange={(val) => onUpdate('pricePerHour', val)} />
-            <MoneyInput label="Preço por Meia Hora" value={boat.pricePerHalfHour || 0} onChange={(val) => onUpdate('pricePerHalfHour', val)} />
+            <MoneyInput id="boat-price-hour" label="Preço por Hora" value={boat.pricePerHour || 0} onChange={(val) => onUpdate('pricePerHour', val)} />
+            <MoneyInput id="boat-price-half-hour" label="Preço por Meia Hora" value={boat.pricePerHalfHour || 0} onChange={(val) => onUpdate('pricePerHalfHour', val)} />
+          </div>
+          <div className="border-t pt-4">
+            <label htmlFor="boat-org-time" className="block text-sm font-medium text-gray-700 mb-1">Tempo de Organização (minutos)</label>
+            <input id="boat-org-time" type="number" placeholder="Ex: 30" value={boat.organizationTimeMinutes} onChange={(e) => onUpdate('organizationTimeMinutes', parseInt(e.target.value) || 0)} onFocus={(e) => e.target.select()} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
           </div>
         </div>
         <div className="flex justify-end space-x-3 mt-8">
@@ -113,6 +117,11 @@ export const BoatsScreen: React.FC = () => {
                     <div className="text-xs text-gray-500 mt-1">
                       {formatCurrencyBRL(boat.pricePerHour || 0)}/h • {formatCurrencyBRL(boat.pricePerHalfHour || 0)}/30min
                     </div>
+                    {boat.organizationTimeMinutes > 0 && (
+                      <div className="text-xs text-blue-500 font-medium mt-1">
+                        Organização: {boat.organizationTimeMinutes} min
+                      </div>
+                    )}
                   </div>
                 </div>
                 {isAuthorized && (

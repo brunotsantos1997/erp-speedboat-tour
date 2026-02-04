@@ -27,6 +27,7 @@ export const useBoatsViewModel = () => {
       size: 30,
       pricePerHour: 0,
       pricePerHalfHour: 0,
+      organizationTimeMinutes: 0,
     });
     setIsModalOpen(true);
   };

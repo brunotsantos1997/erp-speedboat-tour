@@ -72,7 +72,6 @@ export class CompanyDataRepository {
         friday: { startTime: '08:00', endTime: '18:00', isClosed: false },
         saturday: { startTime: '08:00', endTime: '18:00', isClosed: true },
       },
-      eventIntervalMinutes: 30,
     };
     return defaultData;
   }
