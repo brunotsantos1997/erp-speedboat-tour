@@ -2,6 +2,7 @@
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { CompanyData } from '../domain/types';
+import { auditLogRepository } from './AuditLogRepository';
 
 export class CompanyDataRepository {
   private static instance: CompanyDataRepository;
@@ -9,6 +10,7 @@ export class CompanyDataRepository {
   private collectionName = 'company_data';
   private data: CompanyData | null = null;
   private unsubscribe: Unsubscribe | null = null;
+  private currentUser: any = null;
 
   private constructor() {}
 
@@ -19,7 +21,10 @@ export class CompanyDataRepository {
     return CompanyDataRepository.instance;
   }
 
-  initialize() {
+  initialize(user?: any) {
+    if (user) {
+      this.currentUser = user;
+    }
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -39,6 +44,7 @@ export class CompanyDataRepository {
       this.unsubscribe = null;
     }
     this.data = null;
+    this.currentUser = null;
   }
 
   async get(): Promise<CompanyData | undefined> {
@@ -72,10 +78,30 @@ export class CompanyDataRepository {
   }
 
   async update(updatedData: CompanyData): Promise<CompanyData> {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
+      throw new Error('Você não tem permissão para alterar as configurações da empresa.');
+    }
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
+
+    const oldSnap = await getDoc(docRef);
+    const oldData = oldSnap.exists() ? { ...oldSnap.data(), id: oldSnap.id } : null;
+
     await setDoc(docRef, data, { merge: true });
+
+    await auditLogRepository.log({
+      userId: this.currentUser.id,
+      userName: this.currentUser.name,
+      action: 'UPDATE',
+      collection: this.collectionName,
+      docId: this.docId,
+      oldData,
+      newData: updatedData,
+    });
+
     this.data = updatedData;
     return updatedData;
   }
 }
+
+export const companyDataRepository = CompanyDataRepository.getInstance();

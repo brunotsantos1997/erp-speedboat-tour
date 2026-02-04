@@ -5,12 +5,14 @@ import {
   addDoc,
   updateDoc,
   doc,
+  getDoc,
   onSnapshot,
   query,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Product } from '../domain/types';
+import { auditLogRepository } from './AuditLogRepository';
 
 export interface IProductRepository {
   getAll(): Promise<Product[]>;
@@ -18,7 +20,7 @@ export interface IProductRepository {
   update(updatedProduct: Product): Promise<Product>;
   remove(productId: string): Promise<void>;
   dispose(): void;
-  initialize(): void;
+  initialize(user?: any): void;
 }
 
 class ProductRepositoryImpl implements IProductRepository {
@@ -27,6 +29,7 @@ class ProductRepositoryImpl implements IProductRepository {
   private collectionName = 'products';
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
+  private currentUser: any = null;
 
   private constructor() {}
 
@@ -37,7 +40,10 @@ class ProductRepositoryImpl implements IProductRepository {
     return ProductRepositoryImpl.instance;
   }
 
-  initialize() {
+  initialize(user?: any) {
+    if (user) {
+      this.currentUser = user;
+    }
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -60,11 +66,11 @@ class ProductRepositoryImpl implements IProductRepository {
     }
     this.isInitialized = false;
     this.products = [];
+    this.currentUser = null;
   }
 
   async getAll(): Promise<Product[]> {
     if (!this.isInitialized) {
-      this.initialize();
       const querySnapshot = await getDocs(collection(db, this.collectionName));
       this.products = querySnapshot.docs.map(doc => ({
         ...doc.data() as Product,
@@ -75,21 +81,70 @@ class ProductRepositoryImpl implements IProductRepository {
     return this.products.filter(p => !p.isArchived);
   }
 
+  private checkAdminPermission() {
+    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN' && this.currentUser.role !== 'ADMIN')) {
+      throw new Error('Você não tem permissão para realizar esta ação.');
+    }
+  }
+
   async add(productData: Omit<Product, 'id'>): Promise<Product> {
+    this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), productData);
-    return { id: docRef.id, ...productData };
+    const newProduct = { id: docRef.id, ...productData };
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'CREATE',
+      collection: this.collectionName,
+      docId: docRef.id,
+      newData: newProduct,
+    });
+
+    return newProduct;
   }
 
   async update(updatedProduct: Product): Promise<Product> {
+    this.checkAdminPermission();
     const { id, ...data } = updatedProduct;
     const docRef = doc(db, this.collectionName, id);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await updateDoc(docRef, data as any);
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'UPDATE',
+      collection: this.collectionName,
+      docId: id,
+      oldData,
+      newData: updatedProduct,
+    });
+
     return updatedProduct;
   }
 
   async remove(productId: string): Promise<void> {
+    this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, productId);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await updateDoc(docRef, { isArchived: true });
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'DELETE',
+      collection: this.collectionName,
+      docId: productId,
+      oldData,
+      newData: { ...oldData, isArchived: true },
+    });
   }
 }
 

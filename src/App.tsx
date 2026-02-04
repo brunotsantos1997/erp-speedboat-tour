@@ -17,7 +17,6 @@ import { PendingApprovalScreen } from './ui/screens/PendingApprovalScreen';
 import { UserManagementScreen } from './ui/screens/UserManagementScreen';
 import { CommissionReportScreen } from './ui/screens/CommissionReportScreen';
 import { ProfileScreen } from './ui/screens/ProfileScreen';
-import { RentalPricesScreen } from './ui/screens/RentalPricesScreen';
 import { ForgotPasswordScreen } from './ui/screens/ForgotPasswordScreen';
 import { ResetPasswordSecretScreen } from './ui/screens/ResetPasswordSecretScreen';
 import { SetNewPasswordScreen } from './ui/screens/SetNewPasswordScreen';
@@ -39,23 +38,28 @@ function App() {
         <Route path="/voucher/:eventId" element={<PublicLayout><VoucherScreen /></PublicLayout>} />
 
         {/* Protected Admin Routes with the main Layout */}
-        <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER']} />}>
+        <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER', 'SELLER']} />}>
           <Route element={<Layout />}>
             <Route index element={<DashboardScreen />} />
             <Route path="create-event" element={<CreateEventScreen />} />
             <Route path="products" element={<ProductsScreen />} />
             <Route path="boats" element={<BoatsScreen />} />
             <Route path="boarding-locations" element={<BoardingLocationsScreen />} />
-            <Route path="voucher-terms" element={<VoucherTermsScreen />} />
             <Route path="clients" element={<ClientHistoryScreen />} />
-            <Route path="company-data" element={<CompanyDataScreen />} />
-            <Route path="voucher-appearance" element={<VoucherAppearanceScreen />} />
-            <Route path="rental-prices" element={<RentalPricesScreen />} />
             <Route path="profile" element={<ProfileScreen />} />
 
-            {/* Routes for SUPER_ADMIN and OWNER only */}
-            <Route path="admin/users" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'OWNER']}><UserManagementScreen /></ProtectedRoute>} />
-            <Route path="commission-report" element={<ProtectedRoute allowedRoles={['ADMIN', 'OWNER']}><CommissionReportScreen /></ProtectedRoute>} />
+            {/* Routes for SUPER_ADMIN and OWNER only (Sensitive Settings) */}
+            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'OWNER']} />}>
+              <Route path="voucher-terms" element={<VoucherTermsScreen />} />
+              <Route path="company-data" element={<CompanyDataScreen />} />
+              <Route path="voucher-appearance" element={<VoucherAppearanceScreen />} />
+              <Route path="commission-report" element={<CommissionReportScreen />} />
+            </Route>
+
+            {/* Routes for ADMIN, SUPER_ADMIN and OWNER (User management) */}
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER']} />}>
+              <Route path="admin/users" element={<UserManagementScreen />} />
+            </Route>
           </Route>
         </Route>
 

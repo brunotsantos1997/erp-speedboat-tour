@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { EventType } from '../domain/types';
+import { auditLogRepository } from './AuditLogRepository';
 
 export interface IEventRepository {
   getById(eventId: string): Promise<EventType | undefined>;
@@ -21,7 +22,7 @@ export interface IEventRepository {
   updateEvent(event: EventType): Promise<EventType>;
   getAll(): Promise<EventType[]>;
   dispose(): void;
-  initialize(): void;
+  initialize(user?: any): void;
 }
 
 class EventRepositoryImpl implements IEventRepository {
@@ -29,10 +30,14 @@ class EventRepositoryImpl implements IEventRepository {
   private collectionName = 'events';
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
+  private currentUser: any = null;
 
   constructor() {}
 
-  initialize() {
+  initialize(user?: any) {
+    if (user) {
+      this.currentUser = user;
+    }
     if (this.unsubscribe) return;
     this.initListener();
   }
@@ -55,6 +60,7 @@ class EventRepositoryImpl implements IEventRepository {
     }
     this.isInitialized = false;
     this.events = [];
+    this.currentUser = null;
   }
 
   async getById(eventId: string): Promise<EventType | undefined> {
@@ -73,12 +79,11 @@ class EventRepositoryImpl implements IEventRepository {
 
   async getEventsByClient(clientId: string): Promise<EventType[]> {
     const all = await this.getAll();
-    return all.filter((e: EventType) => e.client.id === clientId);
+    return all.filter((e: EventType) => e.client?.id === clientId);
   }
 
   async getAll(): Promise<EventType[]> {
     if (!this.isInitialized) {
-      this.initialize();
       const querySnapshot = await getDocs(collection(db, this.collectionName));
       this.events = querySnapshot.docs.map(doc => ({
         ...doc.data() as EventType,
@@ -90,7 +95,7 @@ class EventRepositoryImpl implements IEventRepository {
   }
 
   private isTimeConflict(eventA: Omit<EventType, 'id'>, eventB: EventType): boolean {
-    if (eventA.date !== eventB.date || eventA.boat.id !== eventB.boat.id) {
+    if (eventA.date !== eventB.date || eventA.boat?.id !== eventB.boat?.id) {
       return false;
     }
 
@@ -103,6 +108,12 @@ class EventRepositoryImpl implements IEventRepository {
   }
 
   async add(eventData: Omit<EventType, 'id'>): Promise<EventType> {
+    if (!this.currentUser) {
+      throw new Error('Você deve estar logado para agendar eventos.');
+    }
+    if (!eventData.boat?.id || !eventData.client?.id || !eventData.boardingLocation?.id) {
+      throw new Error('Dados incompletos para criação do passeio.');
+    }
     const allEvents = await this.getAll();
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
@@ -126,10 +137,30 @@ class EventRepositoryImpl implements IEventRepository {
     }
 
     const docRef = await addDoc(collection(db, this.collectionName), eventData);
-    return { ...eventData, id: docRef.id };
+    const newEvent = { ...eventData, id: docRef.id };
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'CREATE',
+      collection: this.collectionName,
+      docId: docRef.id,
+      newData: newEvent,
+    });
+
+    return newEvent;
   }
 
   async updateEvent(updatedEvent: EventType): Promise<EventType> {
+    if (!this.currentUser) {
+      throw new Error('Você deve estar logado para atualizar eventos.');
+    }
+    if (!updatedEvent.id || !updatedEvent.boat?.id || !updatedEvent.client?.id) {
+      throw new Error('Dados incompletos para atualização do passeio.');
+    }
+    if (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN' && updatedEvent.createdByUserId !== this.currentUser.id) {
+      throw new Error('Você não tem permissão para alterar este evento.');
+    }
     const allEvents = await this.getAll();
     const now = Date.now();
     const twentyFourHours = 24 * 60 * 60 * 1000;
@@ -149,7 +180,22 @@ class EventRepositoryImpl implements IEventRepository {
 
     const { id, ...data } = updatedEvent;
     const docRef = doc(db, this.collectionName, id);
+
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
     await updateDoc(docRef, data as any);
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'UPDATE',
+      collection: this.collectionName,
+      docId: id,
+      oldData,
+      newData: updatedEvent,
+    });
+
     return updatedEvent;
   }
 }
