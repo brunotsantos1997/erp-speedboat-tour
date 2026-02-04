@@ -445,7 +445,7 @@ export const CreateEventScreen: React.FC = () => {
         </div>
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-10">
+      <footer className="fixed bottom-0 left-0 md:left-64 right-0 bg-white border-t border-gray-200 shadow-lg z-10">
         <div className="max-w-7xl mx-auto p-4 flex justify-between items-center">
           {/* Pricing Summary */}
           <div className="flex-grow pr-4">
