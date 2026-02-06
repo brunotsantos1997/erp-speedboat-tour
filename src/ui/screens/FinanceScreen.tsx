@@ -2,8 +2,11 @@
 import React from 'react';
 import { useFinanceViewModel } from '../../viewmodels/useFinanceViewModel';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
-import { DollarSign, TrendingDown, TrendingUp, BarChart3, Calendar, PlusCircle, Settings } from 'lucide-react';
+import { DollarSign, TrendingDown, TrendingUp, BarChart3, Calendar, PlusCircle, Settings, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { MoneyInput } from '../components/MoneyInput';
+import { incomeRepository } from '../../core/repositories/IncomeRepository';
+import { useToastContext } from '../contexts/ToastContext';
 
 const StatCard: React.FC<{ title: string; value: string; subValue?: string; icon: React.ReactNode; color: string }> = ({ title, value, subValue, icon, color }) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
@@ -21,7 +24,32 @@ const StatCard: React.FC<{ title: string; value: string; subValue?: string; icon
 );
 
 export const FinanceScreen: React.FC = () => {
-  const { loading, stats, cashFlowData, startDate, setStartDate, endDate, setEndDate } = useFinanceViewModel();
+  const { loading, stats, cashFlowData, startDate, setStartDate, endDate, setEndDate, refresh } = useFinanceViewModel();
+  const { showToast } = useToastContext();
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = React.useState(false);
+  const [incomeAmount, setIncomeAmount] = React.useState(0);
+  const [incomeDesc, setIncomeDesc] = React.useState('');
+  const [incomeDate, setIncomeDate] = React.useState(new Date().toISOString().split('T')[0]);
+
+  const handleAddIncome = async () => {
+    if (!incomeDesc || incomeAmount <= 0) return;
+    try {
+        await incomeRepository.add({
+            description: incomeDesc,
+            amount: incomeAmount,
+            date: incomeDate,
+            paymentMethod: 'PIX',
+            timestamp: Date.now()
+        });
+        showToast('Receita avulsa registrada!');
+        setIsIncomeModalOpen(false);
+        setIncomeAmount(0);
+        setIncomeDesc('');
+        refresh();
+    } catch (e) {
+        showToast('Erro ao salvar receita.');
+    }
+  };
 
   if (loading) return <div className="p-8 text-center">Carregando dados financeiros...</div>;
 
@@ -32,7 +60,14 @@ export const FinanceScreen: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Gestão Financeira</h1>
           <p className="text-gray-500">Acompanhe a saúde financeira do seu negócio</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => setIsIncomeModalOpen(true)}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <PlusCircle size={20} />
+            <span>Ganhos Avulsos</span>
+          </button>
           <Link to="/expenses" className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
             <PlusCircle size={20} />
             <span>Lançar Despesa</span>
@@ -124,6 +159,18 @@ export const FinanceScreen: React.FC = () => {
                 ></div>
               </div>
             </div>
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-gray-600 font-medium">Ganhos Avulsos</span>
+                <span className="font-bold">{formatCurrencyBRL(stats.otherRevenue)}</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-2.5">
+                <div
+                  className="bg-green-500 h-2.5 rounded-full"
+                  style={{ width: `${stats.totalRevenue > 0 ? (stats.otherRevenue / stats.totalRevenue) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
           </div>
 
           <div className="mt-8 p-4 bg-blue-50 rounded-lg">
@@ -173,6 +220,55 @@ export const FinanceScreen: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Income Modal */}
+      {isIncomeModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <h2 className="font-bold text-gray-800 text-lg">Registrar Ganho Avulso</h2>
+                    <button onClick={() => setIsIncomeModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+                        <X size={20} />
+                    </button>
+                </div>
+                <div className="p-6 space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                        <input
+                            type="text"
+                            className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder="Ex: Venda de Isca, Taxa Extra..."
+                            value={incomeDesc}
+                            onChange={e => setIncomeDesc(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+                        <MoneyInput value={incomeAmount} onChange={setIncomeAmount} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                        <input
+                            type="date"
+                            className="w-full p-2 border rounded-lg outline-none"
+                            value={incomeDate}
+                            onChange={e => setIncomeDate(e.target.value)}
+                        />
+                    </div>
+                </div>
+                <div className="p-4 bg-gray-50 flex gap-3">
+                    <button onClick={() => setIsIncomeModalOpen(false)} className="flex-1 py-2 text-gray-600 font-medium">Cancelar</button>
+                    <button
+                        onClick={handleAddIncome}
+                        disabled={!incomeDesc || incomeAmount <= 0}
+                        className="flex-1 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

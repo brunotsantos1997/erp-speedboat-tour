@@ -1,8 +1,9 @@
 // src/viewmodels/useFinanceViewModel.ts
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { EventType, Expense, Payment } from '../core/domain/types';
+import type { EventType, Expense, Payment, Income } from '../core/domain/types';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
+import { incomeRepository } from '../core/repositories/IncomeRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
 import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
 
@@ -10,6 +11,7 @@ export const useFinanceViewModel = () => {
   const [events, setEvents] = useState<EventType[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
@@ -17,14 +19,16 @@ export const useFinanceViewModel = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [allEvents, allExpenses, allPayments] = await Promise.all([
+      const [allEvents, allExpenses, allPayments, allIncomes] = await Promise.all([
         eventRepository.getAll(),
         expenseRepository.getAll(),
-        paymentRepository.getAll()
+        paymentRepository.getAll(),
+        incomeRepository.getAll()
       ]);
       setEvents(allEvents);
       setExpenses(allExpenses.filter((e: any) => !e.isArchived));
       setPayments(allPayments);
+      setIncomes(allIncomes);
     } catch (err) {
       console.error('Failed to load financial data:', err);
     } finally {
@@ -43,19 +47,21 @@ export const useFinanceViewModel = () => {
     const filteredEvents = events.filter(e => e.date >= startStr && e.date <= endStr && e.status !== 'CANCELLED' && e.status !== 'ARCHIVED_CANCELLED');
     const filteredExpenses = expenses.filter(e => e.date >= startStr && e.date <= endStr && e.status === 'PAID');
     const filteredPayments = payments.filter(p => p.date >= startStr && p.date <= endStr);
+    const filteredIncomes = incomes.filter(i => i.date >= startStr && i.date <= endStr);
 
-    return { filteredEvents, filteredExpenses, filteredPayments };
-  }, [events, expenses, payments, startDate, endDate]);
+    return { filteredEvents, filteredExpenses, filteredPayments, filteredIncomes };
+  }, [events, expenses, payments, incomes, startDate, endDate]);
 
   const stats = useMemo(() => {
-    const { filteredEvents, filteredExpenses, filteredPayments } = filteredData;
+    const { filteredEvents, filteredExpenses, filteredPayments, filteredIncomes } = filteredData;
 
-    const totalRevenue = filteredPayments.reduce((acc, p) => acc + p.amount, 0);
+    const totalRevenue = filteredPayments.reduce((acc, p) => acc + p.amount, 0) + filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
     const totalExpenses = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);
 
     // Granular revenue from events in this period
     let boatRentalRevenue = 0;
     let productsRevenue = 0;
+    let otherRevenue = filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
 
     filteredEvents.forEach(event => {
         // If we have stored breakdown, use it, otherwise approximate
@@ -76,6 +82,7 @@ export const useFinanceViewModel = () => {
       netProfit: totalRevenue - totalExpenses,
       boatRentalRevenue,
       productsRevenue,
+      otherRevenue,
       eventCount: filteredEvents.length,
       expenseCount: filteredExpenses.length
     };
@@ -91,10 +98,11 @@ export const useFinanceViewModel = () => {
 
       const monthPayments = payments.filter(p => p.date >= mStart && p.date <= mEnd);
       const monthExpenses = expenses.filter(e => e.date >= mStart && e.date <= mEnd && e.status === 'PAID');
+      const monthIncomes = incomes.filter(i => i.date >= mStart && i.date <= mEnd);
 
       data.push({
         month: format(monthDate, 'MMM', { locale: undefined }), // Simplified for now
-        revenue: monthPayments.reduce((acc, p) => acc + p.amount, 0),
+        revenue: monthPayments.reduce((acc, p) => acc + p.amount, 0) + monthIncomes.reduce((acc, i) => acc + i.amount, 0),
         expenses: monthExpenses.reduce((acc, e) => acc + e.amount, 0),
       });
     }

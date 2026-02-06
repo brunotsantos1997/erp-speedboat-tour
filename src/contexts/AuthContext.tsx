@@ -34,6 +34,7 @@ import { clientRepository } from '../core/repositories/ClientRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { expenseCategoryRepository } from '../core/repositories/ExpenseCategoryRepository';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
+import { incomeRepository } from '../core/repositories/IncomeRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
 import { VoucherAppearanceRepository } from '../core/repositories/VoucherAppearanceRepository';
 import { VoucherTermsRepository } from '../core/repositories/VoucherTermsRepository';
@@ -95,6 +96,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     eventRepository.dispose();
     expenseCategoryRepository.dispose();
     expenseRepository.dispose();
+    incomeRepository.dispose();
     paymentRepository.dispose();
     VoucherAppearanceRepository.getInstance().dispose();
     VoucherTermsRepository.getInstance().dispose();
@@ -109,6 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     eventRepository.initialize(user);
     expenseCategoryRepository.initialize(user);
     expenseRepository.initialize(user);
+    incomeRepository.initialize(user);
     paymentRepository.initialize(user);
     VoucherAppearanceRepository.getInstance().initialize(user);
     VoucherTermsRepository.getInstance().initialize(user);

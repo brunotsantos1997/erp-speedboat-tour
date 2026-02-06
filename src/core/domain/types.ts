@@ -15,6 +15,18 @@ export interface Product {
 }
 
 /**
+ * Represents a miscellaneous income (gain).
+ */
+export interface Income {
+  id: string;
+  date: string; // YYYY-MM-DD
+  amount: number;
+  description: string;
+  paymentMethod: PaymentMethod;
+  timestamp: number;
+}
+
+/**
  * Represents the discount applied to an event.
  */
 export interface Discount {

@@ -2,12 +2,11 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import type { DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, EventType, PaymentStatus, CompanyData, Payment, PaymentMethod, PaymentType } from '../core/domain/types';
+import type { DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, EventType, PaymentStatus, CompanyData } from '../core/domain/types';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { productRepository } from '../core/repositories/ProductRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
-import { paymentRepository } from '../core/repositories/PaymentRepository';
 import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
 import { format } from 'date-fns';
 import { timeToMinutes, minutesToTime } from '../core/utils/timeUtils';
@@ -43,7 +42,6 @@ export const useCreateEventViewModel = () => {
   const [passengerCount, setPassengerCount] = useState(1);
   const [observations, setObservations] = useState('');
   const [tax, setTax] = useState(0);
-  const [payments, setPayments] = useState<Omit<Payment, 'id' | 'eventId'>[]>([]);
 
   // Client Management State
   const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(null);
@@ -84,10 +82,6 @@ export const useCreateEventViewModel = () => {
           setIsPreScheduled(event.status === 'PRE_SCHEDULED');
           setOriginalPaymentStatus(event.paymentStatus);
           setTax(event.tax || 0);
-
-          // Load existing payments
-          const eventPayments = await paymentRepository.getByEventId(editingEventId);
-          setPayments(eventPayments.map(({ id, eventId, ...rest }) => rest));
         } else {
           setEditingEventId(null);
         }
@@ -343,24 +337,6 @@ export const useCreateEventViewModel = () => {
 
   const total = useMemo(() => Math.max(0, subtotal - totalDiscount + tax), [subtotal, totalDiscount, tax]);
 
-  const paidAmount = useMemo(() => payments.reduce((acc, p) => acc + p.amount, 0), [payments]);
-  const balanceRemaining = useMemo(() => Math.max(0, total - paidAmount), [total, paidAmount]);
-
-  const addPayment = useCallback((amount: number, method: PaymentMethod, type: PaymentType) => {
-    const newPayment = {
-      amount,
-      method,
-      type,
-      date: format(new Date(), 'yyyy-MM-dd'),
-      timestamp: Date.now()
-    };
-    setPayments(prev => [...prev, newPayment]);
-  }, []);
-
-  const removePayment = useCallback((index: number) => {
-    setPayments(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
   const createEvent = useCallback(async () => {
     if (!selectedDate || !selectedClient || !selectedBoat || !selectedBoardingLocation) {
       throw new Error('Campos obrigatórios ausentes.');
@@ -380,15 +356,12 @@ export const useCreateEventViewModel = () => {
 
     const eventStatus = isPreScheduled ? 'PRE_SCHEDULED' : 'SCHEDULED';
 
-    // Auto-confirm payment status if total is covered
-    const finalPaymentStatus: PaymentStatus = paidAmount >= total ? 'CONFIRMED' : 'PENDING';
-
     const eventData: any = {
       date: format(selectedDate, 'yyyy-MM-dd'),
       startTime: startTime,
       endTime: endTime,
       status: eventStatus as EventType['status'],
-      paymentStatus: finalPaymentStatus,
+      paymentStatus: (editingEventId && originalPaymentStatus === 'CONFIRMED' ? 'CONFIRMED' : 'PENDING') as PaymentStatus,
       boat: selectedBoat,
       boardingLocation: selectedBoardingLocation,
       products: selectedProducts,
@@ -407,38 +380,19 @@ export const useCreateEventViewModel = () => {
       eventData.preScheduledAt = Date.now();
     }
 
-    let savedEvent: EventType;
-
     if (editingEventId) {
-      savedEvent = {
+      const updatedEvent = {
         ...eventData,
         id: editingEventId,
         createdByUserId: originalEvent?.createdByUserId,
       };
-      await eventRepository.updateEvent(savedEvent);
-
-      // Handle payments: this is tricky with separate collection.
-      // For simplicity in this task, I will clear and re-add or just add new ones.
-      // Better: fetch existing IDs and compare.
-      // But let's keep it simple: clear event payments and re-add for this event.
-      const existingPayments = await paymentRepository.getByEventId(editingEventId);
-      for (const p of existingPayments) {
-          await paymentRepository.remove(p.id);
-      }
+      await eventRepository.updateEvent(updatedEvent as EventType);
     } else {
       const newEventData = {
         ...eventData,
         createdByUserId: currentUser?.id,
       };
-      savedEvent = await eventRepository.add(newEventData);
-    }
-
-    // Save payments
-    for (const p of payments) {
-        await paymentRepository.add({
-            ...p,
-            eventId: savedEvent.id
-        });
+      await eventRepository.add(newEventData);
     }
 
     return selectedClient;
@@ -461,9 +415,7 @@ export const useCreateEventViewModel = () => {
     originalEvent,
     originalPaymentStatus,
     tax,
-    boatRentalCost,
-    payments,
-    paidAmount
+    boatRentalCost
   ]);
 
   useEffect(() => {
@@ -624,9 +576,6 @@ export const useCreateEventViewModel = () => {
     loyaltySuggestion,
     availableTimeSlots,
     availableEndTimeSlots,
-    payments,
-    paidAmount,
-    balanceRemaining,
     isModalOpen,
     editingClient,
     newClientName,
@@ -653,8 +602,6 @@ export const useCreateEventViewModel = () => {
     handleCloseModal,
     handleSaveClient,
     handleDeleteClient,
-    addPayment,
-    removePayment,
     createEvent,
   };
 };
