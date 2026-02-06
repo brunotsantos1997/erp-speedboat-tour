@@ -286,7 +286,7 @@ export const CreateEventScreen: React.FC = () => {
               </div>
             </section>
 
-            {/* Selected Items & Discount */}
+            {/* Selected Items */}
             {vm.selectedProducts.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-3">Itens Selecionados</h2>
@@ -336,12 +336,22 @@ export const CreateEventScreen: React.FC = () => {
                     )
                   })}
                 </div>
-                <div className="mt-6">
-                  <h3 className="text-md font-semibold mb-2">Desconto</h3>
+              </section>
+            )}
+          </div>
+
+          {/* Right Column: Scheduling */}
+          <aside className="lg:col-span-1 space-y-6">
+            {/* Discount & Tax */}
+            <section className="bg-white p-4 rounded-lg shadow">
+              <h2 className="text-lg font-semibold mb-3 border-b pb-2">Desconto e Taxas</h2>
+              <div className="space-y-4 mt-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Desconto</h3>
                   <div className="grid grid-cols-3 gap-2 bg-white p-2 rounded-lg border">
                     <div className="col-span-1 flex">
-                      <button onClick={() => vm.updateDiscountType('FIXED')} className={`w-full px-4 py-2 text-sm rounded-l-md ${vm.discount.type === 'FIXED' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>R$</button>
-                      <button onClick={() => vm.updateDiscountType('PERCENTAGE')} className={`w-full px-4 py-2 text-sm rounded-r-md ${vm.discount.type === 'PERCENTAGE' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>%</button>
+                      <button onClick={() => vm.updateDiscountType('FIXED')} className={`w-full px-2 py-2 text-sm rounded-l-md ${vm.discount.type === 'FIXED' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>R$</button>
+                      <button onClick={() => vm.updateDiscountType('PERCENTAGE')} className={`w-full px-2 py-2 text-sm rounded-r-md ${vm.discount.type === 'PERCENTAGE' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>%</button>
                     </div>
                     <div className="col-span-2">
                       {vm.discount.type === 'PERCENTAGE' ? (
@@ -359,19 +369,16 @@ export const CreateEventScreen: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="mt-6">
-                  <h3 className="text-md font-semibold mb-2">Taxa</h3>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 mb-2">Taxa Adicional</h3>
                   <MoneyInput
                     value={vm.tax}
                     onChange={vm.updateTax}
                   />
                 </div>
-              </section>
-            )}
-          </div>
+              </div>
+            </section>
 
-          {/* Right Column: Scheduling */}
-          <aside className="lg:col-span-1 space-y-6">
             <section className="bg-white p-4 rounded-lg shadow">
               <h2 className="text-lg font-semibold mb-3 border-b pb-2">Agendamento</h2>
 
@@ -478,7 +485,7 @@ export const CreateEventScreen: React.FC = () => {
             </div>
             {vm.tax > 0 && (
               <div className="flex justify-between items-center text-sm text-green-600">
-                <span>Taxa</span>
+                <span>Taxa Adicional</span>
                 <span className="font-medium">+ {formatCurrencyBRL(vm.tax)}</span>
               </div>
             )}
