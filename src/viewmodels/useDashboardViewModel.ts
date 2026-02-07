@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { EventType } from '../core/domain/types';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
-import { startOfDay, isWithinInterval, addDays, startOfWeek, endOfWeek, getMonth, isSameDay, format } from 'date-fns';
+import { startOfDay, isWithinInterval, startOfWeek, endOfWeek, getMonth, isSameDay, format } from 'date-fns';
 import { useToastContext } from '../ui/contexts/ToastContext';
 
 // Helper to parse date string as local time to avoid timezone issues.
@@ -24,14 +24,7 @@ export const useDashboardViewModel = () => {
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would be a single API call.
-      const datePromises = Array.from({ length: 60 }, (_, i) => {
-        const date = addDays(new Date(), i);
-        const dateString = date.toISOString().split('T')[0];
-        return eventRepository.getEventsByDate(dateString);
-      });
-      const eventsPerDay = await Promise.all(datePromises);
-      const allFetchedEvents = eventsPerDay.flat();
+      const allFetchedEvents = await eventRepository.getAll();
 
       // Auto-cancel expired pre-reservations (older than 24h)
       const now = Date.now();
@@ -202,7 +195,7 @@ export const useDashboardViewModel = () => {
     const currentMonth = getMonth(today);
     const monthlyEvents = allEvents.filter(event =>
       getMonth(parseLocalDate(event.date)) === currentMonth &&
-      event.status === 'COMPLETED'
+      (event.status === 'SCHEDULED' || event.status === 'COMPLETED' || event.status === 'ARCHIVED_COMPLETED')
     );
 
     const totalRevenue = monthlyEvents.reduce((acc, event) => acc + event.total, 0);

@@ -47,7 +47,8 @@ export const useFinanceViewModel = () => {
     const startStr = format(startDate, 'yyyy-MM-dd');
     const endStr = format(endDate, 'yyyy-MM-dd');
 
-    const filteredEvents = events.filter(e => e.date >= startStr && e.date <= endStr && e.status !== 'CANCELLED' && e.status !== 'ARCHIVED_CANCELLED');
+    const confirmedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED'];
+    const filteredEvents = events.filter(e => e.date >= startStr && e.date <= endStr && confirmedStatuses.includes(e.status));
     const filteredExpenses = expenses.filter(e => e.date >= startStr && e.date <= endStr && e.status === 'PAID');
     const filteredPayments = payments.filter(p => p.date >= startStr && p.date <= endStr);
     const filteredIncomes = incomes.filter(i => i.date >= startStr && i.date <= endStr);
@@ -56,9 +57,8 @@ export const useFinanceViewModel = () => {
   }, [events, expenses, payments, incomes, startDate, endDate]);
 
   const stats = useMemo(() => {
-    const { filteredEvents, filteredExpenses, filteredPayments, filteredIncomes } = filteredData;
+    const { filteredEvents, filteredExpenses, filteredIncomes } = filteredData;
 
-    const totalRevenue = filteredPayments.reduce((acc, p) => acc + p.amount, 0) + filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
     const totalExpenses = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);
 
     // Granular revenue from events in this period
@@ -78,6 +78,8 @@ export const useFinanceViewModel = () => {
             productsRevenue += (event.total - boatCost);
         }
     });
+
+    const totalRevenue = boatRentalRevenue + productsRevenue + otherRevenue;
 
     return {
       totalRevenue,

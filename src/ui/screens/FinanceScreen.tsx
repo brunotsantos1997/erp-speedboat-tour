@@ -104,7 +104,7 @@ export const FinanceScreen: React.FC = () => {
         <StatCard
           title="Receita Total"
           value={formatCurrencyBRL(stats.totalRevenue)}
-          subValue={`${stats.eventCount} recebimentos`}
+          subValue={`${stats.eventCount} passeios`}
           icon={<TrendingUp className="text-green-600" />}
           color="bg-green-50"
         />
