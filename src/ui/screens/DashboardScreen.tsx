@@ -90,6 +90,7 @@ export const DashboardScreen: React.FC = () => {
     setIsPaymentModalOpen,
     activeEventForPayment,
     paymentType,
+    defaultPaymentAmount,
     initiatePayment,
     confirmPaymentRecord,
     processNotification
@@ -263,7 +264,7 @@ export const DashboardScreen: React.FC = () => {
           onClose={() => setIsPaymentModalOpen(false)}
           onConfirm={confirmPaymentRecord}
           title={paymentType === 'DOWN_PAYMENT' ? 'Confirmar Reserva (Sinal)' : 'Registrar Pagamento de Saldo'}
-          defaultAmount={paymentType === 'DOWN_PAYMENT' ? activeEventForPayment.total * 0.3 : activeEventForPayment.total} // Placeholder suggested values
+          defaultAmount={defaultPaymentAmount}
           type={paymentType}
         />
       )}

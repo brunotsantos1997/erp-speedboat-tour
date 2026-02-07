@@ -100,7 +100,6 @@ export const VoucherScreen: React.FC = () => {
     products,
     subtotal,
     total,
-    reservationFee,
     remainingBalance,
   } = voucher;
 
@@ -297,8 +296,12 @@ export const VoucherScreen: React.FC = () => {
                       )}
                       <div className="flex justify-between font-bold text-lg border-t border-gray-200 pt-2 mt-2"><span>Total</span> <span>{formatCurrencyBRL(total)}</span></div>
                       <div className="flex justify-between font-bold text-lg text-blue-600 bg-blue-50 p-3 rounded-lg">
-                          <span>Sinal (Reserva 30%)</span>
-                          <span>{formatCurrencyBRL(reservationFee)}</span>
+                          <span>
+                            {voucher.remainingReservationFee < voucher.reservationFee && voucher.remainingReservationFee > 0
+                              ? "Sinal Pendente (Reserva)"
+                              : "Sinal (Reserva 30%)"}
+                          </span>
+                          <span>{formatCurrencyBRL(voucher.remainingReservationFee)}</span>
                       </div>
                        <div className="flex justify-between text-gray-600 pt-2 mt-2">
                           <span>Saldo a pagar no dia</span>

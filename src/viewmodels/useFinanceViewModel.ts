@@ -5,7 +5,7 @@ import { eventRepository } from '../core/repositories/EventRepository';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
 import { incomeRepository } from '../core/repositories/IncomeRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
-import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
+import { startOfMonth, endOfMonth, format, subMonths, subDays } from 'date-fns';
 
 export const useFinanceViewModel = () => {
   const [events, setEvents] = useState<EventType[]>([]);
@@ -13,6 +13,7 @@ export const useFinanceViewModel = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
 
@@ -123,14 +124,95 @@ export const useFinanceViewModel = () => {
     return data;
   }, [events, expenses, incomes]);
 
+  const weeklyCashFlow = useMemo(() => {
+    const data = [];
+    const confirmedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED'];
+
+    for (let i = 6; i >= 0; i--) {
+      const date = subDays(new Date(), i);
+      const dStr = format(date, 'yyyy-MM-dd');
+
+      const dayEvents = events.filter(e => e.date === dStr && confirmedStatuses.includes(e.status));
+      const dayIncomes = incomes.filter(i => i.date === dStr);
+      const dayExpenses = expenses.filter(e => e.date === dStr && e.status === 'PAID');
+
+      const revenue = dayEvents.reduce((acc, e) => acc + (e.total || 0), 0) + dayIncomes.reduce((acc, i) => acc + i.amount, 0);
+      const exp = dayExpenses.reduce((acc, e) => acc + e.amount, 0);
+
+      data.push({
+        day: format(date, 'dd/MM'),
+        revenue,
+        expenses: exp,
+      });
+    }
+    return data;
+  }, [events, expenses, incomes]);
+
+  const cashBook = useMemo(() => {
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
+
+    const combined = [
+      ...incomes.map(i => ({
+        id: i.id,
+        date: i.date,
+        amount: i.amount,
+        description: i.description,
+        type: 'INCOME' as const,
+        timestamp: i.timestamp
+      })),
+      ...expenses.map(e => ({
+        id: e.id,
+        date: e.date,
+        amount: e.amount,
+        description: e.description,
+        type: 'EXPENSE' as const,
+        timestamp: e.timestamp
+      })),
+      ...payments.map(p => ({
+        id: p.id,
+        date: p.date,
+        amount: p.amount,
+        description: `Pagamento de Evento (${p.type})`,
+        type: 'PAYMENT' as const,
+        timestamp: p.timestamp
+      }))
+    ].filter(item => item.date >= startStr && item.date <= endStr);
+
+    return combined.sort((a, b) => {
+        if (b.date !== a.date) return b.date.localeCompare(a.date);
+        return b.timestamp - a.timestamp;
+    });
+  }, [incomes, expenses, payments, startDate, endDate]);
+
+  const deleteEntry = async (id: string, type: 'INCOME' | 'EXPENSE' | 'PAYMENT') => {
+    if (!window.confirm('Tem certeza que deseja excluir este registro financeiro?')) return;
+    setIsDeleting(true);
+    try {
+      if (type === 'INCOME') await incomeRepository.remove(id);
+      else if (type === 'EXPENSE') await expenseRepository.remove(id);
+      else if (type === 'PAYMENT') await paymentRepository.remove(id);
+      await loadData();
+    } catch (err) {
+      console.error('Failed to delete entry:', err);
+      alert('Erro ao excluir registro.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return {
     loading,
+    isDeleting,
     startDate,
     setStartDate,
     endDate,
     setEndDate,
     stats,
     cashFlowData,
+    weeklyCashFlow,
+    cashBook,
+    deleteEntry,
     refresh: loadData
   };
 };

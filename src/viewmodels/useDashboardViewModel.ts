@@ -18,6 +18,7 @@ export const useDashboardViewModel = () => {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [activeEventForPayment, setActiveEventForPayment] = useState<EventType | null>(null);
   const [paymentType, setPaymentType] = useState<'DOWN_PAYMENT' | 'BALANCE' | 'FULL'>('DOWN_PAYMENT');
+  const [defaultPaymentAmount, setDefaultPaymentAmount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
 
@@ -58,11 +59,22 @@ export const useDashboardViewModel = () => {
   }, [fetchEvents]);
 
   // --- Actions ---
-  const initiatePayment = useCallback((eventId: string, type: 'DOWN_PAYMENT' | 'BALANCE' | 'FULL') => {
+  const initiatePayment = useCallback(async (eventId: string, type: 'DOWN_PAYMENT' | 'BALANCE' | 'FULL') => {
     const event = allEvents.find(e => e.id === eventId);
     if (event) {
+      const payments = await paymentRepository.getByEventId(eventId);
+      const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
+
+      let suggested = 0;
+      if (type === 'DOWN_PAYMENT') {
+        suggested = Math.max(0, (event.total * 0.3) - totalPaid);
+      } else {
+        suggested = Math.max(0, event.total - totalPaid);
+      }
+
       setActiveEventForPayment(event);
       setPaymentType(type);
+      setDefaultPaymentAmount(suggested);
       setIsPaymentModalOpen(true);
     }
   }, [allEvents]);
@@ -86,14 +98,18 @@ export const useDashboardViewModel = () => {
       // Update event status/paymentStatus if necessary
       let updatedEvent = { ...activeEventForPayment };
 
-      if (type === 'DOWN_PAYMENT' && updatedEvent.status === 'PRE_SCHEDULED') {
+      // Calculate total paid including the new payment
+      const payments = await paymentRepository.getByEventId(eventId);
+      const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
+
+      const reservationFee = updatedEvent.total * 0.3;
+
+      // Logic: If total paid >= 30% fee, confirm the reservation
+      if (totalPaid >= reservationFee && updatedEvent.status === 'PRE_SCHEDULED') {
         updatedEvent.status = 'SCHEDULED';
       }
 
-      // Check if fully paid (simple check for now)
-      const eventPayments = await paymentRepository.getByEventId(eventId);
-      const totalPaid = eventPayments.reduce((acc, p) => acc + p.amount, 0);
-
+      // Check if fully paid
       if (totalPaid >= updatedEvent.total) {
         updatedEvent.paymentStatus = 'CONFIRMED';
       } else {
@@ -224,6 +240,7 @@ export const useDashboardViewModel = () => {
     setIsPaymentModalOpen,
     activeEventForPayment,
     paymentType,
+    defaultPaymentAmount,
     initiatePayment,
     confirmPaymentRecord,
     processNotification,
