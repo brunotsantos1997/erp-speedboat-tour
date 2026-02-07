@@ -96,23 +96,32 @@ export const useFinanceViewModel = () => {
   const cashFlowData = useMemo(() => {
     // Generate last 6 months of data
     const data = [];
+    const confirmedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED'];
+
     for (let i = 5; i >= 0; i--) {
       const monthDate = subMonths(new Date(), i);
       const mStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
       const mEnd = format(endOfMonth(monthDate), 'yyyy-MM-dd');
 
-      const monthPayments = payments.filter(p => p.date >= mStart && p.date <= mEnd);
+      const monthEvents = events.filter(e => e.date >= mStart && e.date <= mEnd && confirmedStatuses.includes(e.status));
       const monthExpenses = expenses.filter(e => e.date >= mStart && e.date <= mEnd && e.status === 'PAID');
       const monthIncomes = incomes.filter(i => i.date >= mStart && i.date <= mEnd);
 
+      const eventRevenue = monthEvents.reduce((acc, e) => {
+        if (e.rentalRevenue !== undefined && e.productsRevenue !== undefined) {
+          return acc + e.rentalRevenue + e.productsRevenue;
+        }
+        return acc + e.total;
+      }, 0);
+
       data.push({
         month: format(monthDate, 'MMM', { locale: undefined }), // Simplified for now
-        revenue: monthPayments.reduce((acc, p) => acc + p.amount, 0) + monthIncomes.reduce((acc, i) => acc + i.amount, 0),
+        revenue: eventRevenue + monthIncomes.reduce((acc, i) => acc + i.amount, 0),
         expenses: monthExpenses.reduce((acc, e) => acc + e.amount, 0),
       });
     }
     return data;
-  }, [payments, expenses]);
+  }, [events, expenses, incomes]);
 
   return {
     loading,
