@@ -5,7 +5,7 @@ import { eventRepository } from '../core/repositories/EventRepository';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
 import { incomeRepository } from '../core/repositories/IncomeRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
-import { startOfMonth, endOfMonth, format, subMonths, subDays } from 'date-fns';
+import { startOfMonth, endOfMonth, format, subMonths, eachDayOfInterval } from 'date-fns';
 
 export const useFinanceViewModel = () => {
   const [events, setEvents] = useState<EventType[]>([]);
@@ -97,56 +97,58 @@ export const useFinanceViewModel = () => {
   const cashFlowData = useMemo(() => {
     // Generate last 6 months of data
     const data = [];
-    const confirmedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED'];
+    const projectedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED', 'PRE_SCHEDULED'];
 
     for (let i = 5; i >= 0; i--) {
       const monthDate = subMonths(new Date(), i);
       const mStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
       const mEnd = format(endOfMonth(monthDate), 'yyyy-MM-dd');
 
-      const monthEvents = events.filter(e => e.date >= mStart && e.date <= mEnd && confirmedStatuses.includes(e.status));
+      const monthEvents = events.filter(e => e.date >= mStart && e.date <= mEnd && projectedStatuses.includes(e.status));
       const monthExpenses = expenses.filter(e => e.date >= mStart && e.date <= mEnd && e.status === 'PAID');
       const monthIncomes = incomes.filter(i => i.date >= mStart && i.date <= mEnd);
+      const monthPayments = payments.filter(p => p.date >= mStart && p.date <= mEnd);
 
-      const eventRevenue = monthEvents.reduce((acc, e) => {
-        if (e.rentalRevenue !== undefined && e.productsRevenue !== undefined) {
-          return acc + e.rentalRevenue + e.productsRevenue;
-        }
-        return acc + e.total;
-      }, 0);
+      const projectedRevenue = monthEvents.reduce((acc, e) => acc + (e.total || 0), 0) + monthIncomes.reduce((acc, i) => acc + i.amount, 0);
+      const realizedRevenue = monthPayments.reduce((acc, p) => acc + p.amount, 0) + monthIncomes.reduce((acc, i) => acc + i.amount, 0);
 
       data.push({
-        month: format(monthDate, 'MMM', { locale: undefined }), // Simplified for now
-        revenue: eventRevenue + monthIncomes.reduce((acc, i) => acc + i.amount, 0),
+        month: format(monthDate, 'MMM', { locale: undefined }),
+        projected: projectedRevenue,
+        realized: realizedRevenue,
         expenses: monthExpenses.reduce((acc, e) => acc + e.amount, 0),
       });
     }
     return data;
-  }, [events, expenses, incomes]);
+  }, [events, expenses, incomes, payments]);
 
-  const weeklyCashFlow = useMemo(() => {
-    const data = [];
-    const confirmedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED'];
+  const dailyCashFlow = useMemo(() => {
+    const days = eachDayOfInterval({ start: startDate, end: endDate });
+    const projectedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED', 'PRE_SCHEDULED'];
 
-    for (let i = 6; i >= 0; i--) {
-      const date = subDays(new Date(), i);
+    // Limit to 31 days to avoid messy charts
+    const displayDays = days.slice(-31);
+
+    return displayDays.map(date => {
       const dStr = format(date, 'yyyy-MM-dd');
 
-      const dayEvents = events.filter(e => e.date === dStr && confirmedStatuses.includes(e.status));
+      const dayEvents = events.filter(e => e.date === dStr && projectedStatuses.includes(e.status));
       const dayIncomes = incomes.filter(i => i.date === dStr);
       const dayExpenses = expenses.filter(e => e.date === dStr && e.status === 'PAID');
+      const dayPayments = payments.filter(p => p.date === dStr);
 
-      const revenue = dayEvents.reduce((acc, e) => acc + (e.total || 0), 0) + dayIncomes.reduce((acc, i) => acc + i.amount, 0);
+      const projected = dayEvents.reduce((acc, e) => acc + (e.total || 0), 0) + dayIncomes.reduce((acc, i) => acc + i.amount, 0);
+      const realized = dayPayments.reduce((acc, p) => acc + p.amount, 0) + dayIncomes.reduce((acc, i) => acc + i.amount, 0);
       const exp = dayExpenses.reduce((acc, e) => acc + e.amount, 0);
 
-      data.push({
+      return {
         day: format(date, 'dd/MM'),
-        revenue,
+        projected,
+        realized,
         expenses: exp,
-      });
-    }
-    return data;
-  }, [events, expenses, incomes]);
+      };
+    });
+  }, [events, expenses, incomes, payments, startDate, endDate]);
 
   const cashBook = useMemo(() => {
     const startStr = format(startDate, 'yyyy-MM-dd');
@@ -246,7 +248,7 @@ export const useFinanceViewModel = () => {
     setEndDate,
     stats,
     cashFlowData,
-    weeklyCashFlow,
+    dailyCashFlow,
     cashBook,
     deleteEntry,
     refresh: loadData
