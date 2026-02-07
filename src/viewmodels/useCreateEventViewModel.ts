@@ -404,6 +404,9 @@ export const useCreateEventViewModel = () => {
       boardingLocation: selectedBoardingLocation,
       products: selectedProducts,
       rentalDiscount,
+      // For editing legacy events, we want to clear the old discount fields upon saving
+      discount: { type: 'FIXED', value: 0 },
+      productsDiscount: { type: 'FIXED', value: 0 },
       client: selectedClient,
       passengerCount,
       subtotal,
@@ -442,7 +445,6 @@ export const useCreateEventViewModel = () => {
     endTime,
     selectedBoat,
     selectedProducts,
-    discount,
     selectedClient,
     passengerCount,
     subtotal,

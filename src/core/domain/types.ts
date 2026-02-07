@@ -101,6 +101,8 @@ export interface EventType {
   boardingLocation: BoardingLocation;
   products: SelectedProduct[];
   rentalDiscount?: Discount;
+  productsDiscount?: Discount; // Legacy
+  discount?: Discount; // Legacy
   client: ClientProfile;
   passengerCount: number;
   subtotal: number;

@@ -108,8 +108,16 @@ const EventCard: React.FC<{
     });
   };
 
+  const hasLegacyDiscounts = (eventType.discount?.value || 0) > 0 || (eventType.productsDiscount?.value || 0) > 0;
+
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md border transition-shadow hover:shadow-lg">
+    <div className={`bg-white p-4 rounded-lg shadow-md border transition-shadow hover:shadow-lg ${hasLegacyDiscounts ? 'border-yellow-400 bg-yellow-50/30' : ''}`}>
+      {hasLegacyDiscounts && (
+        <div className="mb-3 flex items-center gap-2 text-yellow-800 bg-yellow-100 p-2 rounded-md text-xs font-bold uppercase tracking-wider">
+          <AlertTriangle size={14} />
+          <span>Atenção: Este passeio possui descontos no formato antigo. Clique em "Alterar" para atualizar para os novos descontos por produto.</span>
+        </div>
+      )}
       <div className="flex justify-between items-start">
         <div>
           <p className="font-bold text-lg text-gray-800">{eventType.boat.name}</p>
