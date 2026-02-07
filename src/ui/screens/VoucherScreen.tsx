@@ -57,6 +57,15 @@ const formatDuration = (hours: number) => {
 export const VoucherScreen: React.FC = () => {
   const { voucher, companyData, voucherTerms, watermark, isLoading, error, handleDownloadPdf } = useVoucherViewModel();
 
+  const boatRentalGross = React.useMemo(() => {
+    if (!voucher || !voucher.boat) return 0;
+    const hours = Math.floor(voucher.durationHours);
+    const mins = Math.round((voucher.durationHours - hours) * 60);
+    let cost = hours * (voucher.boat.pricePerHour || 0);
+    if (mins >= 30) cost += (voucher.boat.pricePerHalfHour || 0);
+    return cost;
+  }, [voucher]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -94,15 +103,6 @@ export const VoucherScreen: React.FC = () => {
     reservationFee,
     remainingBalance,
   } = voucher;
-
-  const boatRentalGross = React.useMemo(() => {
-    if (!voucher || !boat) return 0;
-    const hours = Math.floor(voucher.durationHours);
-    const mins = Math.round((voucher.durationHours - hours) * 60);
-    let cost = hours * (boat.pricePerHour || 0);
-    if (mins >= 30) cost += (boat.pricePerHalfHour || 0);
-    return cost;
-  }, [voucher, boat]);
 
   const watermarkStyle = watermark
     ? {
