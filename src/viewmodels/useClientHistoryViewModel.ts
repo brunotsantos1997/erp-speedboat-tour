@@ -39,8 +39,28 @@ export const useClientHistoryViewModel = () => {
     setSearchTerm(client.name);
     setSearchResults([]);
     const events = await eventRepository.getEventsByClient(client.id);
-    events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setClientEvents(events);
+
+    // Auto-cancel logic for 24h old pre-reservations
+    const now = Date.now();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    const eventsWithAutoCancel = events.map(event => {
+      if (
+        event.status === 'PRE_SCHEDULED' &&
+        event.preScheduledAt &&
+        (now - event.preScheduledAt > twentyFourHours)
+      ) {
+        const updatedEvent = { ...event, status: 'CANCELLED' as const };
+        eventRepository.updateEvent(updatedEvent).catch(err =>
+          console.error(`Failed to auto-cancel event ${event.id}:`, err)
+        );
+        return updatedEvent;
+      }
+      return event;
+    });
+
+    eventsWithAutoCancel.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setClientEvents(eventsWithAutoCancel);
     setIsLoading(false);
   }, []);
 

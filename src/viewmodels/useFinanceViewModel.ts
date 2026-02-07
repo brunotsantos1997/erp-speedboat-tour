@@ -19,6 +19,9 @@ export const useFinanceViewModel = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      // Trigger backfill for events missing financial data
+      await eventRepository.backfillFinancialData();
+
       const [allEvents, allExpenses, allPayments, allIncomes] = await Promise.all([
         eventRepository.getAll(),
         expenseRepository.getAll(),
@@ -44,7 +47,8 @@ export const useFinanceViewModel = () => {
     const startStr = format(startDate, 'yyyy-MM-dd');
     const endStr = format(endDate, 'yyyy-MM-dd');
 
-    const filteredEvents = events.filter(e => e.date >= startStr && e.date <= endStr && e.status !== 'CANCELLED' && e.status !== 'ARCHIVED_CANCELLED');
+    const confirmedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED'];
+    const filteredEvents = events.filter(e => e.date >= startStr && e.date <= endStr && confirmedStatuses.includes(e.status));
     const filteredExpenses = expenses.filter(e => e.date >= startStr && e.date <= endStr && e.status === 'PAID');
     const filteredPayments = payments.filter(p => p.date >= startStr && p.date <= endStr);
     const filteredIncomes = incomes.filter(i => i.date >= startStr && i.date <= endStr);
@@ -53,9 +57,8 @@ export const useFinanceViewModel = () => {
   }, [events, expenses, payments, incomes, startDate, endDate]);
 
   const stats = useMemo(() => {
-    const { filteredEvents, filteredExpenses, filteredPayments, filteredIncomes } = filteredData;
+    const { filteredEvents, filteredExpenses, filteredIncomes } = filteredData;
 
-    const totalRevenue = filteredPayments.reduce((acc, p) => acc + p.amount, 0) + filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
     const totalExpenses = filteredExpenses.reduce((acc, e) => acc + e.amount, 0);
 
     // Granular revenue from events in this period
@@ -76,6 +79,8 @@ export const useFinanceViewModel = () => {
         }
     });
 
+    const totalRevenue = boatRentalRevenue + productsRevenue + otherRevenue;
+
     return {
       totalRevenue,
       totalExpenses,
@@ -91,23 +96,32 @@ export const useFinanceViewModel = () => {
   const cashFlowData = useMemo(() => {
     // Generate last 6 months of data
     const data = [];
+    const confirmedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED'];
+
     for (let i = 5; i >= 0; i--) {
       const monthDate = subMonths(new Date(), i);
       const mStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
       const mEnd = format(endOfMonth(monthDate), 'yyyy-MM-dd');
 
-      const monthPayments = payments.filter(p => p.date >= mStart && p.date <= mEnd);
+      const monthEvents = events.filter(e => e.date >= mStart && e.date <= mEnd && confirmedStatuses.includes(e.status));
       const monthExpenses = expenses.filter(e => e.date >= mStart && e.date <= mEnd && e.status === 'PAID');
       const monthIncomes = incomes.filter(i => i.date >= mStart && i.date <= mEnd);
 
+      const eventRevenue = monthEvents.reduce((acc, e) => {
+        if (e.rentalRevenue !== undefined && e.productsRevenue !== undefined) {
+          return acc + e.rentalRevenue + e.productsRevenue;
+        }
+        return acc + e.total;
+      }, 0);
+
       data.push({
         month: format(monthDate, 'MMM', { locale: undefined }), // Simplified for now
-        revenue: monthPayments.reduce((acc, p) => acc + p.amount, 0) + monthIncomes.reduce((acc, i) => acc + i.amount, 0),
+        revenue: eventRevenue + monthIncomes.reduce((acc, i) => acc + i.amount, 0),
         expenses: monthExpenses.reduce((acc, e) => acc + e.amount, 0),
       });
     }
     return data;
-  }, [payments, expenses]);
+  }, [events, expenses, incomes]);
 
   return {
     loading,

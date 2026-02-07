@@ -108,14 +108,22 @@ const EventCard: React.FC<{
     });
   };
 
+  const hasLegacyDiscounts = (eventType.discount?.value || 0) > 0 || (eventType.productsDiscount?.value || 0) > 0;
+
   return (
-    <div className="bg-white p-4 rounded-lg shadow-md border transition-shadow hover:shadow-lg">
+    <div className={`bg-white p-4 rounded-lg shadow-md border transition-shadow hover:shadow-lg ${hasLegacyDiscounts ? 'border-yellow-400 bg-yellow-50/30' : ''}`}>
+      {hasLegacyDiscounts && (
+        <div className="mb-3 flex items-center gap-2 text-yellow-800 bg-yellow-100 p-2 rounded-md text-xs font-bold uppercase tracking-wider">
+          <AlertTriangle size={14} />
+          <span>Atenção: Este passeio possui descontos no formato antigo. Clique em "Alterar" para atualizar para os novos descontos por produto.</span>
+        </div>
+      )}
       <div className="flex justify-between items-start">
         <div>
           <p className="font-bold text-lg text-gray-800">{eventType.boat.name}</p>
           <p className="flex items-center text-gray-600 mt-1">
             <Calendar size={16} className="mr-2" />
-            {new Date(eventType.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} às {eventType.startTime}
+            {new Date(eventType.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} às {eventType.startTime} - {eventType.endTime}
           </p>
         </div>
         <div className="text-right">
@@ -133,7 +141,10 @@ const EventCard: React.FC<{
         {(eventType.status === 'SCHEDULED' || eventType.status === 'PRE_SCHEDULED') && (
           <>
             {eventType.paymentStatus === 'PENDING' && (
-              <button onClick={() => onConfirmPayment(eventType.id)} className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 flex items-center"><DollarSign size={14} className="mr-1" /> Confirmar Pagamento</button>
+              <button onClick={() => onConfirmPayment(eventType.id)} className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 flex items-center">
+                <DollarSign size={14} className="mr-1" />
+                {eventType.status === 'PRE_SCHEDULED' ? 'Confirmar Reserva' : 'Confirmar Pagamento'}
+              </button>
             )}
             <button onClick={() => onEdit(eventType.id)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"><Edit size={14} className="mr-1" /> Alterar</button>
             <button onClick={() => onCancel(eventType.id)} className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 flex items-center"><Ban size={14} className="mr-1" /> Cancelar</button>

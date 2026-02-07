@@ -41,6 +41,7 @@ export interface SelectedProduct extends Product {
   isCourtesy: boolean;
   startTime?: string; // e.g., "15:00"
   endTime?: string;   // e.g., "19:00"
+  discount?: Discount;
 }
 
 /**
@@ -99,12 +100,15 @@ export interface EventType {
   boat: Boat;
   boardingLocation: BoardingLocation;
   products: SelectedProduct[];
-  discount: Discount;
+  rentalDiscount?: Discount;
+  productsDiscount?: Discount; // Legacy
+  discount?: Discount; // Legacy
   client: ClientProfile;
   passengerCount: number;
   subtotal: number;
   total: number;
   tax?: number;
+  taxDescription?: string;
   observations?: string;
   isAcknowledged?: boolean; // For dashboard notifications
   createdByUserId?: string;
