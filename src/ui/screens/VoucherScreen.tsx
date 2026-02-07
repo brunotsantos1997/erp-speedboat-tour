@@ -84,6 +84,15 @@ export const VoucherScreen: React.FC = () => {
     remainingBalance,
   } = voucher;
 
+  const boatRentalGross = React.useMemo(() => {
+    if (!voucher || !boat) return 0;
+    const hours = Math.floor(voucher.durationHours);
+    const mins = Math.round((voucher.durationHours - hours) * 60);
+    let cost = hours * (boat.pricePerHour || 0);
+    if (mins >= 30) cost += (boat.pricePerHalfHour || 0);
+    return cost;
+  }, [voucher, boat]);
+
   const watermarkStyle = watermark
     ? {
         backgroundImage: `url(${watermark})`,
@@ -176,6 +185,14 @@ export const VoucherScreen: React.FC = () => {
                         {boat.name} (Capacidade: {boat.capacity} pessoas)
                       </p>
                     </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-800">
+                      {formatCurrencyBRL(boatRentalGross)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      ({formatCurrencyBRL(boat.pricePerHour)}/h)
+                    </p>
                   </div>
                 </div>
 
