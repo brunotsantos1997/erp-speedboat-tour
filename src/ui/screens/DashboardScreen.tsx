@@ -7,6 +7,7 @@ import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { DollarSign, Hash, PlusCircle, Search, Clock, AlertTriangle, Anchor, CheckCircle, Bell, Ban, Wallet } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
+import { ptBR } from 'date-fns/locale';
 import type { EventType, PaymentType } from '../../core/domain/types';
 import { PaymentModal } from '../components/PaymentModal';
 
@@ -270,6 +271,7 @@ export const DashboardScreen: React.FC = () => {
                 setSelectedDate(date);
               }
             }}
+            locale={ptBR}
             modifiers={{ booked: calendarEvents }}
             modifiersStyles={{ booked: { color: 'red', fontWeight: 'bold' } }}
             className="w-full"

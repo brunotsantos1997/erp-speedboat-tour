@@ -79,7 +79,7 @@ export const useCreateEventViewModel = () => {
           setStartTime(event.startTime);
           setEndTime(event.endTime);
           setSelectedBoat(event.boat);
-          setSelectedTourType(event.tourType);
+          setSelectedTourType(event.tourType || null);
           setSelectedProducts(event.products);
           setRentalDiscount(event.rentalDiscount || { type: 'FIXED', value: 0 });
           setPassengerCount(event.passengerCount);

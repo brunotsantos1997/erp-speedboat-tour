@@ -183,6 +183,7 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
   useEffect(() => {
     if (companyData) {
       setAppName(companyData.appName);
+      document.title = companyData.appName;
     }
   }, [companyData]);
 
