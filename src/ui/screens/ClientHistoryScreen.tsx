@@ -133,7 +133,10 @@ const EventCard: React.FC<{
         {(eventType.status === 'SCHEDULED' || eventType.status === 'PRE_SCHEDULED') && (
           <>
             {eventType.paymentStatus === 'PENDING' && (
-              <button onClick={() => onConfirmPayment(eventType.id)} className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 flex items-center"><DollarSign size={14} className="mr-1" /> Confirmar Pagamento</button>
+              <button onClick={() => onConfirmPayment(eventType.id)} className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 flex items-center">
+                <DollarSign size={14} className="mr-1" />
+                {eventType.status === 'PRE_SCHEDULED' ? 'Confirmar Reserva' : 'Confirmar Pagamento'}
+              </button>
             )}
             <button onClick={() => onEdit(eventType.id)} className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"><Edit size={14} className="mr-1" /> Alterar</button>
             <button onClick={() => onCancel(eventType.id)} className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 flex items-center"><Ban size={14} className="mr-1" /> Cancelar</button>

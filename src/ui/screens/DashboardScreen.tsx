@@ -63,7 +63,7 @@ const EventListItem: React.FC<{ event: EventType; onConfirmPayment: (id: string,
             className="bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600 transition-colors flex items-center"
           >
             <Wallet size={14} className="mr-1"/>
-            {event.status === 'PRE_SCHEDULED' ? 'Sinal' : 'Pagar'}
+            {event.status === 'PRE_SCHEDULED' ? 'Confirmar Reserva' : 'Confirmar Pagamento'}
           </button>
         )}
       </div>
