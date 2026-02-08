@@ -19,9 +19,13 @@ export const UserCommissionsScreen: React.FC = () => {
       rentalEnabled: true,
       rentalPercentage: user.commissionPercentage || 0,
       rentalBase: 'NET',
+      deductRentalCost: false,
       productEnabled: false,
       productPercentage: 0,
-      productBase: 'NET'
+      productBase: 'NET',
+      deductProductCost: false,
+      taxEnabled: false,
+      taxPercentage: 0
     });
   };
 
@@ -146,11 +150,23 @@ export const UserCommissionsScreen: React.FC = () => {
                               Líquido
                             </button>
                           </div>
-                          <p className="mt-2 text-xs text-gray-500">
+                          <p className="mt-2 text-xs text-gray-500 mb-4">
                             {localSettings.rentalBase === 'GROSS'
                               ? '* Calculado sobre o valor total do aluguel antes dos descontos.'
                               : '* Calculado sobre o valor do aluguel após descontos proporcionais.'}
                           </p>
+
+                          <label className="flex items-center gap-2 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={localSettings.deductRentalCost}
+                              onChange={e => setLocalSettings({ ...localSettings, deductRentalCost: e.target.checked })}
+                              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                              Abater custos operacionais da lancha antes de calcular
+                            </span>
+                          </label>
                         </div>
                       </div>
                     )}
@@ -209,11 +225,69 @@ export const UserCommissionsScreen: React.FC = () => {
                               Líquido
                             </button>
                           </div>
-                          <p className="mt-2 text-xs text-gray-500">
+                          <p className="mt-2 text-xs text-gray-500 mb-4">
                             {localSettings.productBase === 'GROSS'
                               ? '* Calculado sobre o valor total dos produtos antes dos descontos.'
                               : '* Calculado sobre o valor dos produtos após descontos proporcionais.'}
                           </p>
+
+                          <label className="flex items-center gap-2 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={localSettings.deductProductCost}
+                              onChange={e => setLocalSettings({ ...localSettings, deductProductCost: e.target.checked })}
+                              className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                            />
+                            <span className="text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors">
+                              Abater custos dos produtos antes de calcular
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* Tax Commission */}
+                  <section className="p-6 rounded-xl border border-orange-100 bg-orange-50/30">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-orange-600 rounded-lg text-white">
+                          <Percent size={20} />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Comissão sobre Taxas/Adicionais</h3>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={localSettings.taxEnabled}
+                          onChange={e => setLocalSettings({ ...localSettings, taxEnabled: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                        <span className="ml-3 text-sm font-medium text-gray-700">{localSettings.taxEnabled ? 'Ativado' : 'Desativado'}</span>
+                      </label>
+                    </div>
+
+                    {localSettings.taxEnabled && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Porcentagem (%)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={localSettings.taxPercentage}
+                              onChange={e => setLocalSettings({ ...localSettings, taxPercentage: parseFloat(e.target.value) || 0 })}
+                              className="w-full pl-4 pr-12 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                              min="0"
+                              max="100"
+                            />
+                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">%</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col justify-end">
+                           <p className="text-sm text-gray-600 italic">
+                             * Esta comissão é calculada sobre o campo "Taxa/Adicional" preenchido no passeio.
+                           </p>
                         </div>
                       </div>
                     )}

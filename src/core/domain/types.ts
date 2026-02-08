@@ -7,7 +7,9 @@ export interface Product {
   id: string;
   name: string;
   price?: number; // Price for FIXED or PER_PERSON
+  cost?: number; // Cost for FIXED or PER_PERSON
   hourlyPrice?: number; // Price for HOURLY
+  hourlyCost?: number; // Cost for HOURLY
   pricingType: 'FIXED' | 'PER_PERSON' | 'HOURLY';
   iconKey: string;
   isDefaultCourtesy: boolean;
@@ -42,6 +44,7 @@ export interface SelectedProduct extends Product {
   startTime?: string; // e.g., "15:00"
   endTime?: string;   // e.g., "19:00"
   discount?: Discount;
+  snapshotCost?: number; // Cost captured at the time of the event
 }
 
 /**
@@ -53,7 +56,9 @@ export interface Boat {
   capacity: number;
   size: number; // in feet
   pricePerHour: number;
+  costPerHour?: number;
   pricePerHalfHour: number;
+  costPerHalfHour?: number;
   organizationTimeMinutes: number;
   isArchived?: boolean;
 }
@@ -128,6 +133,9 @@ export interface EventType {
   productsRevenue?: number;
   rentalGross?: number;
   productsGross?: number;
+  rentalCost?: number;
+  productsCost?: number;
+  taxCost?: number;
   autoCancelled?: boolean;
 }
 

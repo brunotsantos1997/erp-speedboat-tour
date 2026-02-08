@@ -5,9 +5,13 @@ export interface UserCommissionSettings {
   rentalEnabled: boolean;
   rentalPercentage: number;
   rentalBase: 'GROSS' | 'NET';
+  deductRentalCost: boolean;
   productEnabled: boolean;
   productPercentage: number;
   productBase: 'GROSS' | 'NET';
+  deductProductCost: boolean;
+  taxEnabled: boolean;
+  taxPercentage: number;
 }
 
 export interface User {

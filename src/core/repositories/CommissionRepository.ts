@@ -60,14 +60,25 @@ class CommissionRepository implements ICommissionRepository {
           if (user.commissionSettings) {
             const settings = user.commissionSettings;
             if (settings.rentalEnabled) {
-              const base = settings.rentalBase === 'GROSS' ? (event.rentalGross || 0) : (event.rentalRevenue || 0);
+              let base = settings.rentalBase === 'GROSS' ? (event.rentalGross || 0) : (event.rentalRevenue || 0);
+              if (settings.deductRentalCost) {
+                base = Math.max(0, base - (event.rentalCost || 0));
+              }
               commissionValue += base * (settings.rentalPercentage / 100);
               rentalBaseValue += base;
             }
             if (settings.productEnabled) {
-              const base = settings.productBase === 'GROSS' ? (event.productsGross || 0) : (event.productsRevenue || 0);
+              let base = settings.productBase === 'GROSS' ? (event.productsGross || 0) : (event.productsRevenue || 0);
+              if (settings.deductProductCost) {
+                base = Math.max(0, base - (event.productsCost || 0));
+              }
               commissionValue += base * (settings.productPercentage / 100);
               rentalBaseValue += base; // We use rentalBaseValue field in report to show the sum of bases
+            }
+            if (settings.taxEnabled) {
+              const base = (event.tax || 0);
+              commissionValue += base * (settings.taxPercentage / 100);
+              rentalBaseValue += base;
             }
           } else {
             // Legacy
