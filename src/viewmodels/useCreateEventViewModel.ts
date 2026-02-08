@@ -194,29 +194,29 @@ export const useCreateEventViewModel = () => {
     setTaxDescription(desc);
   }, []);
 
-  const handleBoatSelection = (boatId: string) => {
+  const handleBoatSelection = useCallback((boatId: string) => {
     const boat = availableBoats.find(b => b.id === boatId);
     setSelectedBoat(boat || null);
-  };
+  }, [availableBoats]);
 
-  const handleBoardingLocationSelection = (locationId: string) => {
+  const handleBoardingLocationSelection = useCallback((locationId: string) => {
     const location = availableBoardingLocations.find(l => l.id === locationId);
     setSelectedBoardingLocation(location || null);
-  };
+  }, [availableBoardingLocations]);
 
-  const handleTourTypeSelection = (tourTypeId: string) => {
+  const handleTourTypeSelection = useCallback((tourTypeId: string) => {
     const tourType = availableTourTypes.find(t => t.id === tourTypeId);
     setSelectedTourType(tourType || null);
-  };
+  }, [availableTourTypes]);
 
-  const handleSaveTourType = async (name: string, color: string) => {
+  const handleSaveTourType = useCallback(async (name: string, color: string) => {
     const newTourType = await tourTypeRepository.add({ name, color, isArchived: false });
     const tourTypes = await tourTypeRepository.getAll();
     setAvailableTourTypes(tourTypes);
     setSelectedTourType(newTourType);
-  };
+  }, []);
 
-  const updateHourlyProductTime = (productId: string, time: string, type: 'start' | 'end') => {
+  const updateHourlyProductTime = useCallback((productId: string, time: string, type: 'start' | 'end') => {
     setSelectedProducts(prev =>
       prev.map(p => {
         if (p.id === productId && p.pricingType === 'HOURLY') {
@@ -229,7 +229,7 @@ export const useCreateEventViewModel = () => {
         return p;
       })
     );
-  };
+  }, []);
 
   const handleClientSearch = useCallback(async (term: string) => {
     setClientSearchTerm(term);
@@ -470,20 +470,25 @@ export const useCreateEventViewModel = () => {
     startTime,
     endTime,
     selectedBoat,
-    selectedProducts,
-    selectedClient,
-    passengerCount,
-    subtotal,
-    total,
-    editingEventId,
     selectedBoardingLocation,
+    selectedTourType,
+    selectedProducts,
+    rentalDiscount,
+    passengerCount,
+    boatRentalCost,
+    productsCost,
+    subtotal,
+    rentalDiscountValue,
+    total,
+    tax,
+    taxDescription,
     observations,
+    selectedClient,
+    editingEventId,
     isPreScheduled,
     currentUser,
     originalEvent,
     originalPaymentStatus,
-    tax,
-    boatRentalCost
   ]);
 
   useEffect(() => {
