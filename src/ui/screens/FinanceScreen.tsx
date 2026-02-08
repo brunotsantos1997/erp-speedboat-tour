@@ -2,6 +2,7 @@
 import React from 'react';
 import { useFinanceViewModel } from '../../viewmodels/useFinanceViewModel';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
+import { format } from 'date-fns';
 import { DollarSign, TrendingDown, TrendingUp, BarChart3, Calendar, PlusCircle, Settings, X, Trash2, ArrowUpCircle, ArrowDownCircle, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MoneyInput } from '../components/MoneyInput';
@@ -86,15 +87,21 @@ export const FinanceScreen: React.FC = () => {
         </div>
         <input
           type="date"
-          value={startDate.toISOString().split('T')[0]}
-          onChange={(e) => setStartDate(new Date(e.target.value))}
+          value={format(startDate, 'yyyy-MM-dd')}
+          onChange={(e) => {
+              const [y, m, d] = e.target.value.split('-').map(Number);
+              setStartDate(new Date(y, m - 1, d));
+          }}
           className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
         />
         <span className="text-gray-400">até</span>
         <input
           type="date"
-          value={endDate.toISOString().split('T')[0]}
-          onChange={(e) => setEndDate(new Date(e.target.value))}
+          value={format(endDate, 'yyyy-MM-dd')}
+          onChange={(e) => {
+              const [y, m, d] = e.target.value.split('-').map(Number);
+              setEndDate(new Date(y, m - 1, d));
+          }}
           className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -190,15 +197,16 @@ export const FinanceScreen: React.FC = () => {
             <p className="text-xs text-gray-500 mb-6 italic">Mostra o faturamento projetado vs o que já foi recebido</p>
 
             <div className="flex items-end justify-between h-48 gap-1 pt-4">
-              {dailyCashFlow.map((data, index) => {
+              {(() => {
                   const max = Math.max(...dailyCashFlow.map(d => Math.max(d.projected, d.realized, d.expenses)), 100);
-                  const projHeight = (data.projected / max) * 100;
-                  const realHeight = (data.realized / max) * 100;
-                  const expHeight = (data.expenses / max) * 100;
+                  return dailyCashFlow.map((data, index) => {
+                      const projHeight = (data.projected / max) * 100;
+                      const realHeight = (data.realized / max) * 100;
+                      const expHeight = (data.expenses / max) * 100;
 
-                  return (
-                      <div key={index} className="flex-1 flex flex-col items-center gap-1 group">
-                          <div className="w-full flex items-end justify-center gap-[1px] h-full relative">
+                      return (
+                          <div key={index} className="flex-1 h-full flex flex-col items-center gap-1 group">
+                              <div className="w-full flex items-end justify-center gap-[1px] h-full relative">
                               <div
                                   className="w-[3px] sm:w-[6px] bg-blue-300 rounded-t-[1px]"
                                   style={{ height: `${projHeight}%` }}
@@ -215,12 +223,13 @@ export const FinanceScreen: React.FC = () => {
                                   title={`Despesa: ${formatCurrencyBRL(data.expenses)}`}
                               ></div>
                           </div>
-                          {dailyCashFlow.length <= 15 && (
-                            <span className="text-[8px] font-medium text-gray-400">{data.day}</span>
-                          )}
-                      </div>
-                  )
-              })}
+                              {dailyCashFlow.length <= 15 && (
+                                <span className="text-[8px] font-medium text-gray-400">{data.day}</span>
+                              )}
+                          </div>
+                      );
+                  });
+              })()}
             </div>
             <div className="flex justify-center flex-wrap gap-4 mt-6">
                 <div className="flex items-center gap-1.5">
@@ -244,15 +253,16 @@ export const FinanceScreen: React.FC = () => {
                 Fluxo Mensal (Últimos 6 meses)
             </h2>
             <div className="flex items-end justify-between h-48 gap-4 pt-4 px-2">
-              {cashFlowData.map((data, index) => {
+              {(() => {
                   const max = Math.max(...cashFlowData.map(d => Math.max(d.projected, d.realized, d.expenses)), 100);
-                  const projHeight = (data.projected / max) * 100;
-                  const realHeight = (data.realized / max) * 100;
-                  const expHeight = (data.expenses / max) * 100;
+                  return cashFlowData.map((data, index) => {
+                      const projHeight = (data.projected / max) * 100;
+                      const realHeight = (data.realized / max) * 100;
+                      const expHeight = (data.expenses / max) * 100;
 
-                  return (
-                      <div key={index} className="flex-1 flex flex-col items-center gap-2">
-                          <div className="w-full flex items-end justify-center gap-1 h-full">
+                      return (
+                          <div key={index} className="flex-1 h-full flex flex-col items-center gap-2">
+                              <div className="w-full flex items-end justify-center gap-1 h-full">
                               <div
                                   className="w-3 sm:w-6 bg-blue-300 rounded-t-sm"
                                   style={{ height: `${projHeight}%` }}
@@ -269,10 +279,11 @@ export const FinanceScreen: React.FC = () => {
                                   title={`Despesa: ${formatCurrencyBRL(data.expenses)}`}
                               ></div>
                           </div>
-                          <span className="text-xs font-medium text-gray-500">{data.month}</span>
-                      </div>
-                  )
-              })}
+                              <span className="text-xs font-medium text-gray-500">{data.month}</span>
+                          </div>
+                      );
+                  });
+              })()}
             </div>
             <div className="flex justify-center flex-wrap gap-6 mt-8 border-t pt-4">
                 <div className="flex items-center gap-2">
