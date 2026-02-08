@@ -153,6 +153,7 @@ export interface Expense {
   status: 'PENDING' | 'PAID';
   paymentMethod?: PaymentMethod;
   timestamp: number;
+  isArchived?: boolean;
 }
 
 /**

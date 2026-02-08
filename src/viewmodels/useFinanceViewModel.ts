@@ -15,7 +15,6 @@ export const useFinanceViewModel = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
 
@@ -67,7 +66,7 @@ export const useFinanceViewModel = () => {
     // Granular revenue from events in this period
     let boatRentalRevenue = 0;
     let productsRevenue = 0;
-    let otherRevenue = filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
+    const otherRevenue = filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
 
     filteredEvents.forEach(event => {
         // If we have stored breakdown, use it, otherwise approximate
@@ -154,7 +153,6 @@ export const useFinanceViewModel = () => {
 
   return {
     loading,
-    isDeleting,
     startDate,
     setStartDate,
     endDate,

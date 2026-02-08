@@ -3,7 +3,7 @@ import React from 'react';
 import { useFinanceViewModel } from '../../viewmodels/useFinanceViewModel';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { format } from 'date-fns';
-import { DollarSign, TrendingDown, TrendingUp, BarChart3, Calendar, PlusCircle, Settings, X, Trash2, ArrowUpCircle, ArrowDownCircle, History, BookOpen } from 'lucide-react';
+import { DollarSign, TrendingDown, TrendingUp, BarChart3, Calendar, PlusCircle, Settings, X, History, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MoneyInput } from '../components/MoneyInput';
 import { incomeRepository } from '../../core/repositories/IncomeRepository';
@@ -48,7 +48,7 @@ export const FinanceScreen: React.FC = () => {
         setIncomeAmount(0);
         setIncomeDesc('');
         refresh();
-    } catch (e) {
+    } catch {
         showToast('Erro ao salvar receita.');
     }
   };

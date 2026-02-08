@@ -524,7 +524,7 @@ export const useCreateEventViewModel = () => {
 
     // Initial filter by business hours (start time must be within business hours)
     // and must allow at least 30 min before closing.
-    let validSlots = allDaySlots.filter(slot => {
+    const validSlots = allDaySlots.filter(slot => {
       const min = timeToMinutes(slot);
       return min >= businessStartMin && min <= (businessEndMin - 30);
     });
