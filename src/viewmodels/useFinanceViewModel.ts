@@ -5,6 +5,7 @@ import { eventRepository } from '../core/repositories/EventRepository';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
 import { incomeRepository } from '../core/repositories/IncomeRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
+import { timeToMinutes } from '../core/utils/timeUtils';
 import { startOfMonth, endOfMonth, format, subMonths, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -151,95 +152,6 @@ export const useFinanceViewModel = () => {
     });
   }, [events, expenses, incomes, payments, startDate, endDate]);
 
-  const cashBook = useMemo(() => {
-    const startStr = format(startDate, 'yyyy-MM-dd');
-    const endStr = format(endDate, 'yyyy-MM-dd');
-
-    const combined = [
-      ...incomes.map(i => ({
-        id: i.id,
-        date: i.date,
-        amount: i.amount,
-        description: i.description,
-        type: 'INCOME' as const,
-        timestamp: i.timestamp
-      })),
-      ...expenses.map(e => ({
-        id: e.id,
-        date: e.date,
-        amount: e.amount,
-        description: e.description,
-        type: 'EXPENSE' as const,
-        timestamp: e.timestamp
-      })),
-      ...payments.map(p => {
-        const event = events.find(ev => ev.id === p.eventId);
-        return {
-          id: p.id,
-          date: p.date,
-          amount: p.amount,
-          description: event
-            ? `Pagamento: ${event.client.name} (${event.boat.name})`
-            : `Pagamento de Evento (${p.type})`,
-          type: 'PAYMENT' as const,
-          timestamp: p.timestamp,
-          eventId: p.eventId
-        };
-      })
-    ].filter(item => item.date >= startStr && item.date <= endStr);
-
-    return combined.sort((a, b) => {
-        if (b.date !== a.date) return b.date.localeCompare(a.date);
-        return b.timestamp - a.timestamp;
-    });
-  }, [incomes, expenses, payments, startDate, endDate]);
-
-  const deleteEntry = async (id: string, type: 'INCOME' | 'EXPENSE' | 'PAYMENT') => {
-    if (!window.confirm('Tem certeza que deseja excluir este registro financeiro?')) return;
-    setIsDeleting(true);
-    try {
-      if (type === 'INCOME') {
-        await incomeRepository.remove(id);
-      } else if (type === 'EXPENSE') {
-        await expenseRepository.remove(id);
-      } else if (type === 'PAYMENT') {
-        const payment = payments.find(p => p.id === id);
-        if (payment) {
-          await paymentRepository.remove(id);
-
-          // Update event status
-          const event = await eventRepository.getById(payment.eventId);
-          if (event) {
-            const remainingPayments = await paymentRepository.getByEventId(event.id);
-            const totalPaid = remainingPayments.reduce((acc, p) => acc + p.amount, 0);
-            const reservationFee = event.total * 0.3;
-
-            let updatedEvent = { ...event };
-
-            // If total paid drops below 30% and it was scheduled, move back to pre-scheduled?
-            // Actually, usually we just keep it as is unless it's a critical change.
-            // But let's at least update the paymentStatus.
-            if (totalPaid < event.total) {
-              updatedEvent.paymentStatus = 'PENDING';
-            }
-            if (totalPaid < reservationFee && updatedEvent.status === 'SCHEDULED') {
-              updatedEvent.status = 'PRE_SCHEDULED';
-              updatedEvent.preScheduledAt = Date.now(); // Reset timer?
-            }
-
-            await eventRepository.updateEvent(updatedEvent);
-          }
-        }
-      }
-      await loadData();
-    } catch (err) {
-      console.error('Failed to delete entry:', err);
-      alert('Erro ao excluir registro.');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   return {
     loading,
     isDeleting,
@@ -250,8 +162,6 @@ export const useFinanceViewModel = () => {
     stats,
     cashFlowData,
     dailyCashFlow,
-    cashBook,
-    deleteEntry,
     refresh: loadData
   };
 };

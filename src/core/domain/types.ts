@@ -201,6 +201,7 @@ export interface CompanyData {
   businessHours: BusinessHours;
   rentalHourlyRate?: number;
   rentalHalfHourRate?: number;
+  commissionBasis?: 'RENTAL_ONLY' | 'TOTAL_PRICE';
 }
 
 export interface VoucherTerms {
@@ -214,9 +215,12 @@ export interface CommissionReportEntry {
   eventId: string;
   eventDate: string;
   eventTotalPrice: number;
+  rentalRevenue: number;
   commissionPercentage: number;
   commissionValue: number;
   clientName: string;
+  status: 'PENDING' | 'PAID';
+  expenseId?: string;
 }
 
 export interface AuditLog {
