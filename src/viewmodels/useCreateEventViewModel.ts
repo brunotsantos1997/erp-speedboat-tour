@@ -443,6 +443,8 @@ export const useCreateEventViewModel = () => {
       observations,
       rentalRevenue,
       productsRevenue,
+      rentalGross: boatRentalCost,
+      productsGross: productsCost,
     };
 
     if (isPreScheduled) {

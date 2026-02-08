@@ -274,7 +274,9 @@ class EventRepositoryImpl implements IEventRepository {
         await this.updateEvent({
           ...event,
           rentalRevenue: finalRentalRevenue,
-          productsRevenue: finalProductsRevenue
+          productsRevenue: finalProductsRevenue,
+          rentalGross: rentalRevenue,
+          productsGross: productsGross
         });
       } catch (err) {
         console.error(`Failed to backfill event ${event.id}:`, err);

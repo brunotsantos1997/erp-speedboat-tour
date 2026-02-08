@@ -126,6 +126,8 @@ export interface EventType {
   payments?: Payment[];
   rentalRevenue?: number;
   productsRevenue?: number;
+  rentalGross?: number;
+  productsGross?: number;
   autoCancelled?: boolean;
 }
 
