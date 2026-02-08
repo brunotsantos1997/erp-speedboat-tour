@@ -48,7 +48,7 @@ export const FinanceScreen: React.FC = () => {
         setIncomeAmount(0);
         setIncomeDesc('');
         refresh();
-    } catch (e) {
+    } catch {
         showToast('Erro ao salvar receita.');
     }
   };

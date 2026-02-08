@@ -65,7 +65,7 @@ export const useFinanceViewModel = () => {
     // Granular revenue from events in this period
     let boatRentalRevenue = 0;
     let productsRevenue = 0;
-    let otherRevenue = filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
+    const otherRevenue = filteredIncomes.reduce((acc, i) => acc + i.amount, 0);
 
     filteredEvents.forEach(event => {
         // If we have stored breakdown, use it, otherwise approximate
