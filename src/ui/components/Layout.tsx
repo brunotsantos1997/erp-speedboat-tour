@@ -64,7 +64,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
           </NavLink>
 
           {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN') && (
-            <NavLink to="/admin/users" className={navLinkClass + ' justify-between'} onClick={onClose}>
+            <NavLink to="/admin/users" className={(props) => navLinkClass(props) + ' justify-between'} onClick={onClose}>
               <div className="flex items-center">
                 <UserCog className="mr-3" />
                 <span>Gerenciar Usuários</span>
@@ -117,6 +117,11 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
               <NavLink to="/tour-types" className={navLinkClass} onClick={onClose}>
                 Tipos de Passeio
               </NavLink>
+              {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
+                <NavLink to="/admin/commissions" className={navLinkClass} onClick={onClose}>
+                  Comissões
+                </NavLink>
+              )}
               {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
                 <>
                   <NavLink to="/voucher-terms" className={navLinkClass} onClick={onClose}>

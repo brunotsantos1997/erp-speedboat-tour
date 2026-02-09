@@ -1,7 +1,6 @@
 // src/core/repositories/VoucherAppearanceRepository.ts
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { auditLogRepository } from './AuditLogRepository';
 
 export interface VoucherAppearanceData {
   id: string;
@@ -15,6 +14,7 @@ export class VoucherAppearanceRepository {
   private data: VoucherAppearanceData | null = null;
   private unsubscribe: Unsubscribe | null = null;
   private currentUser: any = null;
+  private listeners: ((data: VoucherAppearanceData | null) => void)[] = [];
 
   private constructor() {}
 
@@ -38,8 +38,25 @@ export class VoucherAppearanceRepository {
     this.unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         this.data = { ...docSnap.data() as VoucherAppearanceData, id: docSnap.id };
+      } else {
+        this.data = null;
       }
+      this.notifyListeners();
     });
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener(this.data));
+  }
+
+  subscribe(listener: (data: VoucherAppearanceData | null) => void) {
+    this.listeners.push(listener);
+    if (this.data) {
+      listener(this.data);
+    }
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
   }
 
   dispose() {
@@ -60,7 +77,13 @@ export class VoucherAppearanceRepository {
       this.data = { ...docSnap.data() as VoucherAppearanceData, id: docSnap.id };
       return this.data;
     }
-    return { id: this.docId, watermarkImage: null };
+
+    const defaultData = { id: this.docId, watermarkImage: null };
+
+    this.data = defaultData;
+    this.notifyListeners();
+
+    return defaultData;
   }
 
   async update(updatedData: VoucherAppearanceData): Promise<VoucherAppearanceData> {
@@ -70,20 +93,7 @@ export class VoucherAppearanceRepository {
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
 
-    const oldSnap = await getDoc(docRef);
-    const oldData = oldSnap.exists() ? { ...oldSnap.data(), id: oldSnap.id } : null;
-
     await setDoc(docRef, data, { merge: true });
-
-    await auditLogRepository.log({
-      userId: this.currentUser.id,
-      userName: this.currentUser.name,
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: this.docId,
-      oldData,
-      newData: updatedData,
-    });
 
     this.data = updatedData;
     return updatedData;

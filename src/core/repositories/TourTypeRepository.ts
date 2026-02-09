@@ -21,6 +21,7 @@ export class TourTypeRepository {
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
   private currentUser: any = null;
+  private listeners: ((data: TourType[]) => void)[] = [];
 
   private constructor() {}
 
@@ -47,7 +48,23 @@ export class TourTypeRepository {
         id: doc.id
       }));
       this.isInitialized = true;
+      this.notifyListeners();
     });
+  }
+
+  private notifyListeners() {
+    const activeTourTypes = this.tourTypes.filter(t => !t.isArchived);
+    this.listeners.forEach(listener => listener(activeTourTypes));
+  }
+
+  subscribe(listener: (data: TourType[]) => void) {
+    this.listeners.push(listener);
+    if (this.isInitialized) {
+      listener(this.tourTypes.filter(t => !t.isArchived));
+    }
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
   }
 
   dispose() {
@@ -70,24 +87,7 @@ export class TourTypeRepository {
       this.isInitialized = true;
     }
 
-    if (this.tourTypes.length === 0) {
-      await this.seed();
-    }
-
     return this.tourTypes.filter(t => !t.isArchived);
-  }
-
-  private async seed() {
-    const initialTypes: Omit<TourType, 'id'>[] = [
-      { name: 'Aniversário', color: '#FF69B4' },
-      { name: 'Despedida de Solteiro', color: '#4169E1' },
-      { name: 'Despedida de Solteira', color: '#DA70D6' },
-      { name: 'Passeio', color: '#32CD32' },
-    ];
-
-    for (const type of initialTypes) {
-      await this.add(type);
-    }
   }
 
   async add(tourType: Omit<TourType, 'id'>): Promise<TourType> {

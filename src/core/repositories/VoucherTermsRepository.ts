@@ -2,7 +2,6 @@
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { VoucherTerms } from '../domain/types';
-import { auditLogRepository } from './AuditLogRepository';
 
 export class VoucherTermsRepository {
   private static instance: VoucherTermsRepository;
@@ -11,6 +10,7 @@ export class VoucherTermsRepository {
   private data: VoucherTerms | null = null;
   private unsubscribe: Unsubscribe | null = null;
   private currentUser: any = null;
+  private listeners: ((data: VoucherTerms | null) => void)[] = [];
 
   private constructor() {}
 
@@ -34,8 +34,25 @@ export class VoucherTermsRepository {
     this.unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         this.data = { ...docSnap.data() as VoucherTerms, id: docSnap.id };
+      } else {
+        this.data = null;
       }
+      this.notifyListeners();
     });
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener(this.data));
+  }
+
+  subscribe(listener: (data: VoucherTerms | null) => void) {
+    this.listeners.push(listener);
+    if (this.data) {
+      listener(this.data);
+    }
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
   }
 
   dispose() {
@@ -56,7 +73,22 @@ export class VoucherTermsRepository {
       this.data = { ...docSnap.data() as VoucherTerms, id: docSnap.id };
       return this.data;
     }
-    return { id: this.docId, terms: 'Termos padrão...' };
+
+    const defaultData = {
+      id: this.docId,
+      terms: `
+        <h2>Termos e Condições</h2>
+        <p><strong>1. Cancelamento e Reembolso:</strong> O cancelamento com reembolso de 100% do sinal é permitido apenas se feito com 7 dias de antecedência. Após este período, o sinal não é reembolsável.</p>
+        <p><strong>2. Condições Climáticas:</strong> Condições climáticas adversas (chuva forte, ventos perigosos) podem levar ao reagendamento do passeio sem custo adicional, a ser combinado entre as partes.</p>
+        <p><strong>3. Responsabilidade:</strong> Danos causados à embarcação por mau uso dos passageiros são de responsabilidade do contratante.</p>
+        <p><strong>4. Embarque:</strong> O embarque ocorrerá no local e horário combinados. É recomendado chegar com 15 minutos de antecedência. A tolerância de atraso é de 10 minutos.</p>
+      `.trim()
+    };
+
+    this.data = defaultData;
+    this.notifyListeners();
+
+    return defaultData;
   }
 
   async update(updatedData: VoucherTerms): Promise<VoucherTerms> {
@@ -66,20 +98,7 @@ export class VoucherTermsRepository {
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
 
-    const oldSnap = await getDoc(docRef);
-    const oldData = oldSnap.exists() ? { ...oldSnap.data(), id: oldSnap.id } : null;
-
     await setDoc(docRef, data, { merge: true });
-
-    await auditLogRepository.log({
-      userId: this.currentUser.id,
-      userName: this.currentUser.name,
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: this.docId,
-      oldData,
-      newData: updatedData,
-    });
 
     this.data = updatedData;
     return updatedData;

@@ -13,7 +13,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { ClientProfile } from '../domain/types';
-import { auditLogRepository } from './AuditLogRepository';
 
 export interface IClientRepository {
   search(term: string): Promise<ClientProfile[]>;
@@ -32,6 +31,7 @@ class ClientRepositoryImpl implements IClientRepository {
   private unsubscribe: Unsubscribe | null = null;
   private isInitialized = false;
   private currentUser: any = null;
+  private listeners: ((data: ClientProfile[]) => void)[] = [];
 
   constructor() {}
 
@@ -51,7 +51,22 @@ class ClientRepositoryImpl implements IClientRepository {
         id: doc.id
       }));
       this.isInitialized = true;
+      this.notifyListeners();
     });
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener(this.clients));
+  }
+
+  subscribe(listener: (data: ClientProfile[]) => void) {
+    this.listeners.push(listener);
+    if (this.isInitialized) {
+      listener(this.clients);
+    }
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
   }
 
   dispose() {
@@ -129,15 +144,6 @@ class ClientRepositoryImpl implements IClientRepository {
     const docRef = await addDoc(collection(db, this.collectionName), data);
     const newClient = { id: docRef.id, ...data };
 
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'CREATE',
-      collection: this.collectionName,
-      docId: docRef.id,
-      newData: newClient,
-    });
-
     return newClient;
   }
 
@@ -149,20 +155,7 @@ class ClientRepositoryImpl implements IClientRepository {
     const { id, ...data } = updatedClient;
     const docRef = doc(db, this.collectionName, id);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, data as any);
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: id,
-      oldData,
-      newData: updatedClient,
-    });
 
     return updatedClient;
   }
@@ -173,19 +166,7 @@ class ClientRepositoryImpl implements IClientRepository {
     }
     const docRef = doc(db, this.collectionName, clientId);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await deleteDoc(docRef);
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'DELETE',
-      collection: this.collectionName,
-      docId: clientId,
-      oldData,
-    });
   }
 }
 

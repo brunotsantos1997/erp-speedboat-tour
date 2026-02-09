@@ -1,8 +1,7 @@
 // src/core/repositories/CompanyDataRepository.ts
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { CompanyData } from '../domain/types';
-import { auditLogRepository } from './AuditLogRepository';
+import type { CompanyData, DayOfWeek } from '../domain/types';
 
 export class CompanyDataRepository {
   private static instance: CompanyDataRepository;
@@ -11,6 +10,7 @@ export class CompanyDataRepository {
   private data: CompanyData | null = null;
   private unsubscribe: Unsubscribe | null = null;
   private currentUser: any = null;
+  private listeners: ((data: CompanyData | null) => void)[] = [];
 
   private constructor() {}
 
@@ -33,9 +33,37 @@ export class CompanyDataRepository {
     const docRef = doc(db, this.collectionName, this.docId);
     this.unsubscribe = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
-        this.data = { ...docSnap.data() as CompanyData, id: docSnap.id };
+        const fetchedData = { ...docSnap.data() as CompanyData, id: docSnap.id };
+        // Ensure all business hours are present
+        if (!fetchedData.businessHours) {
+          fetchedData.businessHours = {} as any;
+        }
+        const days: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        days.forEach(day => {
+          if (!fetchedData.businessHours[day]) {
+            fetchedData.businessHours[day] = { startTime: '08:00', endTime: '18:00', isClosed: day === 'sunday' || day === 'saturday' };
+          }
+        });
+        this.data = fetchedData;
+      } else {
+        this.data = null;
       }
+      this.notifyListeners();
     });
+  }
+
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener(this.data));
+  }
+
+  subscribe(listener: (data: CompanyData | null) => void) {
+    this.listeners.push(listener);
+    if (this.data) {
+      listener(this.data);
+    }
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
   }
 
   dispose() {
@@ -53,7 +81,18 @@ export class CompanyDataRepository {
     const docRef = doc(db, this.collectionName, this.docId);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      this.data = { ...docSnap.data() as CompanyData, id: docSnap.id };
+      const fetchedData = { ...docSnap.data() as CompanyData, id: docSnap.id };
+      // Ensure all business hours are present even if partially saved
+      if (!fetchedData.businessHours) {
+        fetchedData.businessHours = {} as any;
+      }
+      const days: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      days.forEach(day => {
+        if (!fetchedData.businessHours[day]) {
+          fetchedData.businessHours[day] = { startTime: '08:00', endTime: '18:00', isClosed: day === 'sunday' || day === 'saturday' };
+        }
+      });
+      this.data = fetchedData;
       return this.data;
     }
 
@@ -74,6 +113,10 @@ export class CompanyDataRepository {
       },
       commissionBasis: 'RENTAL_ONLY',
     };
+
+    this.data = defaultData;
+    this.notifyListeners();
+
     return defaultData;
   }
 
@@ -84,20 +127,7 @@ export class CompanyDataRepository {
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
 
-    const oldSnap = await getDoc(docRef);
-    const oldData = oldSnap.exists() ? { ...oldSnap.data(), id: oldSnap.id } : null;
-
     await setDoc(docRef, data, { merge: true });
-
-    await auditLogRepository.log({
-      userId: this.currentUser.id,
-      userName: this.currentUser.name,
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: this.docId,
-      oldData,
-      newData: updatedData,
-    });
 
     this.data = updatedData;
     return updatedData;
