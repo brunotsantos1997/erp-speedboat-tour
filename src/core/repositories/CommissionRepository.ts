@@ -59,10 +59,21 @@ class CommissionRepository implements ICommissionRepository {
 
           if (user.commissionSettings) {
             const settings = user.commissionSettings;
+
+            const extraRentalCost = (event.additionalCosts || [])
+              .filter(c => c.category === 'RENTAL')
+              .reduce((acc, c) => acc + c.amount, 0);
+            const extraProductCost = (event.additionalCosts || [])
+              .filter(c => c.category === 'PRODUCT')
+              .reduce((acc, c) => acc + c.amount, 0);
+            const extraTaxCost = (event.additionalCosts || [])
+              .filter(c => c.category === 'TAX')
+              .reduce((acc, c) => acc + c.amount, 0);
+
             if (settings.rentalEnabled) {
               let base = settings.rentalBase === 'GROSS' ? (event.rentalGross || 0) : (event.rentalRevenue || 0);
               if (settings.deductRentalCost) {
-                base = Math.max(0, base - (event.rentalCost || 0));
+                base = Math.max(0, base - (event.rentalCost || 0) - extraRentalCost);
               }
               commissionValue += base * (settings.rentalPercentage / 100);
               rentalBaseValue += base;
@@ -70,13 +81,16 @@ class CommissionRepository implements ICommissionRepository {
             if (settings.productEnabled) {
               let base = settings.productBase === 'GROSS' ? (event.productsGross || 0) : (event.productsRevenue || 0);
               if (settings.deductProductCost) {
-                base = Math.max(0, base - (event.productsCost || 0));
+                base = Math.max(0, base - (event.productsCost || 0) - extraProductCost);
               }
               commissionValue += base * (settings.productPercentage / 100);
               rentalBaseValue += base; // We use rentalBaseValue field in report to show the sum of bases
             }
             if (settings.taxEnabled) {
-              const base = (event.tax || 0);
+              let base = (event.tax || 0);
+              if (settings.deductTaxCost) {
+                base = Math.max(0, base - extraTaxCost);
+              }
               commissionValue += base * (settings.taxPercentage / 100);
               rentalBaseValue += base;
             }

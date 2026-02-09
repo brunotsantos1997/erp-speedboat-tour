@@ -12,6 +12,7 @@ export interface UserCommissionSettings {
   deductProductCost: boolean;
   taxEnabled: boolean;
   taxPercentage: number;
+  deductTaxCost: boolean;
 }
 
 export interface User {

@@ -27,7 +27,8 @@ export const UserCommissionsScreen: React.FC = () => {
       productBase: 'NET',
       deductProductCost: false,
       taxEnabled: false,
-      taxPercentage: 0
+      taxPercentage: 0,
+      deductTaxCost: false
     });
   };
 
@@ -295,10 +296,22 @@ export const UserCommissionsScreen: React.FC = () => {
                               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">%</span>
                             </div>
                           </div>
-                          <div className="flex flex-col justify-center">
-                             <p className="text-[10px] md:text-xs text-gray-500 italic font-bold leading-tight">
+                        <div className="space-y-4">
+                             <p className="text-[10px] md:text-xs text-gray-500 italic font-bold leading-tight mb-2">
                                * Comissionamento sobre o valor de taxas adicionais do passeio.
                              </p>
+
+                             <label className="flex items-center gap-3 cursor-pointer group bg-white p-3 rounded-xl border border-gray-100 shadow-sm transition-all hover:border-orange-300">
+                              <input
+                                type="checkbox"
+                                checked={localSettings.deductTaxCost}
+                                onChange={e => setLocalSettings({ ...localSettings, deductTaxCost: e.target.checked })}
+                                className="w-5 h-5 text-orange-600 border-gray-300 rounded-md focus:ring-orange-500"
+                              />
+                              <span className="text-xs font-bold text-gray-700 group-hover:text-orange-600 transition-colors">
+                                Abater custos das taxas
+                              </span>
+                            </label>
                           </div>
                         </div>
                       )}

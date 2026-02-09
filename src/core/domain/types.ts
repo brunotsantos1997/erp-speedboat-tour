@@ -88,6 +88,15 @@ export type PaymentStatus = 'PENDING' | 'CONFIRMED';
 export type PaymentMethod = 'PIX' | 'CARD_CREDIT' | 'CARD_DEBIT' | 'CASH' | 'TRANSFER' | 'OTHER';
 export type PaymentType = 'DOWN_PAYMENT' | 'BALANCE' | 'FULL';
 
+export type EventCostCategory = 'RENTAL' | 'PRODUCT' | 'TAX' | 'OTHER';
+
+export interface EventCostItem {
+  id: string;
+  name: string;
+  amount: number;
+  category: EventCostCategory;
+}
+
 /**
  * Represents a payment for an event.
  */
@@ -136,6 +145,7 @@ export interface EventType {
   rentalCost?: number;
   productsCost?: number;
   taxCost?: number;
+  additionalCosts?: EventCostItem[];
   autoCancelled?: boolean;
 }
 

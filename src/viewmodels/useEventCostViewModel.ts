@@ -1,23 +1,24 @@
 // src/viewmodels/useEventCostViewModel.ts
 import { useState, useCallback } from 'react';
-import type { EventType, SelectedProduct } from '../core/domain/types';
+import type { EventType, SelectedProduct, EventCostItem } from '../core/domain/types';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
 import { expenseCategoryRepository } from '../core/repositories/ExpenseCategoryRepository';
+import { v4 as uuidv4 } from 'uuid';
 
 export const useEventCostViewModel = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [event, setEvent] = useState<EventType | null>(null);
   const [rentalCost, setRentalCost] = useState(0);
   const [products, setProducts] = useState<SelectedProduct[]>([]);
-  const [taxCost, setTaxCost] = useState(0);
+  const [additionalCosts, setAdditionalCosts] = useState<EventCostItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const openModal = useCallback((targetEvent: EventType) => {
     setEvent(targetEvent);
     setRentalCost(targetEvent.rentalCost || 0);
     setProducts(targetEvent.products || []);
-    setTaxCost(targetEvent.taxCost || 0);
+    setAdditionalCosts(targetEvent.additionalCosts || []);
     setIsModalOpen(true);
   }, []);
 
@@ -30,18 +31,35 @@ export const useEventCostViewModel = () => {
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, snapshotCost: cost } : p));
   }, []);
 
+  const addAdditionalCost = useCallback(() => {
+    setAdditionalCosts(prev => [
+      ...prev,
+      { id: uuidv4(), name: '', amount: 0, category: 'OTHER' }
+    ]);
+  }, []);
+
+  const updateAdditionalCost = useCallback((id: string, updates: Partial<EventCostItem>) => {
+    setAdditionalCosts(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+  }, []);
+
+  const removeAdditionalCost = useCallback((id: string) => {
+    setAdditionalCosts(prev => prev.filter(item => item.id !== id));
+  }, []);
+
   const saveCosts = useCallback(async () => {
     if (!event) return;
     setIsSaving(true);
     try {
       const calculatedProductsCost = products.reduce((acc, p) => acc + (p.snapshotCost || 0), 0);
+      const totalAdditionalCost = additionalCosts.reduce((acc, item) => acc + item.amount, 0);
 
       const updatedEvent: EventType = {
         ...event,
         rentalCost,
         products,
         productsCost: calculatedProductsCost,
-        taxCost
+        additionalCosts,
+        taxCost: totalAdditionalCost
       };
 
       await eventRepository.updateEvent(updatedEvent);
@@ -93,13 +111,15 @@ export const useEventCostViewModel = () => {
         }
       }
 
-      // Tax Expense
-      if (taxCost > 0) {
-        await expenseRepository.add({
-          ...commonData,
-          amount: taxCost,
-          description: `Custo Taxa/Adicional - Passeio ${event.client.name}`
-        });
+      // Additional Costs Expenses
+      for (const item of additionalCosts) {
+        if (item.amount > 0) {
+          await expenseRepository.add({
+            ...commonData,
+            amount: item.amount,
+            description: `${item.name || 'Custo Adicional'} - Passeio ${event.client.name}`
+          });
+        }
       }
 
       closeModal();
@@ -109,17 +129,19 @@ export const useEventCostViewModel = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [event, rentalCost, products, taxCost, closeModal]);
+  }, [event, rentalCost, products, additionalCosts, closeModal]);
 
   return {
     isModalOpen,
     event,
     rentalCost,
     products,
-    taxCost,
+    additionalCosts,
     isSaving,
     setRentalCost,
-    setTaxCost,
+    addAdditionalCost,
+    updateAdditionalCost,
+    removeAdditionalCost,
     updateProductCost,
     openModal,
     closeModal,

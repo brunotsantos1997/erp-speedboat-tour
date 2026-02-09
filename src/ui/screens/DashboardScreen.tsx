@@ -319,8 +319,10 @@ export const DashboardScreen: React.FC = () => {
           setRentalCost={costVm.setRentalCost}
           products={costVm.products}
           updateProductCost={costVm.updateProductCost}
-          taxCost={costVm.taxCost}
-          setTaxCost={costVm.setTaxCost}
+          additionalCosts={costVm.additionalCosts}
+          addAdditionalCost={costVm.addAdditionalCost}
+          updateAdditionalCost={costVm.updateAdditionalCost}
+          removeAdditionalCost={costVm.removeAdditionalCost}
           isSaving={costVm.isSaving}
         />
       )}

@@ -1,8 +1,8 @@
 // src/ui/components/EventCostModal.tsx
 import React from 'react';
 import { MoneyInput } from './MoneyInput';
-import { Save, X, Info } from 'lucide-react';
-import type { EventType, SelectedProduct } from '../../core/domain/types';
+import { Save, X, Info, Plus, Trash2 } from 'lucide-react';
+import type { EventType, SelectedProduct, EventCostItem } from '../../core/domain/types';
 
 interface EventCostModalProps {
   isOpen: boolean;
@@ -13,8 +13,10 @@ interface EventCostModalProps {
   setRentalCost: (val: number) => void;
   products: SelectedProduct[];
   updateProductCost: (id: string, cost: number) => void;
-  taxCost: number;
-  setTaxCost: (val: number) => void;
+  additionalCosts: EventCostItem[];
+  addAdditionalCost: () => void;
+  updateAdditionalCost: (id: string, updates: Partial<EventCostItem>) => void;
+  removeAdditionalCost: (id: string) => void;
   isSaving: boolean;
 }
 
@@ -27,8 +29,10 @@ export const EventCostModal: React.FC<EventCostModalProps> = ({
   setRentalCost,
   products,
   updateProductCost,
-  taxCost,
-  setTaxCost,
+  additionalCosts,
+  addAdditionalCost,
+  updateAdditionalCost,
+  removeAdditionalCost,
   isSaving
 }) => {
   if (!isOpen || !event) return null;
@@ -86,13 +90,69 @@ export const EventCostModal: React.FC<EventCostModalProps> = ({
           )}
 
           <section>
-            <h3 className="text-lg font-bold text-gray-800 mb-4 border-l-4 border-orange-600 pl-3">Taxas e Adicionais</h3>
-            <MoneyInput
-              label="Custo sobre Taxas"
-              value={taxCost}
-              onChange={setTaxCost}
-              placeholder="Ex: Taxa de conveniência ou custo de serviço"
-            />
+            <div className="flex justify-between items-center mb-4 border-l-4 border-orange-600 pl-3">
+              <h3 className="text-lg font-bold text-gray-800">Custos Adicionais</h3>
+              <button
+                onClick={addAdditionalCost}
+                className="flex items-center gap-1 text-sm bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg hover:bg-orange-200 transition-colors font-bold"
+              >
+                <Plus size={16} />
+                Adicionar Custo
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {additionalCosts.map((item) => (
+                <div key={item.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Descrição</label>
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => updateAdditionalCost(item.id, { name: e.target.value })}
+                        placeholder="Ex: Marinheiro, Gelo, Taxa Marina..."
+                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Categoria (p/ Comissão)</label>
+                      <select
+                        value={item.category}
+                        onChange={(e) => updateAdditionalCost(item.id, { category: e.target.value as any })}
+                        className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-sm font-medium bg-white"
+                      >
+                        <option value="RENTAL">Passeio (Barco)</option>
+                        <option value="PRODUCT">Produtos</option>
+                        <option value="TAX">Taxas</option>
+                        <option value="OTHER">Outros (Geral)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-end gap-4">
+                    <div className="flex-1">
+                      <MoneyInput
+                        label="Valor do Custo"
+                        value={item.amount}
+                        onChange={(val) => updateAdditionalCost(item.id, { amount: val })}
+                      />
+                    </div>
+                    <button
+                      onClick={() => removeAdditionalCost(item.id)}
+                      className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remover Custo"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {additionalCosts.length === 0 && (
+                <div className="text-center py-8 border-2 border-dashed border-gray-100 rounded-xl">
+                  <p className="text-sm text-gray-400 font-medium">Nenhum custo adicional registrado.</p>
+                </div>
+              )}
+            </div>
           </section>
         </div>
 
