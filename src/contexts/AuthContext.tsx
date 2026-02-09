@@ -62,6 +62,7 @@ interface AuthContextType {
   setSecretQuestion: (userId: string, question: string, answer: string) => Promise<void>;
   verifySecretAnswer: (email: string, answer: string) => Promise<User | null>;
   resetPasswordAfterVerification: (userId: string, newPassword: string) => Promise<void>;
+  linkedProviders: string[];
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,6 +93,7 @@ const validatePassword = (password: string) => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [linkedProviders, setLinkedProviders] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const disposeRepositories = () => {
@@ -129,6 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
+        setLinkedProviders(firebaseUser.providerData.map(p => p.providerId));
         const profileRef = doc(db, 'profiles', firebaseUser.uid);
         const profileSnap = await getDoc(profileRef);
 
@@ -147,6 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       } else {
         setCurrentUser(null);
+        setLinkedProviders([]);
         disposeRepositories();
       }
       setLoading(false);
@@ -257,7 +261,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!auth.currentUser) throw new Error("Usuário não autenticado.");
     const provider = new GoogleAuthProvider();
     try {
-      await linkWithPopup(auth.currentUser, provider);
+      const result = await linkWithPopup(auth.currentUser, provider);
+      setLinkedProviders(result.user.providerData.map(p => p.providerId));
     } catch (error: any) {
       if (error.code === 'auth/credential-already-in-use') {
         throw new Error("Esta conta do Google já está vinculada a outro usuário.");
@@ -463,6 +468,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSecretQuestion,
     verifySecretAnswer,
     resetPasswordAfterVerification,
+    linkedProviders,
   };
 
   return (
