@@ -10,7 +10,11 @@ import {
   updatePassword as firebaseUpdatePassword,
   updateEmail as firebaseUpdateEmail,
   sendPasswordResetEmail,
-  type User as FirebaseUser
+  type User as FirebaseUser,
+  GoogleAuthProvider,
+  signInWithPopup,
+  linkWithPopup,
+  fetchSignInMethodsForEmail
 } from 'firebase/auth';
 import {
   doc,
@@ -44,6 +48,8 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User | null>;
+  loginWithGoogle: () => Promise<User | null>;
+  linkGoogle: () => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<User>;
   logout: () => void;
   updateUserStatus: (userId: string, status: UserStatus) => Promise<void>;
@@ -189,13 +195,75 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       name: sanitizedName,
       email: sanitizedEmail,
       status: 'PENDING',
-      role: 'ADMIN',
+      role: 'SELLER',
       commissionPercentage: 0,
     };
 
     await setDoc(doc(db, 'profiles', firebaseUser.uid), newUser);
 
     return newUser;
+  };
+
+  const loginWithGoogle = async (): Promise<User | null> => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+
+      const profileRef = doc(db, 'profiles', firebaseUser.uid);
+      const profileSnap = await getDoc(profileRef);
+
+      if (profileSnap.exists()) {
+        const profileData = profileSnap.data() as User;
+        if (profileData.status !== 'APPROVED') {
+          await logout();
+          throw new Error("Sua conta ainda não foi aprovada.");
+        }
+        const user = { ...profileData, id: firebaseUser.uid };
+        setCurrentUser(user);
+        initializeRepositories(user);
+        return user;
+      } else {
+        // Check if user with same email exists with different provider
+        const methods = await fetchSignInMethodsForEmail(auth, firebaseUser.email!);
+        if (methods.length > 0) {
+          // If we are here, it means we somehow signed in but no profile exists for this UID.
+          // This could happen if they have an email/password account but the UIDs are different?
+          // Actually, if they use the same email, Firebase might have merged them OR thrown an error.
+          // If "One account per email" is on, it should have thrown an error before getting here.
+        }
+
+        const newUser: User = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || 'Usuário Google',
+          email: firebaseUser.email || '',
+          status: 'PENDING',
+          role: 'SELLER',
+          commissionPercentage: 0,
+        };
+        await setDoc(profileRef, newUser);
+        await logout();
+        throw new Error("Conta criada com sucesso! Aguarde a aprovação de um administrador.");
+      }
+    } catch (error: any) {
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        throw new Error("Este e-mail já está associado a uma conta. Por favor, faça login com seu e-mail e senha para vincular sua conta do Google nas configurações de perfil.");
+      }
+      throw error;
+    }
+  };
+
+  const linkGoogle = async (): Promise<void> => {
+    if (!auth.currentUser) throw new Error("Usuário não autenticado.");
+    const provider = new GoogleAuthProvider();
+    try {
+      await linkWithPopup(auth.currentUser, provider);
+    } catch (error: any) {
+      if (error.code === 'auth/credential-already-in-use') {
+        throw new Error("Esta conta do Google já está vinculada a outro usuário.");
+      }
+      throw error;
+    }
   };
 
   const logout = async () => {
@@ -381,6 +449,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     currentUser,
     loading,
     login,
+    loginWithGoogle,
+    linkGoogle,
     signup,
     logout,
     updateUserStatus,
