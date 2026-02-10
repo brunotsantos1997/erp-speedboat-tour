@@ -13,9 +13,11 @@ import { timeToMinutes, minutesToTime } from '../core/utils/timeUtils';
 import { boardingLocationRepository } from '../core/repositories/BoardingLocationRepository';
 import { sanitizeObject } from '../core/utils/objectUtils';
 import { useToastContext } from '../ui/contexts/ToastContext';
+import { useEventSync } from './useEventSync';
 
 export const useSharedEventViewModel = () => {
   const { currentUser } = useAuth();
+  const { syncEvent } = useEventSync();
   const { showToast } = useToastContext();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -177,7 +179,8 @@ export const useSharedEventViewModel = () => {
             : `Grupo inicial: ${existingSharedEvent.passengerCount} pessoas.\nNovo grupo: ${passengerCount} pessoas. ${observations}`,
         };
 
-        await eventRepository.updateEvent(updatedEvent);
+        const savedEvent = await eventRepository.updateEvent(updatedEvent);
+        await syncEvent(savedEvent);
 
         // Register payment for the NEW group only
         await paymentRepository.add({
@@ -233,6 +236,7 @@ export const useSharedEventViewModel = () => {
       };
 
       const newEvent = await eventRepository.add(sanitizeObject(eventData));
+      await syncEvent(newEvent);
 
       // Register payment
       await paymentRepository.add({

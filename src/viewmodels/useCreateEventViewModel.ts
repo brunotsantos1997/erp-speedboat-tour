@@ -508,7 +508,7 @@ export const useCreateEventViewModel = () => {
     }
 
     // Auto-sync
-    syncEvent(savedEvent);
+    await syncEvent(savedEvent);
 
     return selectedClient;
   }, [

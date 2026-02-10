@@ -80,6 +80,21 @@ export const useGoogleSyncViewModel = () => {
       for (let i = 0; i < futureEvents.length; i++) {
         const event = futureEvents[i];
         const existingGoogleId = event.googleCalendarEventIds?.[currentUser.id];
+        const isCancelled = ['CANCELLED', 'ARCHIVED_CANCELLED', 'REFUNDED', 'PENDING_REFUND'].includes(event.status);
+
+        if (isCancelled) {
+          if (existingGoogleId) {
+            await googleCalendarRepository.deleteEvent(
+              googleAccessToken,
+              currentUser.calendarSettings.calendarId,
+              existingGoogleId
+            );
+            const { [currentUser.id]: _, ...remainingIds } = event.googleCalendarEventIds || {};
+            await eventRepository.updateEvent({ ...event, googleCalendarEventIds: remainingIds });
+          }
+          setSyncProgress({ current: i + 1, total: futureEvents.length });
+          continue;
+        }
 
         const googleId = await googleCalendarRepository.upsertEvent(
           googleAccessToken,

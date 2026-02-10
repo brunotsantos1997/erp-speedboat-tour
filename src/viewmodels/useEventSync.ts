@@ -18,6 +18,27 @@ export const useEventSync = () => {
 
     try {
       const existingGoogleId = event.googleCalendarEventIds?.[currentUser.id];
+      const isCancelled = ['CANCELLED', 'ARCHIVED_CANCELLED', 'REFUNDED', 'PENDING_REFUND'].includes(event.status);
+
+      if (isCancelled) {
+        if (existingGoogleId) {
+          await googleCalendarRepository.deleteEvent(
+            googleAccessToken,
+            currentUser.calendarSettings.calendarId,
+            existingGoogleId
+          );
+
+          // Remove the ID from the event to avoid future sync attempts
+          const { [currentUser.id]: _, ...remainingIds } = event.googleCalendarEventIds || {};
+          const updatedEvent = {
+            ...event,
+            googleCalendarEventIds: remainingIds
+          };
+          await eventRepository.updateEvent(updatedEvent);
+        }
+        return;
+      }
+
       const googleId = await googleCalendarRepository.upsertEvent(
         googleAccessToken,
         currentUser.calendarSettings.calendarId,

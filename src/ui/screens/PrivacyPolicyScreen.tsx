@@ -49,7 +49,7 @@ export const PrivacyPolicyScreen: React.FC = () => {
               <ul className="list-disc pl-6 space-y-2 mt-4">
                 <li><strong>Dados de Conta:</strong> Nome, endereço de e-mail e senha.</li>
                 <li><strong>Dados de Clientes:</strong> Informações sobre seus clientes inseridas no sistema (nome, telefone, histórico de passeios).</li>
-                <li><strong>Dados de Integração Google:</strong> Ao utilizar a sincronização com o Google Calendar, acessamos informações de calendários e eventos conforme autorizado por você através dos escopos OAuth.</li>
+                <li><strong>Dados de Integração Google:</strong> Ao utilizar a sincronização com o Google Calendar, acessamos informações de sua conta Google conforme autorizado por você através dos escopos OAuth.</li>
               </ul>
             </section>
 
@@ -67,9 +67,25 @@ export const PrivacyPolicyScreen: React.FC = () => {
               </ul>
             </section>
 
+            <section className="bg-blue-50 p-6 rounded-xl border border-blue-100">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">4</span>
+                Uso de Dados do Google (Google API)
+              </h2>
+              <p className="mb-4">
+                Nosso aplicativo utiliza os serviços de API do Google para permitir a sincronização de seus passeios com o Google Calendar. O uso e a transferência de informações recebidas das APIs do Google para qualquer outro aplicativo estarão em conformidade com a <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Política de Dados do Usuário dos Serviços de API do Google</a>, incluindo os requisitos de Uso Limitado.
+              </p>
+              <ul className="list-disc pl-6 space-y-3">
+                <li><strong>Acesso:</strong> Solicitamos acesso ao seu Google Calendar para visualizar seus calendários (para seleção) e para gerenciar (criar, ler, atualizar e excluir) eventos relacionados aos seus passeios agendados no sistema.</li>
+                <li><strong>Uso:</strong> Usamos esses dados exclusivamente para manter sua agenda pessoal sincronizada com os passeios registrados em nossa plataforma.</li>
+                <li><strong>Armazenamento:</strong> Armazenamos apenas os identificadores de eventos (IDs) gerados pelo Google para podermos atualizar ou remover esses mesmos eventos futuramente. Não armazenamos outros dados de sua agenda privada que não tenham sido criados por este aplicativo.</li>
+                <li><strong>Compartilhamento:</strong> Não compartilhamos seus dados do Google com terceiros, empresas de publicidade ou qualquer outra entidade externa. O acesso é estritamente limitado às funcionalidades de sincronização do aplicativo.</li>
+              </ul>
+            </section>
+
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-                <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">4</span>
+                <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">5</span>
                 Segurança dos Dados
               </h2>
               <p>
@@ -79,17 +95,27 @@ export const PrivacyPolicyScreen: React.FC = () => {
 
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-                <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">5</span>
+                <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">6</span>
                 Seus Direitos
               </h2>
               <p>
-                Você tem o direito de acessar, corrigir ou excluir seus dados pessoais a qualquer momento através das configurações do seu perfil no aplicativo ou entrando em contato com nosso suporte.
+                Você tem o direito de acessar, corrigir ou excluir seus dados pessoais a qualquer momento através das configurações do seu perfil no aplicativo ou entrando em contato com nosso suporte. No caso do Google, você pode desvincular sua conta e remover as permissões a qualquer momento através da tela de Sincronização ou nas configurações de segurança de sua conta Google.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
-                <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">6</span>
+                <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">7</span>
+                Alterações nesta Política
+              </h2>
+              <p>
+                Reservamos o direito de atualizar esta Política de Privacidade periodicamente. Notificaremos os usuários sobre mudanças significativas através de avisos no aplicativo ou por e-mail. O uso continuado do aplicativo após tais alterações constitui sua aceitação da nova política.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">8</span>
                 Contato
               </h2>
               <p className="flex items-center flex-wrap gap-2">
