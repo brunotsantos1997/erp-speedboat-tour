@@ -33,6 +33,7 @@ const SetNewPasswordScreen = lazy(() => import('./ui/screens/SetNewPasswordScree
 const GoogleSyncScreen = lazy(() => import('./ui/screens/GoogleSyncScreen').then(m => ({ default: m.GoogleSyncScreen })));
 const PrivacyPolicyScreen = lazy(() => import('./ui/screens/PrivacyPolicyScreen').then(m => ({ default: m.PrivacyPolicyScreen })));
 const TermsOfServiceScreen = lazy(() => import('./ui/screens/TermsOfServiceScreen').then(m => ({ default: m.TermsOfServiceScreen })));
+const LandingScreen = lazy(() => import('./ui/screens/LandingScreen').then(m => ({ default: m.LandingScreen })));
 
 // Simple loading fallback
 const LoadingFallback = () => (
@@ -47,6 +48,7 @@ function App() {
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* Public routes that don't use any layout */}
+          <Route path="/" element={<LandingScreen />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/signup" element={<SignupScreen />} />
           <Route path="/pending-approval" element={<PendingApprovalScreen />} />
@@ -60,7 +62,7 @@ function App() {
           <Route path="/voucher/:eventId" element={<PublicLayout><VoucherScreen /></PublicLayout>} />
 
           {/* Protected Admin Routes with the main Layout */}
-          <Route path="/" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER', 'SELLER']} />}>
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'OWNER', 'SELLER']} />}>
             <Route element={<Layout />}>
               <Route index element={<DashboardScreen />} />
               <Route path="create-event" element={<CreateEventScreen />} />

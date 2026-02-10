@@ -17,7 +17,7 @@ export function SignupScreen() {
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: any) {
       if (err.message.includes('Conta criada com sucesso')) {
         navigate('/pending-approval');
@@ -38,7 +38,7 @@ export function SignupScreen() {
       if (user.status === 'PENDING') {
         navigate('/pending-approval');
       } else {
-        navigate('/'); // Navigate to dashboard for the first (approved) user
+        navigate('/dashboard'); // Navigate to dashboard for the first (approved) user
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ocorreu um erro inesperado.');

@@ -15,7 +15,7 @@ export function LoginScreen() {
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao fazer login com Google.');
     } finally {
@@ -28,7 +28,7 @@ export function LoginScreen() {
     setError(null);
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao fazer login.');
     }

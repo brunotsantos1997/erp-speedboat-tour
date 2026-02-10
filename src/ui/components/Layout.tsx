@@ -54,7 +54,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
           <h2 className="text-2xl font-bold text-center truncate">{appName}</h2>
         </div>
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-          <NavLink to="/" className={navLinkClass} onClick={onClose} end>
+          <NavLink to="/dashboard" className={navLinkClass} onClick={onClose} end>
             <LayoutDashboard className="mr-3" />
             Dashboard
           </NavLink>
