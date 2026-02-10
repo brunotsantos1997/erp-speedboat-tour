@@ -2,8 +2,20 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Anchor, Calendar, Users, BarChart3, ShieldCheck, ArrowRight } from 'lucide-react';
 
+import { useAuth } from '../../contexts/AuthContext';
+
 export const LandingScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { currentUser, loading } = useAuth();
+
+  // Redirect to dashboard if already logged in
+  React.useEffect(() => {
+    if (!loading && currentUser) {
+      navigate('/dashboard');
+    }
+  }, [currentUser, loading, navigate]);
+
+  if (loading) return null;
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">

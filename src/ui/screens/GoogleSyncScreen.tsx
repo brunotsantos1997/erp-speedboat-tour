@@ -45,7 +45,7 @@ export const GoogleSyncScreen: React.FC = () => {
             Para sincronizar seus passeios com o Google Calendar, você precisa primeiro vincular sua conta Google.
           </p>
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/dashboard/profile')}
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
           >
             Vincular no Perfil

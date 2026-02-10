@@ -32,10 +32,7 @@ service cloud.firestore {
 
     // Perfis de Usuário
     match /profiles/{userId} {
-      allow read: if isApproved() && (
-        hasStaffPermission(true) ||
-        request.auth.uid == userId
-      );
+      allow read: if (isAuthenticated() && request.auth.uid == userId) || hasStaffPermission(true);
 
       allow create: if isAuthenticated() && request.auth.uid == userId
                     && request.resource.data.status == 'PENDING'

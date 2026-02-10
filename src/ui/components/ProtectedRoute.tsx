@@ -19,8 +19,8 @@ export function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
-  if (currentUser.mustChangePassword && location.pathname !== '/profile') {
-    return <Navigate to="/profile" replace />;
+  if (currentUser.mustChangePassword && location.pathname !== '/dashboard/profile') {
+    return <Navigate to="/dashboard/profile" replace />;
   }
 
   if (currentUser.status === 'PENDING') {
