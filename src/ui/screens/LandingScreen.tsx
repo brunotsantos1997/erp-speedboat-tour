@@ -1,12 +1,14 @@
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Anchor, Calendar, Users, BarChart3, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Anchor, Calendar, Users, BarChart3, ShieldCheck, ArrowRight, MessageCircle } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
 
 export const LandingScreen: React.FC = () => {
   const navigate = useNavigate();
   const { currentUser, loading } = useAuth();
+  const { companyData } = useCompanyDataViewModel();
 
   // Redirect to dashboard if already logged in
   React.useEffect(() => {
@@ -146,10 +148,18 @@ export const LandingScreen: React.FC = () => {
               <Anchor className="text-blue-500" size={32} />
               <span className="text-xl font-bold tracking-tight text-white">Dilancha Náutica</span>
             </div>
-            <div className="flex gap-8 font-medium">
+            <div className="flex flex-wrap justify-center gap-8 font-medium">
               <Link to="/privacy-policy" className="hover:text-white transition-colors">Política de Privacidade</Link>
               <Link to="/terms-of-service" className="hover:text-white transition-colors">Termos de Uso</Link>
-              <a href="mailto:contato@dilancha.com.br" className="hover:text-white transition-colors">Suporte</a>
+              <a
+                href={`https://wa.me/${companyData?.phone?.replace(/\D/g, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white transition-colors flex items-center gap-1 text-green-500 font-bold"
+              >
+                <MessageCircle size={18} />
+                Suporte WhatsApp
+              </a>
             </div>
           </div>
           <div className="text-center text-sm">

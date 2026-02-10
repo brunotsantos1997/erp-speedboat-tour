@@ -1,9 +1,11 @@
 import React from 'react';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { ArrowLeft, Shield, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
 
 export const PrivacyPolicyScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { companyData } = useCompanyDataViewModel();
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -90,8 +92,12 @@ export const PrivacyPolicyScreen: React.FC = () => {
                 <span className="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center text-sm mr-3">6</span>
                 Contato
               </h2>
-              <p>
-                Se você tiver dúvidas sobre esta Política de Privacidade, entre em contato conosco através do e-mail: <span className="text-blue-600 font-medium">contato@dilancha.com.br</span>
+              <p className="flex items-center flex-wrap gap-2">
+                Se você tiver dúvidas sobre esta Política de Privacidade, entre em contato conosco através do WhatsApp:
+                <span className="inline-flex items-center text-blue-600 font-bold bg-blue-50 px-3 py-1 rounded-full">
+                  <MessageCircle size={18} className="mr-2 text-green-500" />
+                  {companyData?.phone || '(00) 00000-0000'}
+                </span>
               </p>
             </section>
           </div>
