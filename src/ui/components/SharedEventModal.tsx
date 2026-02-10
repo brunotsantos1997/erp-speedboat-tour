@@ -39,6 +39,7 @@ export const SharedEventModal: React.FC<SharedEventModalProps> = ({ isOpen, onCl
     subtotal,
     totalDiscount,
     total,
+    existingSharedEvent,
     createSharedEvent
   } = useSharedEventViewModel();
 
@@ -73,6 +74,23 @@ export const SharedEventModal: React.FC<SharedEventModalProps> = ({ isOpen, onCl
           <div className="p-8 text-center text-gray-500">Carregando dados...</div>
         ) : (
           <div className="p-6 space-y-6">
+            {existingSharedEvent && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <Users className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      Já existe um passeio compartilhado para este horário.
+                      <span className="font-bold"> O novo grupo será adicionado ao passeio existente.</span>
+                      <br />
+                      Ocupação atual: {existingSharedEvent.passengerCount} pessoas.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Boat Selection */}
               <div>
@@ -249,6 +267,12 @@ export const SharedEventModal: React.FC<SharedEventModalProps> = ({ isOpen, onCl
               </button>
               <button
                 onClick={handleSave}
+                disabled={isSaving || (availableTimeSlots.length === 0 && !existingSharedEvent)}
+                className={`px-8 py-2 rounded-lg font-bold transition-all shadow-md disabled:bg-gray-400 disabled:shadow-none text-white ${
+                  existingSharedEvent ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isSaving ? 'Salvando...' : existingSharedEvent ? 'Adicionar ao Passeio' : 'Confirmar e Pagar'}
                 disabled={isSaving || availableTimeSlots.length === 0}
                 className="px-8 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-md disabled:bg-gray-400 disabled:shadow-none"
               >

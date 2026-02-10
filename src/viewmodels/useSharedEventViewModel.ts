@@ -34,6 +34,16 @@ export const useSharedEventViewModel = () => {
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const existingSharedEvent = useMemo(() => {
+    if (!selectedBoat || !startTime) return null;
+    return scheduledEvents.find(e =>
+      e.boat.id === selectedBoat.id &&
+      e.startTime === startTime &&
+      e.tourType?.name.toLowerCase() === 'compartilhado' &&
+      e.status !== 'CANCELLED' && e.status !== 'ARCHIVED_CANCELLED'
+    );
+  }, [scheduledEvents, selectedBoat, startTime]);
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
@@ -89,6 +99,12 @@ export const useSharedEventViewModel = () => {
     if (!selectedBoat) return slots;
 
     const orgTime = selectedBoat.organizationTimeMinutes || 0;
+    const otherEvents = scheduledEvents.filter(e =>
+        e.boat.id === selectedBoat.id &&
+        e.status !== 'CANCELLED' &&
+        e.status !== 'ARCHIVED_CANCELLED' &&
+        e.tourType?.name.toLowerCase() !== 'compartilhado' // Ignore shared for slot visibility, we handle merging later
+    );
     const otherEvents = scheduledEvents.filter(e => e.boat.id === selectedBoat.id && e.status !== 'CANCELLED' && e.status !== 'ARCHIVED_CANCELLED');
 
     return slots.filter(slot => {
@@ -150,6 +166,36 @@ export const useSharedEventViewModel = () => {
     }
 
     try {
+      if (existingSharedEvent) {
+        // Update existing event
+        const updatedEvent: EventType = {
+          ...existingSharedEvent,
+          passengerCount: existingSharedEvent.passengerCount + passengerCount,
+          subtotal: existingSharedEvent.subtotal + subtotal,
+          total: existingSharedEvent.total + total,
+          rentalGross: (existingSharedEvent.rentalGross || 0) + subtotal,
+          rentalRevenue: (existingSharedEvent.rentalRevenue || 0) + total,
+          observations: existingSharedEvent.observations
+            ? `${existingSharedEvent.observations}\n---\nNovo grupo: ${passengerCount} pessoas. ${observations}`
+            : `Grupo inicial: ${existingSharedEvent.passengerCount} pessoas.\nNovo grupo: ${passengerCount} pessoas. ${observations}`,
+        };
+
+        await eventRepository.updateEvent(updatedEvent);
+
+        // Register payment for the NEW group only
+        await paymentRepository.add({
+          eventId: existingSharedEvent.id,
+          amount: total,
+          method: paymentMethod,
+          type: 'FULL',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          timestamp: Date.now()
+        });
+
+        showToast('Passageiros adicionados ao passeio compartilhado existente!');
+        return true;
+      }
+
       const [sharedClient, sharedTourType, boardingLocations] = await Promise.all([
         getOrCreateSharedClient(),
         getOrCreateSharedTourType(),
@@ -237,6 +283,7 @@ export const useSharedEventViewModel = () => {
     subtotal,
     totalDiscount,
     total,
+    existingSharedEvent,
     createSharedEvent
   };
 };
