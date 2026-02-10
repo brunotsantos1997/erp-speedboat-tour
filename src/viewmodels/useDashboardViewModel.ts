@@ -37,7 +37,7 @@ export const useDashboardViewModel = () => {
             const cancelledEvent = { ...event, status: 'CANCELLED' as const, autoCancelled: true };
             try {
               const savedEvent = await eventRepository.updateEvent(cancelledEvent);
-              syncEvent(savedEvent);
+              await syncEvent(savedEvent);
             } catch (error) {
               console.error(`Failed to auto-cancel event ${event.id}:`, error);
             }
@@ -116,7 +116,7 @@ export const useDashboardViewModel = () => {
       }
 
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
-      syncEvent(savedEvent);
+      await syncEvent(savedEvent);
 
       showToast('Pagamento registrado com sucesso!');
       setIsPaymentModalOpen(false);
@@ -150,7 +150,7 @@ export const useDashboardViewModel = () => {
       }
 
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
-      syncEvent(savedEvent);
+      await syncEvent(savedEvent);
       showToast(toastMessage);
     } catch (error) {
       console.error('Failed to process notification:', error);
@@ -170,7 +170,7 @@ export const useDashboardViewModel = () => {
       };
 
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
-      syncEvent(savedEvent);
+      await syncEvent(savedEvent);
       showToast('Cancelamento revertido e reserva confirmada!');
     } catch (error: any) {
       console.error('Failed to revert cancellation:', error);
