@@ -1,16 +1,17 @@
 // src/ui/screens/DashboardScreen.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDashboardViewModel } from '../../viewmodels/useDashboardViewModel';
 import { useAuth } from '../../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
-import { DollarSign, Hash, PlusCircle, Search, Clock, AlertTriangle, Anchor, CheckCircle, Bell, Ban, Wallet } from 'lucide-react';
+import { DollarSign, Hash, PlusCircle, Search, Clock, AlertTriangle, Anchor, CheckCircle, Bell, Ban, Wallet, Users } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { ptBR } from 'date-fns/locale';
 import type { EventType, PaymentType } from '../../core/domain/types';
 import { PaymentModal } from '../components/PaymentModal';
 import { EventCostModal } from '../components/EventCostModal';
+import { SharedEventModal } from '../components/SharedEventModal';
 import { useEventCostViewModel } from '../../viewmodels/useEventCostViewModel';
 
 // --- Sub-components for the Dashboard ---
@@ -67,6 +68,9 @@ const EventListItem: React.FC<{
           <div className="flex items-center mr-4">
             <Anchor size={14} className="mr-2" /> {event.boat.name}
           </div>
+          <div className="flex items-center mr-4">
+            <Users size={14} className="mr-2" /> {event.passengerCount} {event.passengerCount === 1 ? 'pessoa' : 'pessoas'}
+          </div>
           <div className="flex items-center">
             <Clock size={14} className="mr-2" /> {event.startTime} - {event.endTime}
           </div>
@@ -99,7 +103,22 @@ const EventListItem: React.FC<{
 
 export const DashboardScreen: React.FC = () => {
   const { currentUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isSharedModalOpen, setIsSharedModalOpen] = React.useState(searchParams.get('shared') === 'true');
   const isSeller = currentUser?.role === 'SELLER';
+
+  useEffect(() => {
+    if (searchParams.get('shared') === 'true') {
+      setIsSharedModalOpen(true);
+    }
+  }, [searchParams]);
+
+  const closeSharedModal = () => {
+    setIsSharedModalOpen(false);
+    if (searchParams.get('shared') === 'true') {
+        setSearchParams({}, { replace: true });
+    }
+  };
   const {
     isLoading,
     error,
@@ -204,14 +223,30 @@ export const DashboardScreen: React.FC = () => {
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Stat Cards */}
         {!isSeller && <StatCard title="Faturamento do Mês" value={formatCurrencyBRL(monthlyStats.totalRevenue)} icon={<DollarSign />} />}
         <StatCard title="Passeios no Mês" value={monthlyStats.totalEvents.toString()} icon={<Hash />} />
+      </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
         {/* Quick Access */}
         <QuickAccessButton to="/create-event" title="Criar Passeio" icon={<PlusCircle size={32}/>} />
-        {!isSeller && <QuickAccessButton to="/clients" title="Buscar Cliente" icon={<Search size={32}/>} />}
+        <button
+          onClick={() => setIsSharedModalOpen(true)}
+          className="bg-indigo-600 text-white p-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors flex flex-col items-center justify-center text-center"
+        >
+          <Users size={32} />
+          <span className="mt-2 font-semibold">Passeio Compartilhado</span>
+        </button>
+        {!isSeller ? (
+          <QuickAccessButton to="/clients" title="Buscar Cliente" icon={<Search size={32}/>} />
+        ) : (
+          <div className="bg-gray-200 text-gray-400 p-4 rounded-lg flex flex-col items-center justify-center text-center cursor-not-allowed">
+            <Search size={32} />
+            <span className="mt-2 font-semibold">Buscar Cliente (Bloqueado)</span>
+          </div>
+        )}
       </div>
 
       {/* Main Content Grid */}
@@ -324,6 +359,14 @@ export const DashboardScreen: React.FC = () => {
           updateAdditionalCost={costVm.updateAdditionalCost}
           removeAdditionalCost={costVm.removeAdditionalCost}
           isSaving={costVm.isSaving}
+        />
+      )}
+
+      {isSharedModalOpen && (
+        <SharedEventModal
+          isOpen={isSharedModalOpen}
+          onClose={closeSharedModal}
+          onSuccess={() => {}}
         />
       )}
     </div>
