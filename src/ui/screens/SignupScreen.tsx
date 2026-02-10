@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 
 export function SignupScreen() {
@@ -136,6 +136,15 @@ export function SignupScreen() {
           </svg>
           <span className="font-medium">Cadastrar com Google</span>
         </button>
+
+        <div className="pt-6 flex justify-center gap-4 border-t border-gray-100 mt-6">
+          <Link to="/privacy-policy" className="text-xs text-gray-400 hover:text-gray-600 underline">
+            Política de Privacidade
+          </Link>
+          <Link to="/terms-of-service" className="text-xs text-gray-400 hover:text-gray-600 underline">
+            Termos de Uso
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -31,6 +31,8 @@ const ForgotPasswordScreen = lazy(() => import('./ui/screens/ForgotPasswordScree
 const ResetPasswordSecretScreen = lazy(() => import('./ui/screens/ResetPasswordSecretScreen').then(m => ({ default: m.ResetPasswordSecretScreen })));
 const SetNewPasswordScreen = lazy(() => import('./ui/screens/SetNewPasswordScreen').then(m => ({ default: m.SetNewPasswordScreen })));
 const GoogleSyncScreen = lazy(() => import('./ui/screens/GoogleSyncScreen').then(m => ({ default: m.GoogleSyncScreen })));
+const PrivacyPolicyScreen = lazy(() => import('./ui/screens/PrivacyPolicyScreen').then(m => ({ default: m.PrivacyPolicyScreen })));
+const TermsOfServiceScreen = lazy(() => import('./ui/screens/TermsOfServiceScreen').then(m => ({ default: m.TermsOfServiceScreen })));
 
 // Simple loading fallback
 const LoadingFallback = () => (
@@ -51,6 +53,8 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
           <Route path="/reset-password-secret" element={<ResetPasswordSecretScreen />} />
           <Route path="/set-new-password" element={<SetNewPasswordScreen />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyScreen />} />
+          <Route path="/terms-of-service" element={<TermsOfServiceScreen />} />
 
           {/* Public voucher route with a specific public layout */}
           <Route path="/voucher/:eventId" element={<PublicLayout><VoucherScreen /></PublicLayout>} />

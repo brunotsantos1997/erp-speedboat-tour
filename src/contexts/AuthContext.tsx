@@ -330,6 +330,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     setCurrentUser(null);
+    setGoogleAccessToken(null);
+    localStorage.removeItem('google_access_token');
     disposeRepositories();
     await signOut(auth);
     try {
