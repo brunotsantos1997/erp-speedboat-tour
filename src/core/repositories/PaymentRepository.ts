@@ -3,6 +3,7 @@ import {
   collection,
   getDocs,
   addDoc,
+  updateDoc,
   doc,
   getDoc,
   onSnapshot,
@@ -20,6 +21,7 @@ export interface IPaymentRepository {
   getByEventId(eventId: string): Promise<Payment[]>;
   getByDateRange(startDate: string, endDate: string): Promise<Payment[]>;
   add(paymentData: Omit<Payment, 'id'>): Promise<Payment>;
+  update(paymentId: string, data: Partial<Payment>): Promise<void>;
   remove(paymentId: string): Promise<void>;
   dispose(): void;
   initialize(user?: any): void;
@@ -143,6 +145,24 @@ class PaymentRepositoryImpl implements IPaymentRepository {
     });
 
     return newPayment;
+  }
+
+  async update(paymentId: string, data: Partial<Payment>): Promise<void> {
+    const docRef = doc(db, this.collectionName, paymentId);
+    const oldDoc = await getDoc(docRef);
+    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
+
+    await updateDoc(docRef, data as any);
+
+    await auditLogRepository.log({
+      userId: this.currentUser?.id || 'unknown',
+      userName: this.currentUser?.name || 'Sistema',
+      action: 'UPDATE',
+      collection: this.collectionName,
+      docId: paymentId,
+      oldData,
+      newData: { ...oldData, ...data },
+    });
   }
 
   async remove(paymentId: string): Promise<void> {
