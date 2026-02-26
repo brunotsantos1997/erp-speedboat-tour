@@ -9,6 +9,7 @@ import { boatRepository } from '../core/repositories/BoatRepository';
 import { timeToMinutes } from '../core/utils/timeUtils';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useEventSync } from './useEventSync';
+import { useModalContext } from '../ui/contexts/ModalContext';
 
 export type CashBookEntry = {
     id: string;
@@ -22,10 +23,12 @@ export type CashBookEntry = {
     clientId?: string;
     clientName?: string;
     eventId?: string;
+    isCancelled?: boolean;
 };
 
 export const useCashBookViewModel = () => {
     const { syncEvent } = useEventSync();
+    const { confirm, showAlert } = useModalContext();
     const [events, setEvents] = useState<EventType[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -106,6 +109,7 @@ export const useCashBookViewModel = () => {
                 const ratio = p.amount / event.total;
                 const pEntries: CashBookEntry[] = [];
                 const paymentRatioPct = (ratio * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+                const isCancelled = ['CANCELLED', 'ARCHIVED_CANCELLED', 'REFUNDED', 'PENDING_REFUND'].includes(event.status);
 
                 // Boat Rental
                 const boatNet = event.rentalRevenue || 0;
@@ -122,7 +126,8 @@ export const useCashBookViewModel = () => {
                         boatId: event.boat.id,
                         eventId: p.eventId,
                         clientId: event.client.id,
-                        clientName: event.client.name
+                        clientName: event.client.name,
+                        isCancelled
                     });
                 }
 
@@ -153,7 +158,8 @@ export const useCashBookViewModel = () => {
                             boatId: event.boat.id,
                             eventId: p.eventId,
                             clientId: event.client.id,
-                            clientName: event.client.name
+                            clientName: event.client.name,
+                            isCancelled
                         });
                     }
                 });
@@ -173,7 +179,8 @@ export const useCashBookViewModel = () => {
                         boatId: event.boat.id,
                         eventId: p.eventId,
                         clientId: event.client.id,
-                        clientName: event.client.name
+                        clientName: event.client.name,
+                        isCancelled
                     });
                 }
 
@@ -209,7 +216,7 @@ export const useCashBookViewModel = () => {
     }, [events, expenses, payments, incomes, startDate, endDate, searchTerm, filterType, filterBoatId, filterCategory]);
 
     const deleteEntry = async (id: string, type: 'INCOME' | 'EXPENSE' | 'PAYMENT') => {
-        if (!window.confirm('Tem certeza que deseja excluir este registro financeiro?')) return;
+        if (!await confirm('Confirmar Exclusão', 'Tem certeza que deseja excluir este registro financeiro?')) return;
         setIsDeleting(true);
         try {
             if (type === 'INCOME') {
@@ -239,7 +246,7 @@ export const useCashBookViewModel = () => {
             }
         } catch (err) {
             console.error('Failed to delete entry:', err);
-            alert('Erro ao excluir registro.');
+            await showAlert('Erro', 'Erro ao excluir registro.');
         } finally {
             setIsDeleting(false);
         }

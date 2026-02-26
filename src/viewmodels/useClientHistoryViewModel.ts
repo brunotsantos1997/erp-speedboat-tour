@@ -1,18 +1,22 @@
 // src/viewmodels/useClientHistoryViewModel.ts
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { ClientProfile, EventType } from '../core/domain/types';
+import { useAuth } from '../contexts/AuthContext';
+import type { ClientProfile, EventType, Payment } from '../core/domain/types';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
 import { format } from 'date-fns';
 import { useEventSync } from './useEventSync';
+import { useModalContext } from '../ui/contexts/ModalContext';
 
 export const useClientHistoryViewModel = () => {
+  const { currentUser } = useAuth();
   const [searchParams] = useSearchParams();
   const clientIdParam = searchParams.get('clientId');
   const [searchTerm, setSearchTerm] = useState('');
-  const { syncEvent } = useEventSync();
+  const { syncEvent, deleteFromGoogle } = useEventSync();
+  const { confirm, showAlert } = useModalContext();
   const [searchResults, setSearchResults] = useState<ClientProfile[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(null);
   const [clientEvents, setClientEvents] = useState<EventType[]>([]);
@@ -34,6 +38,11 @@ export const useClientHistoryViewModel = () => {
   // Shared Event Modal State
   const [isSharedModalOpen, setIsSharedModalOpen] = useState(false);
   const [selectedSharedEventId, setSelectedSharedEventId] = useState<string | null>(null);
+
+  // Quick Edit Modal State
+  const [isQuickEditModalOpen, setIsQuickEditModalOpen] = useState(false);
+  const [activeEventForQuickEdit, setActiveEventForQuickEdit] = useState<EventType | null>(null);
+  const [activeEventPayments, setActiveEventPayments] = useState<Payment[]>([]);
 
   const handleSearch = useCallback(async (term: string) => {
     setSearchTerm(term);
@@ -103,13 +112,13 @@ export const useClientHistoryViewModel = () => {
       ? 'Este evento já foi pago. Ao cancelar, o status será alterado para "Pendente de Reembolso". Deseja continuar?'
       : 'Tem certeza que deseja cancelar este evento?';
 
-    if (window.confirm(message)) {
+    if (await confirm('Confirmar Cancelamento', message)) {
       const newStatus = eventToUpdate.paymentStatus === 'CONFIRMED' ? 'PENDING_REFUND' : 'CANCELLED';
       const updatedEvent = { ...eventToUpdate, status: newStatus as EventType['status'] };
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
       await syncEvent(savedEvent);
     }
-  }, [clientEvents, selectedClient, selectClient]);
+  }, [clientEvents, selectedClient, selectClient, confirm]);
 
   const initiatePayment = useCallback(async (eventId: string, type: 'DOWN_PAYMENT' | 'BALANCE' | 'FULL') => {
     const event = clientEvents.find(e => e.id === eventId);
@@ -188,7 +197,71 @@ export const useClientHistoryViewModel = () => {
       console.error('Failed to revert cancellation:', error);
       throw error;
     }
-  }, [clientEvents, selectedClient, selectClient]);
+  }, [clientEvents, selectedClient, syncEvent]);
+
+  // --- Quick Edit Handlers ---
+  const openQuickEdit = useCallback(async (event: EventType) => {
+    setActiveEventForQuickEdit(event);
+    const payments = await paymentRepository.getByEventId(event.id);
+    setActiveEventPayments(payments);
+    setIsQuickEditModalOpen(true);
+  }, []);
+
+  const manualUpdateEvent = useCallback(async (data: Partial<EventType>) => {
+    if (!activeEventForQuickEdit) return;
+    const updated = { ...activeEventForQuickEdit, ...data };
+    const saved = await eventRepository.updateEvent(updated);
+    await syncEvent(saved);
+    setActiveEventForQuickEdit(saved);
+  }, [activeEventForQuickEdit, syncEvent]);
+
+  const updatePayment = useCallback(async (paymentId: string, data: Partial<Payment>) => {
+    if (!activeEventForQuickEdit) return;
+    await paymentRepository.update(paymentId, data);
+    const payments = await paymentRepository.getByEventId(activeEventForQuickEdit.id);
+    setActiveEventPayments(payments);
+  }, [activeEventForQuickEdit]);
+
+  const deletePayment = useCallback(async (paymentId: string) => {
+    if (!activeEventForQuickEdit) return;
+    await paymentRepository.remove(paymentId);
+    const payments = await paymentRepository.getByEventId(activeEventForQuickEdit.id);
+    setActiveEventPayments(payments);
+  }, [activeEventForQuickEdit]);
+
+  const addPaymentToEvent = useCallback(async (data: { amount: number; method: any; type: any; date: string }) => {
+    if (!activeEventForQuickEdit) return;
+    await paymentRepository.add({
+      ...data,
+      eventId: activeEventForQuickEdit.id,
+      timestamp: Date.now()
+    });
+    const payments = await paymentRepository.getByEventId(activeEventForQuickEdit.id);
+    setActiveEventPayments(payments);
+  }, [activeEventForQuickEdit]);
+
+  const deleteEventPermanently = useCallback(async (eventId: string) => {
+    if (!await confirm('Excluir Permanentemente', 'TEM CERTEZA? Esta ação é irreversível e apagará o evento e todos os seus pagamentos permanentemente.')) return;
+
+    try {
+      const eventToDelete = clientEvents.find(e => e.id === eventId);
+      const googleEventId = eventToDelete?.googleCalendarEventIds?.[currentUser?.id || ''];
+
+      if (googleEventId) {
+        await deleteFromGoogle(googleEventId);
+      }
+
+      await eventRepository.remove(eventId);
+      const payments = await paymentRepository.getByEventId(eventId);
+      for (const p of payments) {
+        await paymentRepository.remove(p.id);
+      }
+      // UI will update automatically via subscription in useEffect
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+      await showAlert('Erro', 'Erro ao excluir evento.');
+    }
+  }, [confirm, showAlert]);
 
   // --- Client Edit Handlers ---
   const openEditModal = () => {
@@ -263,6 +336,16 @@ export const useClientHistoryViewModel = () => {
     isSharedModalOpen,
     setIsSharedModalOpen,
     selectedSharedEventId,
-    setSelectedSharedEventId
+    setSelectedSharedEventId,
+    isQuickEditModalOpen,
+    setIsQuickEditModalOpen,
+    activeEventForQuickEdit,
+    activeEventPayments,
+    openQuickEdit,
+    manualUpdateEvent,
+    updatePayment,
+    deletePayment,
+    addPaymentToEvent,
+    deleteEventPermanently
   };
 };

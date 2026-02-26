@@ -1,12 +1,13 @@
 // src/viewmodels/useVoucherViewModel.ts
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import type { EventType, CompanyData, VoucherTerms, Payment } from '../core/domain/types';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
 import { VoucherTermsRepository } from '../core/repositories/VoucherTermsRepository';
 import { VoucherAppearanceRepository } from '../core/repositories/VoucherAppearanceRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
+import { useModalContext } from '../ui/contexts/ModalContext';
 
 interface VoucherDetails extends EventType {
   reservationFee: number;
@@ -19,6 +20,9 @@ interface VoucherDetails extends EventType {
 
 export const useVoucherViewModel = () => {
   const { eventId } = useParams<{ eventId: string }>();
+  const [searchParams] = useSearchParams();
+  const { showAlert } = useModalContext();
+  const overrideName = searchParams.get('name');
   const [voucher, setVoucher] = useState<VoucherDetails | null>(null);
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [voucherTerms, setVoucherTerms] = useState<VoucherTerms | null>(null);
@@ -85,6 +89,10 @@ export const useVoucherViewModel = () => {
 
       setVoucher({
         ...currentEvent,
+        client: {
+          ...currentEvent.client,
+          name: overrideName || currentEvent.client.name
+        },
         reservationFee: displaySignal,
         remainingReservationFee,
         remainingBalance,
@@ -93,8 +101,8 @@ export const useVoucherViewModel = () => {
         isFullyPaid: totalPaid >= currentEvent.total
       });
 
-      if (currentEvent.client?.name) {
-        document.title = `Voucher - ${currentEvent.client.name}`;
+      if (overrideName || currentEvent.client?.name) {
+        document.title = `Voucher - ${overrideName || currentEvent.client.name}`;
       }
       setIsLoading(false);
     };
@@ -139,7 +147,7 @@ export const useVoucherViewModel = () => {
         await html2pdf().from(element).set(opt).save();
       } catch (err) {
         console.error('Erro ao gerar PDF:', err);
-        alert('Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.');
+        await showAlert('Erro', 'Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.');
       } finally {
         if (button) button.style.display = 'flex';
       }
