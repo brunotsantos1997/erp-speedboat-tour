@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Calendar, DollarSign, Tag, CheckCircle, AlertTriangle, Clock, Ban, History, Smartphone, CreditCard, Landmark, Receipt, Save } from 'lucide-react';
+import { X, Plus, Trash2, Calendar, DollarSign, Tag, CheckCircle, AlertTriangle, Clock, Ban, Smartphone, CreditCard, Landmark, Receipt, Save } from 'lucide-react';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { MoneyInput } from './MoneyInput';
 import type { EventType, Payment, EventStatus, PaymentStatus, PaymentMethod, PaymentType } from '../../core/domain/types';

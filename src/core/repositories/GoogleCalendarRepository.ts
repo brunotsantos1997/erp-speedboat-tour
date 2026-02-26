@@ -89,8 +89,17 @@ class GoogleCalendarRepository {
     description += `Local: ${event.boardingLocation.name}\n`;
     description += `Passageiros: ${event.passengerCount}\n`;
     if (event.tourType) description += `Tipo: ${event.tourType.name}\n`;
-    if (event.observations) description += `Obs: ${event.observations}\n`;
-    description += `Status: ${event.status}\n`;
+
+    if (event.products && event.products.length > 0) {
+      description += `\nItens Inclusos:\n`;
+      event.products.forEach(p => {
+        description += `- ${p.name}${p.isCourtesy ? ' (Cortesia)' : ''}\n`;
+      });
+    }
+
+    if (event.observations) description += `\nObservações:\n${event.observations}\n`;
+
+    description += `\nStatus: ${event.status}\n`;
 
     return {
       summary: `Passeio - ${event.client.name}${event.tourType ? ` (${event.tourType.name})` : ''}`,
