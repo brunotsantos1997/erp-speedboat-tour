@@ -169,6 +169,7 @@ class EventRepositoryImpl implements IEventRepository {
       existingEvent.status !== 'CANCELLED' &&
       existingEvent.status !== 'ARCHIVED_CANCELLED' &&
       existingEvent.status !== 'REFUNDED' &&
+      existingEvent.status !== 'PENDING_REFUND' &&
       this.isTimeConflict(eventData, existingEvent)
     );
 
@@ -207,6 +208,7 @@ class EventRepositoryImpl implements IEventRepository {
       existingEvent.status !== 'CANCELLED' &&
       existingEvent.status !== 'ARCHIVED_CANCELLED' &&
       existingEvent.status !== 'REFUNDED' &&
+      existingEvent.status !== 'PENDING_REFUND' &&
       this.isTimeConflict(updatedEvent, existingEvent)
     );
 
