@@ -5,12 +5,15 @@ import { Menu, PlusCircle, Settings, Users, LayoutDashboard, Palette, UserCog, T
 import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
 import { useAuth } from '../../contexts/AuthContext';
 import { useGlobalSync } from '../../viewmodels/useGlobalSync';
+import { SettingsMenu } from './SettingsMenu';
+import { useTranslation } from 'react-i18next';
 
 
 const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string }> = ({ isOpen, onClose, appName }) => {
   const { currentUser, getAllUsers, logout } = useAuth();
   const navigate = useNavigate();
   const [pendingUsersCount, setPendingUsersCount] = useState(0);
+  const { t } = useTranslation();
 
   const handleLogout = () => {
     logout();
@@ -57,18 +60,18 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
           <NavLink to="/dashboard" className={navLinkClass} onClick={onClose} end>
             <LayoutDashboard className="mr-3" />
-            Dashboard
+            {t('navigation.dashboard', 'Dashboard')}
           </NavLink>
           <NavLink to="/dashboard/create-event" className={navLinkClass} onClick={onClose}>
             <PlusCircle className="mr-3" />
-            <span>Criar Passeio</span>
+            <span>{t('navigation.createEvent', 'Criar Evento')}</span>
           </NavLink>
 
           {(currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'OWNER' || currentUser?.role === 'ADMIN') && (
             <NavLink to="/dashboard/admin/users" className={(props) => navLinkClass(props) + ' justify-between'} onClick={onClose}>
               <div className="flex items-center">
                 <UserCog className="mr-3" />
-                <span>Gerenciar Usuários</span>
+                <span>{t('navigation.users', 'Gerenciar Usuários')}</span>
               </div>
               {pendingUsersCount > 0 && (
                 <span className="flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-red-500 rounded-full">
@@ -81,14 +84,14 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
           {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
             <NavLink to="/dashboard/finance" className={navLinkClass} onClick={onClose}>
               <Wallet className="mr-3" />
-              <span>Financeiro</span>
+              <span>{t('navigation.finance', 'Financeiro')}</span>
             </NavLink>
           )}
 
           {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
             <NavLink to="/dashboard/commission-report" className={navLinkClass} onClick={onClose}>
               <TrendingUp className="mr-3" />
-              <span>Relatório de Comissão</span>
+              <span>{t('navigation.reports', 'Relatório de Comissão')}</span>
             </NavLink>
           )}
 
@@ -103,30 +106,30 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
                 }}
               >
                 <Settings className="mr-3" />
-                Configurações
+                {t('navigation.settings', 'Configurações')}
               </button>
             <div className="pl-10 space-y-2 hidden">
               <NavLink to="/dashboard/products" className={navLinkClass} onClick={onClose}>
-                Produtos
+                {t('navigation.products', 'Produtos')}
               </NavLink>
               <NavLink to="/dashboard/boats" className={navLinkClass} onClick={onClose}>
-                Lanchas
+                {t('navigation.boats', 'Lanchas')}
               </NavLink>
               <NavLink to="/dashboard/boarding-locations" className={navLinkClass} onClick={onClose}>
-                Locais de Embarque
+                {t('navigation.boardingLocations', 'Locais de Embarque')}
               </NavLink>
               <NavLink to="/dashboard/tour-types" className={navLinkClass} onClick={onClose}>
-                Tipos de Passeio
+                {t('navigation.tourTypes', 'Tipos de Passeio')}
               </NavLink>
               {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN') && (
                 <NavLink to="/dashboard/admin/commissions" className={navLinkClass} onClick={onClose}>
-                  Comissões
+                  {t('navigation.commissions', 'Comissões')}
                 </NavLink>
               )}
               {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
                 <>
                   <NavLink to="/dashboard/voucher-terms" className={navLinkClass} onClick={onClose}>
-                    Termos do Voucher
+                    {t('navigation.voucherTerms', 'Termos do Voucher')}
                   </NavLink>
                 </>
               )}
@@ -144,14 +147,14 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
                 }}
               >
                 <Palette className="mr-3" />
-                Personalização
+                {t('navigation.appearance', 'Personalização')}
               </button>
               <div className="pl-10 space-y-2 hidden">
                 <NavLink to="/dashboard/company-data" className={navLinkClass} onClick={onClose}>
-                  Dados da Empresa
+                  {t('navigation.company', 'Dados da Empresa')}
                 </NavLink>
                 <NavLink to="/dashboard/voucher-appearance" className={navLinkClass} onClick={onClose}>
-                  Aparência do Voucher
+                  {t('navigation.voucherAppearance', 'Aparência do Voucher')}
                 </NavLink>
               </div>
             </div>
@@ -159,16 +162,16 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
           {(currentUser?.role !== 'SELLER') && (
             <NavLink to="/dashboard/clients" className={navLinkClass} onClick={onClose}>
               <Users className="mr-3" />
-              Clientes
+              {t('navigation.clients', 'Clientes')}
             </NavLink>
           )}
           <NavLink to="/dashboard/google-sync" className={navLinkClass} onClick={onClose}>
             <Calendar className="mr-3" />
-            Sincronizar Agenda
+            {t('navigation.calendar', 'Sincronizar Agenda')}
           </NavLink>
           <NavLink to="/dashboard/profile" className={navLinkClass} onClick={onClose}>
             <UserCog className="mr-3" />
-            Meu Perfil
+            {t('navigation.profile', 'Meu Perfil')}
           </NavLink>
         </nav>
         <div className="p-4 border-t flex-shrink-0">
@@ -177,7 +180,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
                 className="flex items-center w-full px-4 py-3 text-lg font-semibold text-left text-red-600 rounded-lg hover:bg-red-100"
             >
                 <LogOut className="mr-3" />
-                Sair
+                {t('common.logout', 'Sair')}
             </button>
         </div>
       </aside>
@@ -188,7 +191,9 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
 export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   useGlobalSync();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
   const { companyData } = useCompanyDataViewModel();
+  const { t } = useTranslation();
   const [appName, setAppName] = useState('BoatManager');
 
   useEffect(() => {
@@ -204,16 +209,23 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white shadow-md md:hidden">
-          <div className="relative flex justify-center items-center p-4">
+          <div className="relative flex justify-between items-center p-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="absolute left-4 p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
             >
               <Menu size={24} />
             </button>
-            <h1 className="text-xl font-bold text-center truncate px-12">
+            <h1 className="text-xl font-bold text-center truncate px-4">
               {appName}
             </h1>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+              title={t('settings.title', 'Configurações')}
+            >
+              <Settings size={20} />
+            </button>
           </div>
         </header>
 
@@ -221,6 +233,8 @@ export const Layout: React.FC<{ children?: React.ReactNode }> = ({ children }) =
           {children || <Outlet />}
         </main>
       </div>
+      
+      <SettingsMenu isOpen={isSettingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 };

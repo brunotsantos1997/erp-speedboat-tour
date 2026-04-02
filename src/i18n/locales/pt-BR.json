@@ -35,7 +35,10 @@
     "signup": "Cadastrar",
     "password": "Senha",
     "confirmPassword": "Confirmar Senha",
-    "forgotPassword": "Esqueci minha senha"
+    "forgotPassword": "Esqueci minha senha",
+    "or": "OU",
+    "privacyPolicy": "Política de Privacidade",
+    "termsOfService": "Termos de Uso"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -45,11 +48,19 @@
     "products": "Produtos",
     "clients": "Clientes",
     "finance": "Finanças",
-    "users": "Usuários",
+    "users": "Gerenciar Usuários",
     "reports": "Relatórios",
     "settings": "Configurações",
     "vouchers": "Vouchers",
-    "calendar": "Calendário"
+    "calendar": "Sincronizar Agenda",
+    "boardingLocations": "Locais de Embarque",
+    "tourTypes": "Tipos de Passeio",
+    "commissions": "Comissões",
+    "voucherTerms": "Termos do Voucher",
+    "appearance": "Personalização",
+    "company": "Dados da Empresa",
+    "voucherAppearance": "Aparência do Voucher",
+    "profile": "Meu Perfil"
   },
   "auth": {
     "login": "Entrar",
@@ -72,7 +83,8 @@
     "passwordChanged": "Senha alterada com sucesso",
     "pendingApproval": "Sua conta está aguardando aprovação",
     "accountRejected": "Sua conta foi rejeitada",
-    "accountApproved": "Sua conta foi aprovada"
+    "accountApproved": "Sua conta foi aprovada",
+    "loginWithGoogle": "Entrar com Google"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -290,7 +302,19 @@
     "dateFormat": "Formato de Data",
     "timeFormat": "Formato de Hora",
     "currency": "Moeda",
-    "settingsUpdated": "Configurações atualizadas com sucesso"
+    "settingsUpdated": "Configurações atualizadas com sucesso",
+    "selectLanguage": "Selecione o idioma",
+    "languageNote": "A alteração do idioma será aplicada imediatamente em toda a aplicação.",
+    "theme": "Tema",
+    "lightTheme": "Claro",
+    "darkTheme": "Escuro",
+    "autoTheme": "Automático",
+    "emailNotifications": "Notificações por email",
+    "pushNotifications": "Notificações push",
+    "changePassword": "Alterar Senha",
+    "twoFactorAuth": "Autenticação de Dois Fatores",
+    "googleCalendarDesc": "Sincronize seus eventos com o Google Calendar",
+    "connectGoogle": "Conectar com Google"
   },
   "forms": {
     "requiredField": "Campo obrigatório",
@@ -326,7 +350,9 @@
     "noDataAvailable": "Nenhum dado disponível",
     "loadingData": "Carregando dados...",
     "processingRequest": "Processando solicitação...",
-    "operationCompleted": "Operação concluída"
+    "operationCompleted": "Operação concluída",
+    "loginError": "Falha ao fazer login.",
+    "googleLoginError": "Falha ao fazer login com Google."
   },
   "validation": {
     "required": "Este campo é obrigatório",

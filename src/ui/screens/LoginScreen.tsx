@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ export function LoginScreen() {
   const { login, loginWithGoogle } = useAuth();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleGoogleLogin = async () => {
     setError(null);
@@ -17,7 +19,7 @@ export function LoginScreen() {
       await loginWithGoogle();
       navigate('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao fazer login com Google.');
+      setError(err instanceof Error ? err.message : t('messages.googleLoginError', 'Falha ao fazer login com Google.'));
     } finally {
       setIsGoogleLoading(false);
     }
@@ -30,18 +32,18 @@ export function LoginScreen() {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao fazer login.');
+      setError(err instanceof Error ? err.message : t('messages.loginError', 'Falha ao fazer login.'));
     }
   };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold text-center">Login</h1>
+        <h1 className="text-2xl font-bold text-center">{t('auth.login', 'Login')}</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="text-sm font-medium text-gray-700">
-              E-mail
+              {t('common.email', 'E-mail')}
             </label>
             <input
               id="email"
@@ -57,7 +59,7 @@ export function LoginScreen() {
               htmlFor="password"
               className="text-sm font-medium text-gray-700"
             >
-              Senha
+              {t('common.password', 'Senha')}
             </label>
             <input
               id="password"
@@ -73,7 +75,7 @@ export function LoginScreen() {
             type="submit"
             className="w-full py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            Login
+            {t('auth.login', 'Login')}
           </button>
         </form>
 
@@ -82,7 +84,7 @@ export function LoginScreen() {
             <div className="w-full border-t border-gray-300"></div>
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 text-gray-500 bg-white font-medium">OU</span>
+            <span className="px-2 text-gray-500 bg-white font-medium">{t('common.or', 'OU')}</span>
           </div>
         </div>
 
@@ -109,27 +111,27 @@ export function LoginScreen() {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
             />
           </svg>
-          <span className="font-medium">Entrar com Google</span>
+          <span className="font-medium">{t('auth.loginWithGoogle', 'Entrar com Google')}</span>
         </button>
 
         <div className="text-sm text-center text-gray-600 space-y-2">
           <p>
             <Link to="/forgot-password"className="font-medium text-indigo-600 hover:text-indigo-500">
-              Esqueceu sua senha?
+              {t('auth.forgotPassword', 'Esqueceu sua senha?')}
             </Link>
           </p>
           <p>
-            Não tem uma conta?{' '}
+            {t('auth.dontHaveAccount', 'Não tem uma conta?')}{' '}
             <Link to="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
-              Cadastre-se
+              {t('auth.signup', 'Cadastre-se')}
             </Link>
           </p>
           <div className="pt-4 flex justify-center gap-4 border-t border-gray-100">
             <Link to="/privacy-policy" className="text-xs text-gray-400 hover:text-gray-600 underline">
-              Política de Privacidade
+              {t('common.privacyPolicy', 'Política de Privacidade')}
             </Link>
             <Link to="/terms-of-service" className="text-xs text-gray-400 hover:text-gray-600 underline">
-              Termos de Uso
+              {t('common.termsOfService', 'Termos de Uso')}
             </Link>
           </div>
         </div>

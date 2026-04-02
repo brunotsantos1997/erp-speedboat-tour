@@ -35,7 +35,10 @@
     "signup": "Sign Up",
     "password": "Password",
     "confirmPassword": "Confirm Password",
-    "forgotPassword": "Forgot Password"
+    "forgotPassword": "Forgot Password",
+    "or": "OR",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
   },
   "navigation": {
     "dashboard": "Dashboard",
