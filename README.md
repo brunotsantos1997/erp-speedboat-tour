@@ -21,6 +21,144 @@ Sistema web completo para gestão de passeios turísticos de lancha, desenvolvid
 - **📱 Interface Responsiva**: Otimizada para dispositivos móveis
 - **🌍 Internacionalização**: Suporte a múltiplos idiomas (PT-BR, EN-US, ES-ES)
 
+## 🖼️ **Screenshots da Aplicação**
+
+### **Desktop Version**
+
+#### **1. Landing Page**
+![Landing Page](./app_screenshots/desktop/01-landing-page.png)
+
+#### **2. Login**
+![Login](./app_screenshots/desktop/02-login.png)
+
+#### **3. Dashboard**
+- **Com Tutorial**: ![Dashboard Tutorial](./app_screenshots/desktop/03-dashboard-tutorial.png)
+- **Principal**: ![Dashboard](./app_screenshots/desktop/03-dashboard.png)
+
+#### **4. Perfil do Usuário**
+![Perfil](./app_screenshots/desktop/04-profile.png)
+
+#### **5. Criação de Eventos**
+- **Com Tutorial**: ![Create Event Tutorial](./app_screenshots/desktop/05-create-event-tutorial.png)
+- **Principal**: ![Create Event](./app_screenshots/desktop/05-create-event.png)
+
+#### **6. Gestão de Clientes**
+![Clientes](./app_screenshots/desktop/06-clients.png)
+
+#### **7. Financeiro**
+- **Com Tutorial**: ![Finance Tutorial](./app_screenshots/desktop/07-finance-tutorial.png)
+- **Principal**: ![Finance](./app_screenshots/desktop/07-finance.png)
+
+#### **8. Relatório de Comissões**
+- **Com Tutorial**: ![Commission Report Tutorial](./app_screenshots/desktop/08-commission-report-tutorial.png)
+- **Principal**: ![Commission Report](./app_screenshots/desktop/08-commission-report.png)
+
+#### **9. Produtos**
+- **Com Tutorial**: ![Products Tutorial](./app_screenshots/desktop/09-products-tutorial.png)
+- **Principal**: ![Products](./app_screenshots/desktop/09-products.png)
+
+#### **10. Embarcações**
+- **Com Tutorial**: ![Boats Tutorial](./app_screenshots/desktop/10-boats-tutorial.png)
+- **Principal**: ![Boats](./app_screenshots/desktop/10-boats.png)
+
+#### **11. Locais de Embarque**
+- **Com Tutorial**: ![Boarding Locations Tutorial](./app_screenshots/desktop/11-boarding-locations-tutorial.png)
+- **Principal**: ![Boarding Locations](./app_screenshots/desktop/11-boarding-locations.png)
+
+#### **12. Tipos de Passeios**
+- **Com Tutorial**: ![Tour Types Tutorial](./app_screenshots/desktop/12-tour-types-tutorial.png)
+- **Principal**: ![Tour Types](./app_screenshots/desktop/12-tour-types.png)
+
+#### **13. Gestão de Usuários**
+- **Com Tutorial**: ![User Management Tutorial](./app_screenshots/desktop/13-user-management-tutorial.png)
+- **Principal**: ![User Management](./app_screenshots/desktop/13-user-management.png)
+
+#### **14. Configurações de Comissões**
+![Commissions Settings](./app_screenshots/desktop/14-commissions-settings.png)
+
+#### **15. Termos do Voucher**
+![Voucher Terms](./app_screenshots/desktop/15-voucher-terms.png)
+
+#### **16. Dados da Empresa**
+![Company Data](./app_screenshots/desktop/16-company-data.png)
+
+#### **17. Aparência do Voucher**
+![Voucher Appearance](./app_screenshots/desktop/17-voucher-appearance.png)
+
+#### **18. Sincronização Google**
+- **Com Tutorial**: ![Google Sync Tutorial](./app_screenshots/desktop/18-google-sync-tutorial.png)
+- **Principal**: ![Google Sync](./app_screenshots/desktop/18-google-sync.png)
+
+---
+
+### **Mobile Version**
+
+#### **1. Landing Page**
+![Landing Page Mobile](./app_screenshots/mobile/01-landing-page.png)
+
+#### **2. Login**
+![Login Mobile](./app_screenshots/mobile/02-login.png)
+
+#### **3. Dashboard**
+- **Com Tutorial**: ![Dashboard Tutorial Mobile](./app_screenshots/mobile/03-dashboard-tutorial.png)
+- **Principal**: ![Dashboard Mobile](./app_screenshots/mobile/03-dashboard.png)
+
+#### **4. Perfil do Usuário**
+![Perfil Mobile](./app_screenshots/mobile/04-profile.png)
+
+#### **5. Criação de Eventos**
+- **Com Tutorial**: ![Create Event Tutorial Mobile](./app_screenshots/mobile/05-create-event-tutorial.png)
+- **Principal**: ![Create Event Mobile](./app_screenshots/mobile/05-create-event.png)
+
+#### **6. Gestão de Clientes**
+![Clientes Mobile](./app_screenshots/mobile/06-clients.png)
+
+#### **7. Financeiro**
+- **Com Tutorial**: ![Finance Tutorial Mobile](./app_screenshots/mobile/07-finance-tutorial.png)
+- **Principal**: ![Finance Mobile](./app_screenshots/mobile/07-finance.png)
+
+#### **8. Relatório de Comissões**
+- **Com Tutorial**: ![Commission Report Tutorial Mobile](./app_screenshots/mobile/08-commission-report-tutorial.png)
+- **Principal**: ![Commission Report Mobile](./app_screenshots/mobile/08-commission-report.png)
+
+#### **9. Produtos**
+- **Com Tutorial**: ![Products Tutorial Mobile](./app_screenshots/mobile/09-products-tutorial.png)
+- **Principal**: ![Products Mobile](./app_screenshots/mobile/09-products.png)
+
+#### **10. Embarcações**
+- **Com Tutorial**: ![Boats Tutorial Mobile](./app_screenshots/mobile/10-boats-tutorial.png)
+- **Principal**: ![Boats Mobile](./app_screenshots/mobile/10-boats.png)
+
+#### **11. Locais de Embarque**
+- **Com Tutorial**: ![Boarding Locations Tutorial Mobile](./app_screenshots/mobile/11-boarding-locations-tutorial.png)
+- **Principal**: ![Boarding Locations Mobile](./app_screenshots/mobile/11-boarding-locations.png)
+
+#### **12. Tipos de Passeios**
+- **Com Tutorial**: ![Tour Types Tutorial Mobile](./app_screenshots/mobile/12-tour-types-tutorial.png)
+- **Principal**: ![Tour Types Mobile](./app_screenshots/mobile/12-tour-types.png)
+
+#### **13. Gestão de Usuários**
+- **Com Tutorial**: ![User Management Tutorial Mobile](./app_screenshots/mobile/13-user-management-tutorial.png)
+- **Principal**: ![User Management Mobile](./app_screenshots/mobile/13-user-management.png)
+
+#### **14. Configurações de Comissões**
+![Commissions Settings Mobile](./app_screenshots/mobile/14-commissions-settings.png)
+
+#### **15. Termos do Voucher**
+![Voucher Terms Mobile](./app_screenshots/mobile/15-voucher-terms.png)
+
+#### **16. Dados da Empresa**
+![Company Data Mobile](./app_screenshots/mobile/16-company-data.png)
+
+#### **17. Aparência do Voucher**
+![Voucher Appearance Mobile](./app_screenshots/mobile/17-voucher-appearance.png)
+
+#### **18. Sincronização Google**
+- **Com Tutorial**: ![Google Sync Tutorial Mobile](./app_screenshots/mobile/18-google-sync-tutorial.png)
+- **Principal**: ![Google Sync Mobile](./app_screenshots/mobile/18-google-sync.png)
+
+---
+
 ## 🛠️ **Stack Tecnológico**
 
 ### **Frontend**
