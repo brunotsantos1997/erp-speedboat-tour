@@ -84,7 +84,14 @@
     "pendingApproval": "Sua conta está aguardando aprovação",
     "accountRejected": "Sua conta foi rejeitada",
     "accountApproved": "Sua conta foi aprovada",
-    "loginWithGoogle": "Entrar com Google"
+    "loginWithGoogle": "Entrar com Google",
+    "demoAccess": "Acesso Demonstração",
+    "demoCredentials": "Credenciais de Demonstração",
+    "demoDescription": "Use as credenciais abaixo para explorar o sistema com diferentes perfis de usuário:",
+    "useCredentials": "Usar Credenciais",
+    "superAdminCredentials": "Super Administrador",
+    "adminCredentials": "Administrador",
+    "sellerCredentials": "Vendedor"
   },
   "dashboard": {
     "title": "Dashboard",

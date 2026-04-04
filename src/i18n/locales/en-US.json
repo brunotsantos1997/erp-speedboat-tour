@@ -75,7 +75,15 @@
     "passwordChanged": "Password changed successfully",
     "pendingApproval": "Your account is awaiting approval",
     "accountRejected": "Your account has been rejected",
-    "accountApproved": "Your account has been approved"
+    "accountApproved": "Your account has been approved",
+    "loginWithGoogle": "Login with Google",
+    "demoAccess": "Demo Access",
+    "demoCredentials": "Demo Credentials",
+    "demoDescription": "Use the credentials below to explore the system with different user profiles:",
+    "useCredentials": "Use Credentials",
+    "superAdminCredentials": "Super Admin",
+    "adminCredentials": "Admin",
+    "sellerCredentials": "Seller"
   },
   "dashboard": {
     "title": "Dashboard",
