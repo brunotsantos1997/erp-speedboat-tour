@@ -51,8 +51,8 @@ export class CompanyDataService {
 
       return config;
 
-    } catch (error) {
-      logger.error('Failed to get company configuration', error as Error);
+    } catch {
+      logger.warn('Failed to get company configuration', { error: new Error('Failed to get company configuration') });
       throw new Error('Unable to load company configuration');
     }
   }
@@ -89,8 +89,8 @@ export class CompanyDataService {
     try {
       const config = await this.getValidatedConfig();
       return config.commissionBasis || 'RENTAL_ONLY';
-    } catch (error) {
-      logger.warn('Failed to get commission basis, using fallback', error as Error);
+    } catch {
+      logger.warn('Failed to get commission basis, using fallback', { error: new Error('Failed to get commission basis') });
       return 'RENTAL_ONLY';
     }
   }
@@ -102,8 +102,8 @@ export class CompanyDataService {
     try {
       const config = await this.getValidatedConfig();
       return config.reservationFeePercentage || 0;
-    } catch (error) {
-      logger.warn('Failed to get reservation fee percentage, using fallback', error as Error);
+    } catch {
+      logger.warn('Failed to get reservation fee percentage, using fallback', { error: new Error('Failed to get reservation fee percentage') });
       return 0;
     }
   }
@@ -159,7 +159,7 @@ export class CompanyDataService {
       await this.getValidatedConfig();
       return true;
     } catch (error) {
-      logger.debug('Company configuration validation failed', error as Error);
+      logger.debug('Company configuration validation failed', { error: error as Error });
       return false;
     }
   }
