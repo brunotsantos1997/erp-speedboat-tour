@@ -1,19 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Toast } from '../components/Toast';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { useModalContext } from '../contexts/ModalContext';
 
 export function ProfileScreen() {
-  const { currentUser, updateProfile, setSecretQuestion, linkGoogle, unlinkGoogle, linkedProviders, resetTours } = useAuth();
+  const { currentUser, updateProfile, linkGoogle, unlinkGoogle, linkedProviders, resetTours } = useAuth();
   const { confirm } = useModalContext();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [secretQuestion, setSecretQuestionState] = useState('');
-  const [secretAnswer, setSecretAnswer] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,7 +19,6 @@ export function ProfileScreen() {
     if (currentUser) {
       setName(currentUser.name);
       setEmail(currentUser.email);
-      setSecretQuestionState(currentUser.secretQuestion || '');
     }
   }, [currentUser]);
 
@@ -31,39 +28,36 @@ export function ProfileScreen() {
     setToastMessage(null);
 
     if (newPassword && newPassword !== confirmPassword) {
-      setError('As senhas não conferem.');
+      setError('As senhas nao conferem.');
       return;
     }
 
     if (!currentUser) {
-      setError('Nenhum usuário logado.');
+      setError('Nenhum usuario logado.');
       return;
     }
 
     try {
       const updates: { name?: string; email?: string; newPassword?: string; oldPassword?: string } = {};
+
       if (name !== currentUser.name) updates.name = name;
       if (email !== currentUser.email) updates.email = email;
+
       if (newPassword) {
         updates.newPassword = newPassword;
         updates.oldPassword = oldPassword;
       }
 
-      if (Object.keys(updates).length > 0) {
-        await updateProfile(currentUser.id, updates);
-        setToastMessage('Perfil atualizado com sucesso!');
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+      if (Object.keys(updates).length === 0) {
+        setToastMessage('Nenhuma alteracao para salvar.');
+        return;
       }
 
-      if (currentUser.role === 'OWNER' && secretQuestion && secretAnswer) {
-        await setSecretQuestion(currentUser.id, secretQuestion, secretAnswer);
-        setToastMessage('Perfil e pergunta secreta atualizados com sucesso!');
-        setSecretAnswer('');
-      } else if (Object.keys(updates).length === 0) {
-        setToastMessage('Nenhuma alteração para salvar.');
-      }
+      await updateProfile(currentUser.id, updates);
+      setToastMessage('Perfil atualizado com sucesso!');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao atualizar o perfil.');
     }
@@ -77,6 +71,7 @@ export function ProfileScreen() {
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
       <h1 className="text-2xl font-bold mb-6">Meu Perfil</h1>
+
       <form onSubmit={handleSubmit}>
         <div className="bg-white shadow-md rounded-lg p-6">
           <div className="mb-4">
@@ -89,6 +84,7 @@ export function ProfileScreen() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div className="mb-4">
             <label htmlFor="email" className="block text-gray-700 font-medium mb-2">Email</label>
             <input
@@ -99,8 +95,10 @@ export function ProfileScreen() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <hr className="my-6" />
           <h2 className="text-xl font-bold mb-4">Alterar Senha</h2>
+
           <div className="mb-4">
             <label htmlFor="oldPassword" className="block text-gray-700 font-medium mb-2">Senha Atual</label>
             <input
@@ -111,6 +109,7 @@ export function ProfileScreen() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
           <div className="mb-4">
             <label htmlFor="newPassword" className="block text-gray-700 font-medium mb-2">Nova Senha</label>
             <input
@@ -122,6 +121,7 @@ export function ProfileScreen() {
             />
             <PasswordStrengthMeter password={newPassword} />
           </div>
+
           <div className="mb-6">
             <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">Confirmar Nova Senha</label>
             <input
@@ -132,34 +132,11 @@ export function ProfileScreen() {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-        </div>
 
-        {currentUser.role === 'OWNER' && (
-          <div className="bg-white shadow-md rounded-lg p-6 mt-6">
-            <h2 className="text-xl font-bold mb-4">Pergunta Secreta</h2>
-            <p className="text-sm text-gray-500 mb-4">Usada para recuperação de conta. Preencha a resposta apenas se desejar alterá-la.</p>
-            <div className="mb-4">
-              <label htmlFor="secretQuestion" className="block text-gray-700 font-medium mb-2">Pergunta</label>
-              <input
-                id="secretQuestion"
-                type="text"
-                value={secretQuestion}
-                onChange={(e) => setSecretQuestionState(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="mb-6">
-              <label htmlFor="secretAnswer" className="block text-gray-700 font-medium mb-2">Resposta</label>
-              <input
-                id="secretAnswer"
-                type="password"
-                value={secretAnswer}
-                onChange={(e) => setSecretAnswer(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            A recuperacao por pergunta secreta foi removida. A redefinicao de senha agora acontece apenas pelo link enviado por e-mail.
           </div>
-        )}
+        </div>
 
         {error && <p className="text-red-600 my-4 text-center">{error}</p>}
 
@@ -189,16 +166,17 @@ export function ProfileScreen() {
                 <p className="font-medium">Google</p>
                 <p className="text-sm text-gray-500">
                   {linkedProviders.includes('google.com')
-                    ? 'Sua conta está vinculada ao Google'
+                    ? 'Sua conta esta vinculada ao Google'
                     : 'Vincule sua conta para entrar com Google'}
                 </p>
               </div>
             </div>
+
             {linkedProviders.includes('google.com') ? (
               <button
                 type="button"
                 onClick={async () => {
-                  if (await confirm('Confirmar Desvinculação', 'Tem certeza que deseja desvincular sua conta Google?')) {
+                  if (await confirm('Confirmar Desvinculacao', 'Tem certeza que deseja desvincular sua conta Google?')) {
                     try {
                       setError(null);
                       await unlinkGoogle();
@@ -234,14 +212,14 @@ export function ProfileScreen() {
 
         <div className="bg-white shadow-md rounded-lg p-6 mt-6">
           <h2 className="text-xl font-bold mb-2">Tutoriais</h2>
-          <p className="text-sm text-gray-500 mb-4">Deseja ver as explicações das telas novamente?</p>
+          <p className="text-sm text-gray-500 mb-4">Deseja ver as explicacoes das telas novamente?</p>
           <button
             type="button"
             onClick={async () => {
-                if (await confirm('Confirmar Reset', 'Deseja resetar todos os tutoriais? Eles aparecerão novamente quando você acessar cada tela.')) {
-                    await resetTours(currentUser.id);
-                    setToastMessage('Tutoriais resetados! Eles aparecerão ao navegar pelas telas.');
-                }
+              if (await confirm('Confirmar Reset', 'Deseja resetar todos os tutoriais? Eles aparecerao novamente quando voce acessar cada tela.')) {
+                await resetTours(currentUser.id);
+                setToastMessage('Tutoriais resetados! Eles aparecerao ao navegar pelas telas.');
+              }
             }}
             className="w-full sm:w-auto px-6 py-2 border-2 border-blue-600 text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-all active:scale-95"
           >
@@ -254,7 +232,7 @@ export function ProfileScreen() {
             type="submit"
             className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Salvar Alterações
+            Salvar Alteracoes
           </button>
         </div>
       </form>

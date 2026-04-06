@@ -6,6 +6,12 @@ import { Tutorial } from '../components/Tutorial';
 import { userManagementSteps } from '../tutorials/userManagementSteps';
 import { useModalContext } from '../contexts/ModalContext';
 
+const getStatusBadgeClass = (status: UserStatus) => {
+  if (status === 'APPROVED') return 'bg-green-100 text-green-800';
+  if (status === 'PENDING') return 'bg-yellow-100 text-yellow-800';
+  return 'bg-red-100 text-red-800';
+};
+
 export function UserManagementScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,13 +22,12 @@ export function UserManagementScreen() {
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
+
     try {
-      let allUsers = await getAllUsers();
-      const otherUsers = allUsers
-        .filter(user => user.id !== currentUser?.id);
-      setUsers(otherUsers);
+      const allUsers = await getAllUsers();
+      setUsers(allUsers.filter((user) => user.id !== currentUser?.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Falha ao buscar usuários.');
+      setError(err instanceof Error ? err.message : 'Falha ao buscar usuarios.');
     } finally {
       setLoading(false);
     }
@@ -33,14 +38,16 @@ export function UserManagementScreen() {
   }, [fetchUsers]);
 
   const handleStatusChange = async (userId: string, status: UserStatus) => {
-    const user = users.find(u => u.id === userId);
+    const user = users.find((candidate) => candidate.id === userId);
+
     if (user?.role === 'OWNER' && currentUser?.role !== 'OWNER') {
-        setToastMessage('Você não tem permissão para alterar o status do proprietário.');
-        return;
+      setToastMessage('Voce nao tem permissao para alterar o status do proprietario.');
+      return;
     }
+
     try {
       await updateUserStatus(userId, status);
-      setToastMessage('Status do usuário atualizado!');
+      setToastMessage('Status do usuario atualizado.');
       fetchUsers();
     } catch (err) {
       setToastMessage(err instanceof Error ? err.message : 'Erro ao atualizar status.');
@@ -48,14 +55,16 @@ export function UserManagementScreen() {
   };
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
-    const user = users.find(u => u.id === userId);
+    const user = users.find((candidate) => candidate.id === userId);
+
     if (user?.role === 'OWNER' && currentUser?.role !== 'OWNER') {
-        setToastMessage('Você não tem permissão para alterar o cargo do proprietário.');
-        return;
+      setToastMessage('Voce nao tem permissao para alterar o cargo do proprietario.');
+      return;
     }
+
     try {
       await updateUserRole(userId, role);
-      setToastMessage('Cargo do usuário atualizado!');
+      setToastMessage('Cargo do usuario atualizado.');
       fetchUsers();
     } catch (err) {
       setToastMessage(err instanceof Error ? err.message : 'Erro ao atualizar cargo.');
@@ -66,108 +75,138 @@ export function UserManagementScreen() {
     if (!currentUser) return;
 
     const isConfirmed = await confirm(
-      'Aprovar Redefinição de Senha',
-      `Tem certeza que deseja aprovar a redefinição de senha para o usuário ${user.name}?`
+      'Liberar Fluxo Legado',
+      `Tem certeza que deseja liberar o fluxo legado de redefinicao para ${user.name}?`
     );
 
-    if (isConfirmed) {
-      try {
-        const tempPassword = await approvePasswordReset(currentUser.id, user.id);
-        setToastMessage('Redefinição de senha aprovada com sucesso!');
+    if (!isConfirmed) return;
 
-        await showAlert(
-          'Senha Resetada com Sucesso',
-          <>
-            <p>A nova senha temporária para <strong>{user.name}</strong> é:</p>
-            <p className="my-2 p-2 bg-gray-100 rounded font-mono text-center">{tempPassword}</p>
-            <p className="text-sm text-gray-500">Por favor, copie esta senha e a envie para o usuário. Ele será solicitado a trocá-la no próximo login.</p>
-          </>
-        );
-        fetchUsers();
-      } catch (err) {
-        setToastMessage(err instanceof Error ? err.message : 'Falha ao executar a ação.');
-      }
+    try {
+      const guidanceMessage = await approvePasswordReset(currentUser.id, user.id);
+      setToastMessage('Fluxo legado liberado com sucesso.');
+
+      await showAlert(
+        'Fluxo Legado Liberado',
+        <>
+          <p>
+            O usuario <strong>{user.name}</strong> pode voltar para a tela de login e solicitar a redefinicao por e-mail.
+          </p>
+          <p className="my-2 rounded bg-gray-100 p-2 text-center text-sm font-medium">{guidanceMessage}</p>
+          <p className="text-sm text-gray-500">
+            Nao existe mais senha temporaria nem aprovacao manual para novos resets.
+          </p>
+        </>
+      );
+
+      fetchUsers();
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Falha ao executar a acao.');
     }
   };
-
 
   if (loading) return <div>Carregando...</div>;
   if (error) return <div className="text-red-600">{error}</div>;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-7xl p-4 md:p-8">
       <Tutorial tourId="user-management" steps={userManagementSteps} />
-      {toastMessage && (
-        <Toast
-          message={toastMessage}
-          onClose={() => setToastMessage(null)}
-        />
-      )}
+      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Usuários</h1>
-        <p className="text-gray-500">Gerencie permissões e aprove novos membros da equipe</p>
+        <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Usuarios</h1>
+        <p className="text-gray-500">Gerencie permissoes e aprove novos membros da equipe.</p>
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden" data-tour="users-table">
+      <div
+        className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm md:block"
+        data-tour="users-table"
+      >
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Usuário</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider" data-tour="user-status">Status</th>
-              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider" data-tour="user-role">Cargo</th>
-              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider" data-tour="user-actions">Ações</th>
+              <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500">
+                Usuario
+              </th>
+              <th
+                className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500"
+                data-tour="user-status"
+              >
+                Status
+              </th>
+              <th
+                className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-gray-500"
+                data-tour="user-role"
+              >
+                Cargo
+              </th>
+              <th
+                className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-gray-500"
+                data-tour="user-actions"
+              >
+                Acoes
+              </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 bg-white">
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col">
-                        <span className="font-bold text-gray-900">{user.name}</span>
-                        <span className="text-sm text-gray-500">{user.email}</span>
-                    </div>
+              <tr key={user.id} className="transition-colors hover:bg-gray-50">
+                <td className="whitespace-nowrap px-6 py-4">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-gray-900">{user.name}</span>
+                    <span className="text-sm text-gray-500">{user.email}</span>
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                        user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                    }`}>
-                        {user.status}
-                    </span>
+                <td className="whitespace-nowrap px-6 py-4">
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(user.status)}`}
+                  >
+                    {user.status}
+                  </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="whitespace-nowrap px-6 py-4">
                   <select
                     value={user.role}
                     onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                    className="border border-gray-300 rounded-lg p-1.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="rounded-lg border border-gray-300 bg-white p-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={
-                        (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') ||
-                        (currentUser?.role === 'ADMIN' && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) ||
-                        user.role === 'OWNER'
+                      (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') ||
+                      (currentUser?.role === 'ADMIN' && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) ||
+                      user.role === 'OWNER'
                     }
                   >
                     <option value="SELLER">VENDEDOR</option>
                     <option value="ADMIN">ADMINISTRADOR</option>
-                    {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && <option value="SUPER_ADMIN">SUPER ADMIN</option>}
-                    {user.role === 'OWNER' && <option value="OWNER">PROPRIETÁRIO</option>}
+                    {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
+                      <option value="SUPER_ADMIN">SUPER ADMIN</option>
+                    )}
+                    {user.role === 'OWNER' && <option value="OWNER">PROPRIETARIO</option>}
                   </select>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                   <div className="flex items-center justify-end space-x-3">
                     {user.status === 'PENDING' && (
                       <>
-                        <button onClick={() => handleStatusChange(user.id, 'APPROVED')} className="bg-indigo-600 text-white px-3 py-1 rounded-md hover:bg-indigo-700 transition-colors">Aprovar</button>
-                        <button onClick={() => handleStatusChange(user.id, 'REJECTED')} className="text-red-600 hover:text-red-900">Rejeitar</button>
+                        <button
+                          onClick={() => handleStatusChange(user.id, 'APPROVED')}
+                          className="rounded-md bg-indigo-600 px-3 py-1 text-white transition-colors hover:bg-indigo-700"
+                        >
+                          Aprovar
+                        </button>
+                        <button
+                          onClick={() => handleStatusChange(user.id, 'REJECTED')}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Rejeitar
+                        </button>
                       </>
                     )}
                     {user.status === 'APPROVED' && (
                       <button
                         onClick={() => handleStatusChange(user.id, 'REJECTED')}
                         className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                        disabled={(currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') || user.role === 'OWNER'}
+                        disabled={
+                          (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') || user.role === 'OWNER'
+                        }
                       >
                         Desativar
                       </button>
@@ -183,13 +222,13 @@ export function UserManagementScreen() {
                     {user.status === 'PASSWORD_RESET_REQUESTED' && (
                       <button
                         onClick={() => handleApproveReset(user)}
-                        className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                        className="rounded-md bg-blue-600 px-3 py-1 text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                         disabled={
                           (currentUser?.role === 'ADMIN' && user.role !== 'ADMIN') ||
                           (currentUser?.role === 'SUPER_ADMIN' && user.role === 'OWNER')
                         }
                       >
-                        Aprovar Redefinição
+                        Liberar Fluxo Legado
                       </button>
                     )}
                   </div>
@@ -200,56 +239,55 @@ export function UserManagementScreen() {
         </table>
       </div>
 
-      {/* Mobile Card View */}
-      <div className="md:hidden space-y-4">
+      <div className="space-y-4 md:hidden">
         {users.map((user) => (
-          <div key={user.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-            <div className="flex justify-between items-start mb-4">
+          <div key={user.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-start justify-between">
               <div>
-                <p className="font-bold text-gray-900 text-lg">{user.name}</p>
+                <p className="text-lg font-bold text-gray-900">{user.name}</p>
                 <p className="text-sm text-gray-500">{user.email}</p>
               </div>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${
-                  user.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                  user.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-red-100 text-red-800'
-              }`}>
-                  {user.status}
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${getStatusBadgeClass(user.status)}`}
+              >
+                {user.status}
               </span>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Cargo</label>
+                <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Cargo</label>
                 <select
                   value={user.role}
                   onChange={(e) => handleRoleChange(user.id, e.target.value as UserRole)}
-                  className="w-full border border-gray-300 rounded-lg p-2.5 text-sm bg-white"
+                  className="w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm"
                   disabled={
-                      (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') ||
-                      (currentUser?.role === 'ADMIN' && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) ||
-                      user.role === 'OWNER'
+                    (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') ||
+                    (currentUser?.role === 'ADMIN' && (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN')) ||
+                    user.role === 'OWNER'
                   }
                 >
                   <option value="SELLER">VENDEDOR</option>
                   <option value="ADMIN">ADMINISTRADOR</option>
-                  {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && <option value="SUPER_ADMIN">SUPER ADMIN</option>}
-                  {user.role === 'OWNER' && <option value="OWNER">PROPRIETÁRIO</option>}
+                  {(currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN') && (
+                    <option value="SUPER_ADMIN">SUPER ADMIN</option>
+                  )}
+                  {user.role === 'OWNER' && <option value="OWNER">PROPRIETARIO</option>}
                 </select>
               </div>
 
-              <div className="pt-2 flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 {user.status === 'PENDING' && (
                   <>
                     <button
                       onClick={() => handleStatusChange(user.id, 'APPROVED')}
-                      className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm"
+                      className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white"
                     >
                       Aprovar
                     </button>
                     <button
                       onClick={() => handleStatusChange(user.id, 'REJECTED')}
-                      className="flex-1 border border-red-200 text-red-600 px-4 py-2 rounded-lg font-bold text-sm"
+                      className="flex-1 rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-600"
                     >
                       Rejeitar
                     </button>
@@ -258,30 +296,32 @@ export function UserManagementScreen() {
                 {user.status === 'APPROVED' && (
                   <button
                     onClick={() => handleStatusChange(user.id, 'REJECTED')}
-                    className="w-full border border-red-200 text-red-600 px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50"
-                    disabled={(currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') || user.role === 'OWNER'}
+                    className="w-full rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-600 disabled:opacity-50"
+                    disabled={
+                      (currentUser?.role === 'SUPER_ADMIN' && user.role === 'SUPER_ADMIN') || user.role === 'OWNER'
+                    }
                   >
-                    Desativar Usuário
+                    Desativar Usuario
                   </button>
                 )}
                 {user.status === 'REJECTED' && (
                   <button
                     onClick={() => handleStatusChange(user.id, 'APPROVED')}
-                    className="w-full border border-green-200 text-green-600 px-4 py-2 rounded-lg font-bold text-sm"
+                    className="w-full rounded-lg border border-green-200 px-4 py-2 text-sm font-bold text-green-600"
                   >
-                    Reativar Usuário
+                    Reativar Usuario
                   </button>
                 )}
                 {user.status === 'PASSWORD_RESET_REQUESTED' && (
                   <button
                     onClick={() => handleApproveReset(user)}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50"
+                    className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
                     disabled={
                       (currentUser?.role === 'ADMIN' && user.role !== 'ADMIN') ||
                       (currentUser?.role === 'SUPER_ADMIN' && user.role === 'OWNER')
                     }
                   >
-                    Aprovar Redefinição de Senha
+                    Liberar Fluxo Legado
                   </button>
                 )}
               </div>
