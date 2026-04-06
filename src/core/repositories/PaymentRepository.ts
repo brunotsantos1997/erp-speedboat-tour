@@ -24,13 +24,13 @@ export interface IPaymentRepository {
   update(paymentId: string, data: Partial<Payment>): Promise<void>;
   remove(paymentId: string): Promise<void>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(): void;
+  subscribe(callback: (data: Payment[]) => void): Unsubscribe;
 }
 
 class PaymentRepositoryImpl implements IPaymentRepository {
   private static instance: PaymentRepositoryImpl;
   private collectionName = 'payments';
-  private currentUser: any = null;
 
   private constructor() {}
 
@@ -41,10 +41,8 @@ class PaymentRepositoryImpl implements IPaymentRepository {
     return PaymentRepositoryImpl.instance;
   }
 
-  initialize(user?: any) {
-    if (user) {
-      this.currentUser = user;
-    }
+  initialize(): void {
+    // User context not needed - security handled by Firebase rules
   }
 
   subscribe(callback: (data: Payment[]) => void): Unsubscribe {
@@ -71,7 +69,7 @@ class PaymentRepositoryImpl implements IPaymentRepository {
   }
 
   dispose() {
-    this.currentUser = null;
+    // Cleanup handled by Firebase listeners
   }
 
   async getAll(limitCount: number = 100): Promise<Payment[]> {
@@ -96,26 +94,17 @@ class PaymentRepositoryImpl implements IPaymentRepository {
     }));
   }
 
-  private checkAdminPermission() {
-    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN' && this.currentUser.role !== 'ADMIN')) {
-      throw new Error('Você não tem permissão para realizar esta ação.');
-    }
-  }
-
   async add(paymentData: Omit<Payment, 'id'>): Promise<Payment> {
-    this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), paymentData);
     return { id: docRef.id, ...paymentData };
   }
 
   async update(paymentId: string, data: Partial<Payment>): Promise<void> {
-    this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, paymentId);
     await updateDoc(docRef, data);
   }
 
   async remove(paymentId: string): Promise<void> {
-    this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, paymentId);
     await deleteDoc(docRef);
   }

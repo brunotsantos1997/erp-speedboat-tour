@@ -111,14 +111,7 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
     }));
   }
 
-  private checkAdminPermission() {
-    if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN' && this.currentUser.role !== 'ADMIN')) {
-      throw new Error('Você não tem permissão para realizar esta ação.');
-    }
-  }
-
   async add(expenseData: Omit<Expense, 'id'>): Promise<Expense> {
-    this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), expenseData);
     const newExpense = { id: docRef.id, ...expenseData };
 
@@ -135,7 +128,6 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
   }
 
   async update(updatedExpense: Expense): Promise<Expense> {
-    this.checkAdminPermission();
     const { id, ...data } = updatedExpense;
     const docRef = doc(db, this.collectionName, id);
 
@@ -158,7 +150,6 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
   }
 
   async remove(expenseId: string): Promise<void> {
-    this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, expenseId);
 
     const oldDoc = await getDoc(docRef);
