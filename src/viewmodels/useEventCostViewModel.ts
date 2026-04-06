@@ -132,7 +132,7 @@ export const useEventCostViewModel = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [event, rentalCost, products, additionalCosts, closeModal]);
+  }, [event, rentalCost, products, additionalCosts, closeModal, syncEvent]);
 
   return {
     isModalOpen,

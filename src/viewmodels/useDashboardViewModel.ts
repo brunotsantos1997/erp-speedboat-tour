@@ -1,6 +1,7 @@
 // src/viewmodels/useDashboardViewModel.ts
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { EventType } from '../core/domain/types';
+import type { EventType, PaymentMethod, PaymentType, Payment } from '../core/domain/types';
+import { logger } from '../core/common/Logger';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
 import { startOfDay, isWithinInterval, startOfWeek, endOfWeek, getMonth, isSameDay, format, startOfMonth, endOfMonth } from 'date-fns';
@@ -12,7 +13,7 @@ const parseLocalDate = (dateString: string) => new Date(`${dateString}T00:00`);
 export const useDashboardViewModel = () => {
   const [eventsForPeriod, setEventsForPeriod] = useState<EventType[]>([]);
   const [notificationEvents, setNotificationEvents] = useState<EventType[]>([]);
-  const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<Payment[]>([]);
   const { syncEvent } = useEventSync();
   const { showToast } = useToastContext();
   const [isLoading, setIsLoading] = useState(true);
@@ -28,7 +29,6 @@ export const useDashboardViewModel = () => {
   const periodEnd = useMemo(() => format(endOfMonth(selectedDate), 'yyyy-MM-dd'), [selectedDate]);
 
   useEffect(() => {
-    setIsLoading(true);
     
     // 1. Subscribe to events in the current visible period (month)
     const unsubscribeEvents = eventRepository.subscribeToDateRange(
@@ -88,7 +88,7 @@ export const useDashboardViewModel = () => {
     }
   }, [eventsForPeriod]);
 
-  const confirmPaymentRecord = useCallback(async (amount: number, method: any, type: any) => {
+  const confirmPaymentRecord = useCallback(async (amount: number, method: PaymentMethod, type: PaymentType) => {
     if (!activeEventForPayment) return;
 
     try {
@@ -105,24 +105,27 @@ export const useDashboardViewModel = () => {
       const payments = await paymentRepository.getByEventId(eventId);
       const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
 
-      let updatedEvent = { ...activeEventForPayment };
+      const updatedEvent = { ...activeEventForPayment };
       if (totalPaid > 0 && updatedEvent.status === 'PRE_SCHEDULED') {
         updatedEvent.status = 'SCHEDULED';
       }
-      updatedEvent.paymentStatus = totalPaid >= updatedEvent.total ? 'CONFIRMED' : 'PENDING';
+
+      if (totalPaid >= updatedEvent.total) {
+        updatedEvent.paymentStatus = 'CONFIRMED';
+      } else {
+        updatedEvent.paymentStatus = 'PENDING';
+      }
 
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
       await syncEvent(savedEvent);
 
-      showToast('Pagamento registrado com sucesso!');
       setIsPaymentModalOpen(false);
       setActiveEventForPayment(null);
-    } catch (error) {
-      console.error('Failed to record payment:', error);
-      showToast('Erro ao registrar o pagamento.');
-      throw error;
+    } catch (error: unknown) {
+      logger.error('Failed to confirm payment', error as Error, { eventId: activeEventForPayment?.id, amount, method, type, operation: 'confirmPaymentRecord' });
+      showToast(error instanceof Error ? error.message : 'Erro ao confirmar pagamento.');
     }
-  }, [activeEventForPayment, showToast, syncEvent]);
+  }, [activeEventForPayment, syncEvent, showToast]);
 
   const processNotification = useCallback(async (eventId: string) => {
     try {
@@ -168,11 +171,14 @@ export const useDashboardViewModel = () => {
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
       await syncEvent(savedEvent);
       showToast('Cancelamento revertido e reserva confirmada!');
-    } catch (error: any) {
-      console.error('Failed to revert cancellation:', error);
-      showToast(error.message || 'Erro ao reverter cancelamento.');
+    } catch (error: unknown) {
+      logger.error('Failed to confirm payment', error as Error, { 
+        eventId: activeEventForPayment?.id, 
+        operation: 'confirmPaymentRecord' 
+      });
+      showToast(error instanceof Error ? error.message : 'Erro ao confirmar pagamento.');
     }
-  }, [notificationEvents, showToast, syncEvent]);
+  }, [notificationEvents, showToast, syncEvent, activeEventForPayment?.id]);
 
   // --- Derived State ---
   const today = startOfDay(new Date());

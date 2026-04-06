@@ -9,7 +9,6 @@ export const useBoardingLocationsViewModel = () => {
   const repository = boardingLocationRepository;
 
   useEffect(() => {
-    setIsLoading(true);
     repository.getAll().then(() => setIsLoading(false));
 
     const unsubscribe = repository.subscribe((data) => {

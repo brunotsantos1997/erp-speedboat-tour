@@ -8,7 +8,6 @@ export const useVoucherTermsViewModel = () => {
   const repository = VoucherTermsRepository.getInstance();
 
   useEffect(() => {
-    setIsLoading(true);
     repository.get().catch(err => console.error("Error loading voucher terms:", err));
 
     const unsubscribe = repository.subscribe((data) => {

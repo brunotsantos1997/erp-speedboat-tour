@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { googleCalendarRepository, type GoogleCalendar } from '../core/repositories/GoogleCalendarRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
+import { logger } from '../core/common/Logger';
 import { googleTokenStore } from '../core/utils/googleTokenStore';
 
 export const useGoogleSyncViewModel = () => {
@@ -28,14 +29,15 @@ export const useGoogleSyncViewModel = () => {
     try {
       const list = await googleCalendarRepository.listCalendars(googleAccessToken);
       setCalendars(list);
-    } catch (err: any) {
-      if (err.message === 'UNAUTHORIZED') {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'UNAUTHORIZED') {
         setGoogleAccessToken(null);
         googleTokenStore.clear();
         setError('Sessão do Google expirada. Por favor, vincule novamente ou faça login com Google.');
       } else {
         setError('Falha ao buscar calendários.');
       }
+      logger.error('Failed to fetch calendars', err as Error, { operation: 'fetchCalendars' });
     } finally {
       setIsLoading(false);
     }
@@ -52,7 +54,8 @@ export const useGoogleSyncViewModel = () => {
     setIsLoading(true);
     try {
       await updateCalendarSettings(currentUser.id, { calendarId, autoSync });
-    } catch (err) {
+    } catch (err: unknown) {
+      logger.error('Failed to save calendar settings', err as Error, { calendarId, autoSync, operation: 'saveSettings' });
       setError('Falha ao salvar configurações.');
     } finally {
       setIsLoading(false);
@@ -116,8 +119,9 @@ export const useGoogleSyncViewModel = () => {
         }
         setSyncProgress({ current: i + 1, total: futureEvents.length });
       }
-    } catch (err: any) {
-      setError('Falha durante a sincronização: ' + err.message);
+    } catch (err: unknown) {
+      logger.error('Failed to sync existing events', err as Error, { operation: 'syncExistingEvents' });
+      setError('Falha durante a sincronização: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
     } finally {
       setIsLoading(false);
       setSyncProgress(null);

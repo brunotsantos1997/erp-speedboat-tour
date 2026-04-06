@@ -2,13 +2,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import type { ClientProfile, EventType, Payment } from '../core/domain/types';
+import type { ClientProfile, EventType, Payment, PaymentMethod, PaymentType } from '../core/domain/types';
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
 import { format } from 'date-fns';
 import { useEventSync } from './useEventSync';
 import { useModalContext } from '../ui/contexts/ModalContext';
+import { logger } from '../core/common/Logger';
 
 export const useClientHistoryViewModel = () => {
   const { currentUser } = useAuth();
@@ -64,11 +65,9 @@ export const useClientHistoryViewModel = () => {
 
   useEffect(() => {
     if (!selectedClient) {
-      setClientEvents([]);
+      setTimeout(() => setClientEvents([]), 0);
       return;
     }
-
-    setIsLoading(true);
 
     // Initial fetch for auto-cancel check
     eventRepository.getEventsByClient(selectedClient.id).then(async (events) => {
@@ -80,18 +79,20 @@ export const useClientHistoryViewModel = () => {
           try {
             const savedEvent = await eventRepository.updateEvent({ ...event, status: 'CANCELLED', autoCancelled: true });
             await syncEvent(savedEvent);
-          } catch (error) {
-            console.error(`Failed to auto-cancel event ${event.id}:`, error);
+          } catch (error: unknown) {
+            logger.error('Failed to auto-cancel event', error as Error, { eventId: event.id, operation: 'auto-cancel' });
           }
         }
       }
-      setIsLoading(false);
+      setTimeout(() => setIsLoading(false), 0);
     });
 
     const unsubscribe = eventRepository.subscribeToClientEvents(selectedClient.id, (events) => {
-      const sorted = [...events].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setClientEvents(sorted);
-      setIsLoading(false);
+      setTimeout(() => {
+        const sorted = [...events].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setClientEvents(sorted);
+        setIsLoading(false);
+      }, 0);
     });
 
     return unsubscribe;
@@ -140,7 +141,7 @@ export const useClientHistoryViewModel = () => {
     }
   }, [clientEvents]);
 
-  const confirmPaymentRecord = useCallback(async (amount: number, method: any, type: any) => {
+  const confirmPaymentRecord = useCallback(async (amount: number, method: PaymentMethod, type: PaymentType) => {
     if (!activeEventForPayment) return;
 
     try {
@@ -155,7 +156,7 @@ export const useClientHistoryViewModel = () => {
             timestamp: Date.now()
         });
 
-        let updatedEvent = { ...activeEventForPayment };
+        const updatedEvent = { ...activeEventForPayment };
         const payments = await paymentRepository.getByEventId(eventId);
         const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
 
@@ -174,9 +175,9 @@ export const useClientHistoryViewModel = () => {
 
         setIsPaymentModalOpen(false);
         setActiveEventForPayment(null);
-    } catch (error) {
-        console.error('Failed to record payment:', error);
-        throw error;
+    } catch (error: unknown) {
+      logger.error('Failed to record payment', error as Error, { eventId: activeEventForPayment?.id, amount, method, type, operation: 'confirmPaymentRecord' });
+      throw error;
     }
   }, [activeEventForPayment, syncEvent]);
 
@@ -193,11 +194,11 @@ export const useClientHistoryViewModel = () => {
 
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
       await syncEvent(savedEvent);
-    } catch (error: any) {
-      console.error('Failed to revert cancellation:', error);
+    } catch (error: unknown) {
+      logger.error('Failed to revert cancellation', error as Error, { eventId, operation: 'revertCancellation' });
       throw error;
     }
-  }, [clientEvents, selectedClient, syncEvent]);
+  }, [clientEvents, syncEvent]);
 
   // --- Quick Edit Handlers ---
   const openQuickEdit = useCallback(async (event: EventType) => {
@@ -229,7 +230,7 @@ export const useClientHistoryViewModel = () => {
     setActiveEventPayments(payments);
   }, [activeEventForQuickEdit]);
 
-  const addPaymentToEvent = useCallback(async (data: { amount: number; method: any; type: any; date: string }) => {
+  const addPaymentToEvent = useCallback(async (data: { amount: number; method: PaymentMethod; type: PaymentType; date: string }) => {
     if (!activeEventForQuickEdit) return;
     await paymentRepository.add({
       ...data,

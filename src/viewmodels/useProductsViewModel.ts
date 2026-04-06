@@ -10,7 +10,6 @@ export const useProductsViewModel = () => {
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
     productRepository.getAll().then(() => setIsLoading(false));
 
     const unsubscribe = productRepository.subscribe((data) => {
@@ -70,7 +69,7 @@ export const useProductsViewModel = () => {
     }
   };
 
-  const updateEditingProduct = (field: keyof Product, value: any) => {
+  const updateEditingProduct = (field: keyof Product, value: Product[keyof Product]) => {
     setEditingProduct(prev => prev ? { ...prev, [field]: value } : null);
   };
 

@@ -285,12 +285,12 @@ export const useCreateEventViewModel = () => {
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setIsModalOpen(false);
     setEditingClient(null);
     setNewClientName('');
     setNewClientPhone('');
-  };
+  }, []);
 
   const handleSaveClient = useCallback(async () => {
     if (!newClientName || !newClientPhone) return;
@@ -313,7 +313,7 @@ export const useCreateEventViewModel = () => {
       console.error('Erro ao salvar cliente:', error);
       throw error; // Re-throw to be handled by the UI (toast)
     }
-  }, [editingClient, newClientName, newClientPhone, selectedClient, clientSearchTerm, handleCloseModal, selectClient]);
+  }, [editingClient, newClientName, newClientPhone, selectedClient, handleCloseModal, selectClient]);
 
   const handleDeleteClient = useCallback(async (clientId: string) => {
     if (await confirm('Confirmar Exclusão', 'Tem certeza que deseja excluir este cliente?')) {
@@ -323,7 +323,7 @@ export const useCreateEventViewModel = () => {
       }
        handleClientSearch(clientSearchTerm);
     }
-  }, [selectedClient, clientSearchTerm, handleClientSearch, clearClientSelection]);
+  }, [selectedClient, clientSearchTerm, handleClientSearch, clearClientSelection, confirm]);
 
 
   // Calculations
@@ -457,7 +457,7 @@ export const useCreateEventViewModel = () => {
 
     const eventStatus = isPreScheduled ? 'PRE_SCHEDULED' : 'SCHEDULED';
 
-    const eventData: any = {
+    const eventData: Omit<EventType, 'id'> = {
       date: format(selectedDate, 'yyyy-MM-dd'),
       startTime: startTime,
       endTime: endTime,
@@ -537,6 +537,7 @@ export const useCreateEventViewModel = () => {
     currentUser,
     originalEvent,
     originalPaymentStatus,
+    syncEvent
   ]);
 
   useEffect(() => {
@@ -656,7 +657,7 @@ export const useCreateEventViewModel = () => {
     } else {
       setEndTime('');
     }
-  }, [availableEndTimeSlots]);
+  }, [availableEndTimeSlots, startTime, endTime]);
 
   // Initial validation for startTime
   useEffect(() => {
@@ -664,7 +665,7 @@ export const useCreateEventViewModel = () => {
       // Find closest available time or just pick first
        setStartTime(availableTimeSlots[0]);
     }
-  }, [availableTimeSlots]);
+  }, [availableTimeSlots, startTime]);
 
 
   return {
@@ -733,5 +734,6 @@ export const useCreateEventViewModel = () => {
     handleSaveClient,
     handleDeleteClient,
     createEvent,
+    syncEvent,
   };
 };

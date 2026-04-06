@@ -10,7 +10,6 @@ export const useBoatsViewModel = () => {
   const [editingBoat, setEditingBoat] = useState<Partial<Boat> | null>(null);
 
   useEffect(() => {
-    setIsLoading(true);
     boatRepository.getAll().then(() => setIsLoading(false));
 
     const unsubscribe = boatRepository.subscribe((data) => {
@@ -69,7 +68,7 @@ export const useBoatsViewModel = () => {
     }
   };
 
-  const updateEditingBoat = (field: keyof Boat, value: any) => {
+  const updateEditingBoat = (field: keyof Boat, value: Boat[keyof Boat]) => {
     setEditingBoat(prev => (prev ? { ...prev, [field]: value } : null));
   };
 

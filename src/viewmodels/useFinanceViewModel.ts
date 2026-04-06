@@ -23,8 +23,6 @@ export const useFinanceViewModel = () => {
     const endStr = format(endDate, 'yyyy-MM-dd');
 
     try {
-      await eventRepository.backfillFinancialData();
-      
       const [fetchedEvents, fetchedExpenses, fetchedPayments, fetchedIncomes] = await Promise.all([
         eventRepository.getEventsByDateRange(startStr, endStr),
         expenseRepository.getByDateRange(startStr, endStr),

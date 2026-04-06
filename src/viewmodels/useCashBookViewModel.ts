@@ -233,7 +233,7 @@ export const useCashBookViewModel = () => {
                         const remainingPayments = await paymentRepository.getByEventId(event.id);
                         const totalPaid = remainingPayments.reduce((acc, p) => acc + p.amount, 0);
                         const reservationFee = event.total * 0.3;
-                        let updatedEvent = { ...event };
+                        const updatedEvent = { ...event };
                         if (totalPaid < event.total) updatedEvent.paymentStatus = 'PENDING';
                         if (totalPaid < reservationFee && updatedEvent.status === 'SCHEDULED') {
                             updatedEvent.status = 'PRE_SCHEDULED';

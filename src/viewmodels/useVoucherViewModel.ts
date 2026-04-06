@@ -123,7 +123,7 @@ export const useVoucherViewModel = () => {
     }));
 
     return () => unsubs.forEach(fn => fn());
-  }, [eventId, companyData?.reservationFeePercentage]);
+  }, [eventId, companyData?.reservationFeePercentage, overrideName]);
 
   const handleDownloadPdf = async () => {
     const element = document.getElementById('voucher-content');
@@ -133,7 +133,6 @@ export const useVoucherViewModel = () => {
 
       try {
         // Dynamic import to avoid loading the heavy PDF library until needed
-        // @ts-ignore - html2pdf might not have types in some environments
         const html2pdf = (await import('html2pdf.js')).default;
 
         const opt = {

@@ -11,15 +11,32 @@ export const useCompanyDataViewModel = () => {
   const repository = CompanyDataRepository.getInstance();
 
   useEffect(() => {
-    setIsLoading(true);
-    repository.get().catch(() => setError('Falha ao carregar dados da empresa.'));
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      if (isMounted) {
+        setIsLoading(true);
+      }
+      await repository.get().catch(() => {
+        if (isMounted) {
+          setError('Falha ao carregar dados da empresa.');
+        }
+      });
+    };
+    
+    fetchData();
 
     const unsubscribe = repository.subscribe((data) => {
-      setCompanyData(data);
-      setIsLoading(false);
+      if (isMounted) {
+        setCompanyData(data);
+        setIsLoading(false);
+      }
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [repository]);
 
   const updateCompanyData = useCallback(

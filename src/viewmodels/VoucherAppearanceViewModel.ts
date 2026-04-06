@@ -11,7 +11,6 @@ export const useVoucherAppearanceViewModel = () => {
   const repository = VoucherAppearanceRepository.getInstance();
 
   useEffect(() => {
-    setIsLoading(true);
     repository.get().catch(() => setError('Falha ao carregar aparência do voucher.'));
 
     const unsubscribe = repository.subscribe((data) => {

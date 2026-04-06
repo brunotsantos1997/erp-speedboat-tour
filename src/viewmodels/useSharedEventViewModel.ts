@@ -14,6 +14,7 @@ import { boardingLocationRepository } from '../core/repositories/BoardingLocatio
 import { sanitizeObject } from '../core/utils/objectUtils';
 import { useToastContext } from '../ui/contexts/ToastContext';
 import { useEventSync } from './useEventSync';
+import { logger } from '../core/common/Logger';
 
 export const useSharedEventViewModel = (editingEventId?: string | null) => {
   const { currentUser } = useAuth();
@@ -145,7 +146,7 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
         return !isBefore && !isAfter;
       });
     });
-  }, [selectedBoat, scheduledEvents, durationHours]);
+  }, [selectedBoat, scheduledEvents, durationHours, editingEventId]);
 
   const getOrCreateSharedClient = async (): Promise<ClientProfile> => {
     const results = await clientRepository.search('Compartilhado');
@@ -258,7 +259,7 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
         throw new Error('Nenhum local de embarque configurado.');
       }
 
-      const eventData: Partial<EventType> = {
+      const eventData: Omit<EventType, 'id'> = {
         date: format(selectedDate, 'yyyy-MM-dd'),
         startTime,
         endTime,
@@ -300,9 +301,15 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
 
       showToast('Passeio compartilhado criado com sucesso!');
       return true;
-    } catch (error: any) {
-      console.error('Error creating shared event:', error);
-      showToast(error.message || 'Erro ao criar passeio compartilhado.');
+    } catch (error: unknown) {
+      logger.error('Error creating shared event', error as Error, { 
+        operation: 'createSharedEvent',
+        selectedDate,
+        startTime,
+        passengerCount,
+        selectedBoatId: selectedBoat?.id
+      });
+      showToast(error instanceof Error ? error.message : 'Erro ao criar passeio compartilhado.');
       return false;
     }
   };

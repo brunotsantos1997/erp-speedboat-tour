@@ -4,6 +4,7 @@ import type { Expense, ExpenseCategory, Boat } from '../core/domain/types';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
 import { expenseCategoryRepository } from '../core/repositories/ExpenseCategoryRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
+import { logger } from '../core/common/Logger';
 import { useToastContext } from '../ui/contexts/ToastContext';
 import { useModalContext } from '../ui/contexts/ModalContext';
 
@@ -16,14 +17,13 @@ export const useExpenseViewModel = () => {
   const { confirm } = useModalContext();
 
   useEffect(() => {
-    setLoading(true);
     Promise.all([
       expenseRepository.getAll(),
       expenseCategoryRepository.getAll(),
       boatRepository.getAll()
     ]).finally(() => setLoading(false));
 
-    const unsubExpenses = expenseRepository.subscribe((data) => setExpenses(data.filter((e: any) => !e.isArchived)));
+    const unsubExpenses = expenseRepository.subscribe((data) => setExpenses(data.filter((e: Expense) => !e.isArchived)));
     const unsubCategories = expenseCategoryRepository.subscribe(setCategories);
     const unsubBoats = boatRepository.subscribe(setBoats);
 
@@ -47,8 +47,9 @@ export const useExpenseViewModel = () => {
       });
       showToast('Despesa cadastrada com sucesso!');
       return newExpense;
-    } catch (err: any) {
-      showToast('Erro ao cadastrar despesa: ' + err.message);
+    } catch (err: unknown) {
+      logger.error('Failed to add expense', err as Error, { expenseData, operation: 'addExpense' });
+      showToast('Erro ao cadastrar despesa: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
       throw err;
     }
   };
@@ -65,8 +66,9 @@ export const useExpenseViewModel = () => {
       });
       showToast('Despesa atualizada com sucesso!');
       return updatedExpense;
-    } catch (err: any) {
-      showToast('Erro ao atualizar despesa: ' + err.message);
+    } catch (err: unknown) {
+      logger.error('Failed to update expense', err as Error, { expenseId: expense.id, operation: 'updateExpense' });
+      showToast('Erro ao atualizar despesa: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
       throw err;
     }
   };
@@ -76,8 +78,9 @@ export const useExpenseViewModel = () => {
     try {
       await expenseRepository.remove(expenseId);
       showToast('Despesa excluída com sucesso!');
-    } catch (err: any) {
-      showToast('Erro ao excluir despesa: ' + err.message);
+    } catch (err: unknown) {
+      logger.error('Failed to remove expense', err as Error, { expenseId, operation: 'removeExpense' });
+      showToast('Erro ao excluir despesa: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
     }
   };
 
@@ -86,8 +89,9 @@ export const useExpenseViewModel = () => {
       const newCategory = await expenseCategoryRepository.add({ name });
       showToast('Categoria criada com sucesso!');
       return newCategory;
-    } catch (err: any) {
-      showToast('Erro ao criar categoria: ' + err.message);
+    } catch (err: unknown) {
+      logger.error('Failed to add category', err as Error, { name, operation: 'addCategory' });
+      showToast('Erro ao criar categoria: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
     }
   };
 
@@ -95,8 +99,9 @@ export const useExpenseViewModel = () => {
     try {
       await expenseCategoryRepository.update(category);
       showToast('Categoria atualizada com sucesso!');
-    } catch (err: any) {
-      showToast('Erro ao atualizar categoria: ' + err.message);
+    } catch (err: unknown) {
+      logger.error('Failed to update category', err as Error, { categoryId: category.id, operation: 'updateCategory' });
+      showToast('Erro ao atualizar categoria: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
     }
   };
 
@@ -105,8 +110,9 @@ export const useExpenseViewModel = () => {
     try {
       await expenseCategoryRepository.remove(categoryId);
       showToast('Categoria excluída com sucesso!');
-    } catch (err: any) {
-      showToast('Erro ao excluir categoria: ' + err.message);
+    } catch (err: unknown) {
+      logger.error('Failed to remove category', err as Error, { categoryId, operation: 'removeCategory' });
+      showToast('Erro ao excluir categoria: ' + (err instanceof Error ? err.message : 'Erro desconhecido'));
     }
   };
 
