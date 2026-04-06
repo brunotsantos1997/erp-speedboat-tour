@@ -1,13 +1,12 @@
 // src/ui/screens/FinanceScreen.tsx
 import React from 'react';
 import { useFinanceViewModel } from '../../viewmodels/useFinanceViewModel';
+import { useIncomeManagement } from '../../viewmodels/useIncomeManagement';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { format } from 'date-fns';
 import { DollarSign, TrendingDown, TrendingUp, BarChart3, Calendar, PlusCircle, Settings, X, History, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MoneyInput } from '../components/MoneyInput';
-import { incomeRepository } from '../../core/repositories/IncomeRepository';
-import { useToast } from '../contexts/toast/useToast';
 import { Tutorial } from '../components/Tutorial';
 import { financeSteps } from '../tutorials/financeSteps';
 
@@ -28,31 +27,11 @@ const StatCard: React.FC<{ title: string; value: string; subValue?: string; icon
 
 export const FinanceScreen: React.FC = () => {
   const { loading, stats, cashFlowData, dailyCashFlow, startDate, setStartDate, endDate, setEndDate, refresh } = useFinanceViewModel();
+  const incomeManagement = useIncomeManagement();
   const navigate = useNavigate();
-  const { showToast } = useToast();
-  const [isIncomeModalOpen, setIsIncomeModalOpen] = React.useState(false);
-  const [incomeAmount, setIncomeAmount] = React.useState(0);
-  const [incomeDesc, setIncomeDesc] = React.useState('');
-  const [incomeDate, setIncomeDate] = React.useState(new Date().toISOString().split('T')[0]);
 
   const handleAddIncome = async () => {
-    if (!incomeDesc || incomeAmount <= 0) return;
-    try {
-        await incomeRepository.add({
-            description: incomeDesc,
-            amount: incomeAmount,
-            date: incomeDate,
-            paymentMethod: 'PIX',
-            timestamp: Date.now()
-        });
-        showToast('Receita avulsa registrada!');
-        setIsIncomeModalOpen(false);
-        setIncomeAmount(0);
-        setIncomeDesc('');
-        refresh();
-    } catch {
-        showToast('Erro ao salvar receita.');
-    }
+    await incomeManagement.handleAddIncome(refresh);
   };
 
   if (loading) return <div className="p-8 text-center">Carregando dados financeiros...</div>;
@@ -67,7 +46,7 @@ export const FinanceScreen: React.FC = () => {
         </div>
         <div className="flex items-center justify-center md:justify-end gap-2 md:gap-3 flex-wrap" data-tour="finance-actions">
           <button
-            onClick={() => setIsIncomeModalOpen(true)}
+            onClick={incomeManagement.openIncomeModal}
             className="flex items-center gap-2 bg-green-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base"
             data-tour="btn-add-income"
           >
@@ -326,51 +305,51 @@ export const FinanceScreen: React.FC = () => {
 
 
       {/* Add Income Modal */}
-      {isIncomeModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-                    <h2 className="font-bold text-gray-800 text-lg">Registrar Ganho Avulso</h2>
-                    <button onClick={() => setIsIncomeModalOpen(false)} className="text-gray-500 hover:text-gray-700">
-                        <X size={20} />
-                    </button>
-                </div>
-                <div className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                        <input
-                            type="text"
-                            className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
-                            placeholder="Ex: Venda de Isca, Taxa Extra..."
-                            value={incomeDesc}
-                            onChange={e => setIncomeDesc(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
-                        <MoneyInput value={incomeAmount} onChange={setIncomeAmount} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
-                        <input
-                            type="date"
-                            className="w-full p-2 border rounded-lg outline-none"
-                            value={incomeDate}
-                            onChange={e => setIncomeDate(e.target.value)}
-                        />
-                    </div>
-                </div>
-                <div className="p-4 bg-gray-50 flex gap-3">
-                    <button onClick={() => setIsIncomeModalOpen(false)} className="flex-1 py-2 text-gray-600 font-medium">Cancelar</button>
-                    <button
-                        onClick={handleAddIncome}
-                        disabled={!incomeDesc || incomeAmount <= 0}
-                        className="flex-1 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors disabled:opacity-50"
-                    >
-                        Salvar
-                    </button>
-                </div>
+      {incomeManagement.isIncomeModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Adicionar Receita Avulsa</h3>
+              <button onClick={incomeManagement.closeIncomeModal} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
             </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <input
+                    type="text"
+                    className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Ex: Venda de Isca, Taxa Extra..."
+                    value={incomeManagement.incomeDesc}
+                    onChange={e => incomeManagement.setIncomeDesc(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Valor</label>
+                <MoneyInput value={incomeManagement.incomeAmount} onChange={incomeManagement.setIncomeAmount} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                <input
+                    type="date"
+                    className="w-full p-2 border rounded-lg outline-none"
+                    value={incomeManagement.incomeDate}
+                    onChange={e => incomeManagement.setIncomeDate(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 flex gap-3">
+              <button onClick={incomeManagement.closeIncomeModal} className="flex-1 py-2 text-gray-600 font-medium">Cancelar</button>
+              <button
+                onClick={handleAddIncome}
+                disabled={!incomeManagement.incomeDesc || incomeManagement.incomeAmount <= 0}
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -47,29 +47,35 @@ export const useCashBookViewModel = () => {
 
     useEffect(() => {
         setLoading(true);
-        // Initial load for all
+        const startStr = format(startDate, 'yyyy-MM-dd');
+        const endStr = format(endDate, 'yyyy-MM-dd');
+
+        // Load data for the selected period only - consistent with other ViewModels
         Promise.all([
-            eventRepository.getAll(),
-            expenseRepository.getAll(),
-            paymentRepository.getAll(),
-            incomeRepository.getAll(),
-            boatRepository.getAll()
+            eventRepository.getEventsByDateRange(startStr, endStr),
+            expenseRepository.getByDateRange(startStr, endStr),
+            paymentRepository.getAll(), // Keep all payments for accurate payment calculations
+            incomeRepository.getByDateRange(startStr, endStr),
+            boatRepository.getAll() // Boats don't need period filtering
         ]).finally(() => setLoading(false));
 
-        const unsubEvents = eventRepository.subscribe(setEvents);
-        const unsubExpenses = expenseRepository.subscribe((data) => setExpenses(data.filter(e => !e.isArchived)));
+        // Subscribe to period-specific data
+        const unsubEvents = eventRepository.subscribeToDateRange(startStr, endStr, setEvents);
+        const unsubExpenses = expenseRepository.subscribeByDateRange(startStr, endStr, (data) => setExpenses(data.filter(e => !e.isArchived)));
+        const unsubIncomes = incomeRepository.subscribeByDateRange(startStr, endStr, setIncomes);
+        
+        // Keep global payment subscription for accurate payment-to-event matching
         const unsubPayments = paymentRepository.subscribe(setPayments);
-        const unsubIncomes = incomeRepository.subscribe(setIncomes);
         const unsubBoats = boatRepository.subscribe(setBoats);
 
         return () => {
             unsubEvents();
             unsubExpenses();
-            unsubPayments();
             unsubIncomes();
+            unsubPayments();
             unsubBoats();
         };
-    }, []);
+    }, [startDate, endDate]);
 
     const cashBook = useMemo(() => {
         const entries: CashBookEntry[] = [

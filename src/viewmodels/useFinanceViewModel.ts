@@ -26,7 +26,7 @@ export const useFinanceViewModel = () => {
       const [fetchedEvents, fetchedExpenses, fetchedPayments, fetchedIncomes] = await Promise.all([
         eventRepository.getEventsByDateRange(startStr, endStr),
         expenseRepository.getByDateRange(startStr, endStr),
-        paymentRepository.getAll(500), // Finance needs a broader view
+        paymentRepository.getAll(), // Full historical data for accurate reports
         incomeRepository.getByDateRange(startStr, endStr)
       ]);
 
@@ -116,29 +116,55 @@ export const useFinanceViewModel = () => {
     const data = [];
     const projectedStatuses = ['SCHEDULED', 'COMPLETED', 'ARCHIVED_COMPLETED', 'PRE_SCHEDULED'];
 
-    // This is a bit heavy for a 6-month view without full data, 
-    // but we have 'events' and 'expenses' for the current selected period.
-    // Ideally, this should be a separate query or aggregation.
-    // For now, we use what we have in the current period.
-    const monthDate = startDate;
-    const realized = incomes.reduce((acc, i) => acc + i.amount, 0);
-    let pending = 0;
+    // Generate data for the last 6 months
+    const currentDate = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const monthStart = startOfMonth(monthDate);
+      const monthEnd = endOfMonth(monthDate);
+      const monthStartStr = format(monthStart, 'yyyy-MM-dd');
+      const monthEndStr = format(monthEnd, 'yyyy-MM-dd');
 
-    events.filter(e => projectedStatuses.includes(e.status)).forEach(e => {
+      // Filter events and incomes for this month
+      const monthEvents = events.filter(e => 
+        projectedStatuses.includes(e.status) && 
+        e.date >= monthStartStr && 
+        e.date <= monthEndStr
+      );
+      const monthIncomes = incomes.filter(i => 
+        i.date >= monthStartStr && 
+        i.date <= monthEndStr
+      );
+
+      // Calculate realized revenue from incomes
+      const realized = monthIncomes.reduce((acc, i) => acc + i.amount, 0);
+      
+      // Calculate pending revenue from events
+      let pending = 0;
+      monthEvents.forEach(e => {
         const ePayments = payments.filter(p => p.eventId === e.id);
         const ePaid = ePayments.reduce((acc, p) => acc + p.amount, 0);
         pending += Math.max(0, e.total - ePaid);
-    });
+      });
 
-    data.push({
-      month: format(monthDate, 'MMM', { locale: ptBR }),
-      projected: pending,
-      realized: realized,
-      expenses: expenses.reduce((acc, e) => acc + e.amount, 0),
-    });
+      // Calculate expenses for this month
+      const monthExpenses = expenses.filter(e => 
+        e.status === 'PAID' && 
+        e.date >= monthStartStr && 
+        e.date <= monthEndStr
+      );
+      const expensesTotal = monthExpenses.reduce((acc, e) => acc + e.amount, 0);
+
+      data.push({
+        month: format(monthDate, 'MMM', { locale: ptBR }),
+        projected: pending,
+        realized: realized,
+        expenses: expensesTotal,
+      });
+    }
     
     return data;
-  }, [events, expenses, incomes, payments, startDate]);
+  }, [events, expenses, incomes, payments]);
 
   const dailyCashFlow = useMemo(() => {
     const days = eachDayOfInterval({ start: startDate, end: endDate });

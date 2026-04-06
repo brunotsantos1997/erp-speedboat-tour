@@ -5,7 +5,8 @@ import type { User } from '../domain/User';
 
 export interface VoucherAppearanceData {
   id: string;
-  watermarkImage: string | null;
+  watermarkImageUrl: string | null; // Changed from watermarkImage to watermarkImageUrl
+  watermarkImageBase64?: string | null; // Keep for backward compatibility during migration
 }
 
 export class VoucherAppearanceRepository {
@@ -80,7 +81,7 @@ export class VoucherAppearanceRepository {
       return this.data;
     }
 
-    const defaultData = { id: this.docId, watermarkImage: null };
+    const defaultData = { id: this.docId, watermarkImageUrl: null, watermarkImageBase64: null };
 
     this.data = defaultData;
     this.notifyListeners();

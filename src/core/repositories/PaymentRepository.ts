@@ -46,11 +46,10 @@ class PaymentRepositoryImpl implements IPaymentRepository {
   }
 
   subscribe(callback: (data: Payment[]) => void): Unsubscribe {
-    // Limited global listener for dashboard/summary, latest 100 payments
+    // Full historical data for financial reports - no truncation
     const q = query(
       collection(db, this.collectionName),
-      orderBy('timestamp', 'desc'),
-      limit(100)
+      orderBy('timestamp', 'desc')
     );
     return onSnapshot(q, (snapshot) => {
       callback(snapshot.docs.map(doc => ({ ...doc.data() as Payment, id: doc.id })));
@@ -72,12 +71,17 @@ class PaymentRepositoryImpl implements IPaymentRepository {
     // Cleanup handled by Firebase listeners
   }
 
-  async getAll(limitCount: number = 100): Promise<Payment[]> {
-    const q = query(
-      collection(db, this.collectionName),
-      orderBy('timestamp', 'desc'),
-      limit(limitCount)
-    );
+  async getAll(limitCount?: number): Promise<Payment[]> {
+    const q = limitCount 
+      ? query(
+          collection(db, this.collectionName),
+          orderBy('timestamp', 'desc'),
+          limit(limitCount)
+        )
+      : query(
+          collection(db, this.collectionName),
+          orderBy('timestamp', 'desc')
+        );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
       ...doc.data() as Payment,

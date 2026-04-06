@@ -25,26 +25,29 @@ export const useVoucherAppearanceViewModel = () => {
     async (file: File) => {
       if (!appearanceData) return;
 
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-          try {
-            const base64Image = reader.result as string;
-            const updatedData: VoucherAppearanceData = { ...appearanceData, watermarkImage: base64Image };
-            await repository.update(updatedData);
-            setAppearanceData(updatedData);
-            resolve(base64Image);
-          } catch (e) {
-            setError('Falha ao atualizar marca d\'água.');
-            reject(e);
-          }
+      try {
+        // TODO: Implement upload to Firebase Storage and get URL
+        // For now, keep base64 as fallback during migration
+        const base64Image = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+
+        // Store both for backward compatibility during migration
+        const updatedData: VoucherAppearanceData = { 
+          ...appearanceData, 
+          watermarkImageUrl: null, // Will be updated when storage upload is implemented
+          watermarkImageBase64: base64Image 
         };
-        reader.onerror = (error) => {
-          setError('Falha ao ler arquivo.');
-          reject(error);
-        };
-      });
+        await repository.update(updatedData);
+        setAppearanceData(updatedData);
+        return base64Image;
+      } catch (e) {
+        setError('Falha ao atualizar marca d\'água.');
+        throw e;
+      }
     },
     [appearanceData, repository]
   );

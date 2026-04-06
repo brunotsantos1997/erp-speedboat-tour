@@ -35,7 +35,7 @@ export const VoucherAppearanceScreen: React.FC = () => {
     return <div className="p-6 text-red-500">{error}</div>;
   }
 
-  const currentWatermark = preview || appearanceData?.watermarkImage;
+  const currentWatermark = preview || appearanceData?.watermarkImageUrl;
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">

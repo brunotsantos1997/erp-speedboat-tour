@@ -43,16 +43,7 @@ export const useVoucherViewModel = () => {
     const termsRepo = VoucherTermsRepository.getInstance();
     const appearanceRepo = VoucherAppearanceRepository.getInstance();
 
-    // Ensure listeners are started (important for unauthenticated users)
-    companyRepo.initialize();
-    termsRepo.initialize();
-    appearanceRepo.initialize();
-
-    // Trigger loads/seeding
-    companyRepo.get();
-    termsRepo.get();
-    appearanceRepo.get();
-
+    // Public voucher should work without authentication - repositories handle their own initialization
     const unsubs: (() => void)[] = [];
 
     unsubs.push(companyRepo.subscribe((data) => {
@@ -64,7 +55,10 @@ export const useVoucherViewModel = () => {
     }));
 
     unsubs.push(appearanceRepo.subscribe((data) => {
-      if (data) setWatermark(data.watermarkImage);
+      if (data) {
+        // Use imageUrl if available, fallback to base64 during migration
+        setWatermark(data.watermarkImageUrl || data.watermarkImageBase64 || null);
+      }
     }));
 
     let currentEvent: EventType | undefined;
@@ -127,28 +121,67 @@ export const useVoucherViewModel = () => {
 
   const handleDownloadPdf = async () => {
     const element = document.getElementById('voucher-content');
-    const button = document.getElementById('download-pdf-button');
-    if (element && voucher) {
-      if (button) button.style.display = 'none';
+    const button = document.getElementById('download-pdf-button') as HTMLButtonElement;
+    if (!element || !voucher) return;
 
-      try {
-        // Dynamic import to avoid loading the heavy PDF library until needed
-        const html2pdf = (await import('html2pdf.js')).default;
+    // Disable button and show loading state
+    if (button) {
+      button.disabled = true;
+      button.style.opacity = '0.5';
+      button.innerHTML = '<span class="animate-spin">⏳</span> Gerando PDF...';
+    }
 
-        const opt = {
-          margin: 0.5,
-          filename: `voucher-${voucher.client.name.replace(/\s+/g, '-')}-${voucher.id}.pdf`,
-          image: { type: 'jpeg' as const, quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
-        };
+    try {
+      // Dynamic import to avoid loading the heavy PDF library until needed
+      const html2pdf = (await import('html2pdf.js')).default;
 
-        await html2pdf().from(element).set(opt).save();
-      } catch (err) {
-        console.error('Erro ao gerar PDF:', err);
-        await showAlert('Erro', 'Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.');
-      } finally {
-        if (button) button.style.display = 'flex';
+      const opt = {
+        margin: 0.5,
+        filename: `voucher-${voucher.client.name.replace(/\s+/g, '-')}-${voucher.id}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          logging: false, // Reduce console noise
+          letterRendering: true
+        },
+        jsPDF: { 
+          unit: 'in', 
+          format: 'letter', 
+          orientation: 'portrait' as const,
+          compress: true // Reduce file size
+        }
+      };
+
+      // Show progress feedback
+      console.log('Iniciando geração do PDF...');
+      
+      await html2pdf()
+        .from(element)
+        .set(opt)
+        .save();
+      
+      console.log('PDF gerado com sucesso');
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      
+      // More descriptive error message
+      const errorMessage = err instanceof Error 
+        ? `Ocorreu um erro ao gerar o PDF: ${err.message}` 
+        : 'Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.';
+      
+      await showAlert('Erro no PDF', errorMessage);
+    } finally {
+      // Restore button state
+      if (button) {
+        button.disabled = false;
+        button.style.opacity = '1';
+        button.innerHTML = `
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span class="hidden sm:inline">Baixar PDF</span>
+        `;
       }
     }
   };
