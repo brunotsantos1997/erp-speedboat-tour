@@ -16,7 +16,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { EventType } from '../domain/types';
+import type { User } from '../domain/User';
 import { timeToMinutes } from '../utils/timeUtils';
+import { logger } from '../common/Logger';
 
 export interface IEventRepository {
   getById(eventId: string): Promise<EventType | undefined>;
@@ -29,19 +31,21 @@ export interface IEventRepository {
   getAll(limitCount?: number): Promise<EventType[]>;
   backfillFinancialData(): Promise<void>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(user?: User): void;
   subscribe(callback: (data: EventType[]) => void): Unsubscribe;
   subscribeToDateRange(startDate: string, endDate: string, callback: (data: EventType[]) => void): Unsubscribe;
   subscribeToNotifications(callback: (data: EventType[]) => void): Unsubscribe;
+  subscribeToId(id: string, callback: (data: EventType | undefined) => void): Unsubscribe;
+  subscribeToClientEvents(clientId: string, callback: (data: EventType[]) => void): Unsubscribe;
 }
 
 class EventRepositoryImpl implements IEventRepository {
   private collectionName = 'events';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   constructor() {}
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }
@@ -267,7 +271,7 @@ class EventRepositoryImpl implements IEventRepository {
     const { id, ...data } = updatedEvent;
     const docRef = doc(db, this.collectionName, id);
 
-    await updateDoc(docRef, data as any);
+    await updateDoc(docRef, data);
 
     return updatedEvent;
   }
@@ -351,7 +355,7 @@ class EventRepositoryImpl implements IEventRepository {
           productsCost
         });
       } catch (err) {
-        console.error(`Failed to backfill event ${event.id}:`, err);
+        logger.error(`Failed to backfill event ${event.id}`, err as Error, { eventId: event.id });
       }
     }
   }
