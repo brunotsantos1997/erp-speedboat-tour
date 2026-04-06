@@ -17,8 +17,21 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Initialize Analytics
-export const analytics = getAnalytics(app);
+// Initialize Analytics with proper environment guards
+export const analytics = (() => {
+  try {
+    // Only initialize Analytics in production or when measurement ID is available
+    if (typeof window !== 'undefined' && 
+        import.meta.env.VITE_FIREBASE_MEASUREMENT_ID && 
+        (import.meta.env.PROD || import.meta.env.VITE_ENABLE_ANALYTICS === 'true')) {
+      return getAnalytics(app);
+    }
+    return null;
+  } catch (error) {
+    console.warn('Analytics initialization failed:', error);
+    return null;
+  }
+})();
 
 // Enable offline persistence
 if (typeof window !== 'undefined') {
