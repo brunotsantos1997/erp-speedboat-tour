@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+﻿import { useState, useCallback } from 'react'
 
 // Mock do ViewModel para testes
 export const useModalState = () => {
@@ -13,7 +13,7 @@ export const useModalState = () => {
 
   const openModal = useCallback((modalId: string, _data?: any, _options?: any) => {
     if (openModals.has(modalId)) {
-      throw new Error('Modal já está aberto')
+      throw new Error('Modal jÃ¡ estÃ¡ aberto')
     }
 
     setIsTransitioning(true)
@@ -29,7 +29,7 @@ export const useModalState = () => {
     setActiveModal(modalId)
     setModalStack((prev: any) => [...prev, modalId])
 
-    // Simular transição
+    // Simular transiÃ§Ã£o
     setTimeout(() => {
       setIsTransitioning(false)
     }, 200)
@@ -37,13 +37,13 @@ export const useModalState = () => {
 
   const closeModal = useCallback((modalId: string, force: boolean = false) => {
     if (!openModals.has(modalId)) {
-      throw new Error('Modal não está aberto')
+      throw new Error('Modal nÃ£o estÃ¡ aberto')
     }
 
     if (!force && modalStack.length > 1) {
       const modalIndex = modalStack.indexOf(modalId)
       if (modalIndex < modalStack.length - 1) {
-        throw new Error('Não é possível fechar modal que não está no topo da pilha')
+        throw new Error('NÃ£o Ã© possÃ­vel fechar modal que nÃ£o estÃ¡ no topo da pilha')
       }
     }
 
@@ -69,7 +69,7 @@ export const useModalState = () => {
     setModalStack(newStack)
     setActiveModal(newStack.length > 0 ? newStack[newStack.length - 1] : null)
 
-    // Simular transição
+    // Simular transiÃ§Ã£o
     setTimeout(() => {
       setIsTransitioning(false)
     }, 200)
@@ -80,12 +80,12 @@ export const useModalState = () => {
       const userResponse = window.confirm(message)
       resolve(userResponse)
     })
-  }, [])
+  }, [openModals])
 
   const showAlert = useCallback((modalId: string, message: string, _type?: any) => {
     window.alert(message)
     return `${modalId}-${Date.now()}`
-  }, [])
+  }, [openModals])
 
   const lockModal = useCallback((modalId: string, reason: string) => {
     setLockedModals((prev: any) => new Set([...prev, modalId]))
@@ -125,7 +125,7 @@ export const useModalState = () => {
     return lockReasons[modalId] || null
   }, [lockReasons])
 
-  const closeAllModals = useCallback(() => {
+  const closeAllModals = () => {
     setOpenModals(new Set())
     setModalData({})
     setModalHistory((prev: any) => [...prev, {
@@ -135,7 +135,7 @@ export const useModalState = () => {
     }])
     setActiveModal(null)
     setModalStack([])
-  }, [])
+  }
 
   const getActiveModal = useCallback(() => {
     return activeModal
@@ -169,3 +169,4 @@ export const useModalState = () => {
     }
   }
 }
+

@@ -6,6 +6,7 @@ import { expenseRepository } from '../core/repositories/ExpenseRepository';
 import { incomeRepository } from '../core/repositories/IncomeRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
 import { boatRepository } from '../core/repositories/BoatRepository';
+import { EventStatusService } from '../core/domain/EventStatusService';
 import { timeToMinutes } from '../core/utils/timeUtils';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useEventSync } from './useEventSync';
@@ -238,13 +239,7 @@ export const useCashBookViewModel = () => {
                     if (event) {
                         const remainingPayments = await paymentRepository.getByEventId(event.id);
                         const totalPaid = remainingPayments.reduce((acc, p) => acc + p.amount, 0);
-                        const reservationFee = event.total * 0.3;
-                        const updatedEvent = { ...event };
-                        if (totalPaid < event.total) updatedEvent.paymentStatus = 'PENDING';
-                        if (totalPaid < reservationFee && updatedEvent.status === 'SCHEDULED') {
-                            updatedEvent.status = 'PRE_SCHEDULED';
-                            updatedEvent.preScheduledAt = Date.now();
-                        }
+                        const updatedEvent = EventStatusService.updateStatusAfterPaymentRemoval(event, totalPaid);
                         const savedEvent = await eventRepository.updateEvent(updatedEvent);
                         await syncEvent(savedEvent);
                     }

@@ -1,16 +1,28 @@
 import { useState, useCallback } from 'react'
 
+type UserState = Record<string, unknown> | null
+type NotificationState = {
+  id: string
+  timestamp: Date
+  read: boolean
+} & Record<string, unknown>
+type ModalState = Record<string, boolean>
+type ModalDataState = Record<string, unknown>
+
+const getCurrentTimestamp = () => Date.now()
+const createNotificationId = () => `notif-${getCurrentTimestamp()}`
+
 // Mock do ViewModel para testes
 export const useGlobalState = () => {
-  const [user, setUserState] = useState<any>(null)
-  const [app, setAppState] = useState({
+  const [user, setUserState] = useState<UserState>(null)
+  const [app, setAppState] = useState(() => ({
     loading: false,
     error: null as string | null,
     initialized: false,
     online: navigator.onLine,
-    lastActivity: Date.now(),
+    lastActivity: getCurrentTimestamp(),
     version: '1.0.0'
-  })
+  }))
   const [data] = useState({
     events: [],
     clients: [],
@@ -18,7 +30,13 @@ export const useGlobalState = () => {
     expenses: [],
     lastSync: null as Date | null
   })
-  const [ui, setUi] = useState<any>({
+  const [ui, setUi] = useState<{
+    sidebarOpen: boolean
+    modals: ModalState
+    notifications: NotificationState[]
+    breadcrumbs: unknown[]
+    modalData: ModalDataState
+  }>({
     sidebarOpen: true,
     modals: {
       createEvent: false,
@@ -30,25 +48,25 @@ export const useGlobalState = () => {
     modalData: {}
   })
 
-  const setUser = useCallback((userData: any) => {
+  const setUser = useCallback((userData: UserState) => {
     setUserState(userData)
   }, [])
 
   const logout = useCallback(() => {
     setUserState(null)
-    setAppState((prev: any) => ({ ...prev, initialized: false }))
+    setAppState(prev => ({ ...prev, initialized: false }))
   }, [])
 
   const setTheme = useCallback((theme: string) => {
-    setAppState((prev: any) => ({ ...prev, theme }))
+    setAppState(prev => ({ ...prev, theme }))
   }, [])
 
-  const addNotification = useCallback((notification: any) => {
-    setUi((prev: any) => ({
+  const addNotification = useCallback((notification: Record<string, unknown>) => {
+    setUi(prev => ({
       ...prev,
       notifications: [
         {
-          id: `notif-${Date.now()}`,
+          id: createNotificationId(),
           timestamp: new Date(),
           read: false,
           ...notification
@@ -58,8 +76,8 @@ export const useGlobalState = () => {
     }))
   }, [])
 
-  const openModal = useCallback((modalId: string, modalData?: any) => {
-    setUi((prev: any) => ({
+  const openModal = useCallback((modalId: string, modalData?: unknown) => {
+    setUi(prev => ({
       ...prev,
       modals: { ...prev.modals, [modalId]: true },
       modalData: { ...prev.modalData, [modalId]: modalData }
@@ -67,40 +85,40 @@ export const useGlobalState = () => {
   }, [])
 
   const closeModal = useCallback((modalId: string) => {
-    setUi((prev: any) => ({
+    setUi(prev => ({
       ...prev,
       modals: { ...prev.modals, [modalId]: false }
     }))
   }, [])
 
   const setLoading = useCallback((loading: boolean) => {
-    setAppState((prev: any) => ({ ...prev, loading, lastActivity: Date.now() }))
+    setAppState(prev => ({ ...prev, loading, lastActivity: getCurrentTimestamp() }))
   }, [])
 
   const setError = useCallback((error: string | null) => {
-    setAppState((prev: any) => ({ ...prev, error, loading: false, lastActivity: Date.now() }))
+    setAppState(prev => ({ ...prev, error, loading: false, lastActivity: getCurrentTimestamp() }))
   }, [])
 
-  const updateUserProfile = useCallback((updates: any) => {
+  const updateUserProfile = useCallback((updates: Record<string, unknown>) => {
     if (!user) return
-    setUserState((prev: any) => ({ ...prev, ...updates }))
+    setUserState(prev => (prev ? { ...prev, ...updates } : prev))
   }, [user])
 
   const markNotificationAsRead = useCallback((notificationId: string) => {
-    setUi((prev: any) => ({
+    setUi(prev => ({
       ...prev,
-      notifications: prev.notifications.map((n: any) =>
-        n.id === notificationId ? { ...n, read: true } : n
+      notifications: prev.notifications.map(notification =>
+        notification.id === notificationId ? { ...notification, read: true } : notification
       )
     }))
   }, [])
 
   const clearNotifications = useCallback(() => {
-    setUi((prev: any) => ({ ...prev, notifications: [] }))
+    setUi(prev => ({ ...prev, notifications: [] }))
   }, [])
 
   const initialize = useCallback(() => {
-    setAppState((prev: any) => ({
+    setAppState(prev => ({
       ...prev,
       initialized: true,
       loading: false,
@@ -109,7 +127,7 @@ export const useGlobalState = () => {
   }, [])
 
   const updateOnlineStatus = useCallback((online: boolean) => {
-    setAppState((prev: any) => ({ ...prev, online, lastActivity: Date.now() }))
+    setAppState(prev => ({ ...prev, online, lastActivity: getCurrentTimestamp() }))
   }, [])
 
   return {
@@ -135,7 +153,7 @@ export const useGlobalState = () => {
     computed: {
       isAuthenticated: !!user,
       isOnline: app.online,
-      unreadNotifications: ui.notifications.filter((n: any) => !n.read).length,
+      unreadNotifications: ui.notifications.filter(notification => !notification.read).length,
       openModalsCount: Object.values(ui.modals).filter(Boolean).length
     }
   }

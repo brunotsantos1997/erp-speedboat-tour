@@ -1,20 +1,16 @@
-// src/viewmodels/useSharedEventViewModel.ts
 import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../contexts/auth/useAuth';
-import type { Boat, EventType, ClientProfile, TourType, PaymentMethod } from '../core/domain/types';
-import { clientRepository } from '../core/repositories/ClientRepository';
+import type { BoardingLocation, Boat, EventType, PaymentMethod } from '../core/domain/types';
 import { boatRepository } from '../core/repositories/BoatRepository';
-import { tourTypeRepository } from '../core/repositories/TourTypeRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
-import { paymentRepository } from '../core/repositories/PaymentRepository';
-import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
 import { format } from 'date-fns';
 import { timeToMinutes, minutesToTime } from '../core/utils/timeUtils';
 import { boardingLocationRepository } from '../core/repositories/BoardingLocationRepository';
-import { sanitizeObject } from '../core/utils/objectUtils';
 import { useToast } from '../ui/contexts/toast/useToast';
 import { useEventSync } from './useEventSync';
 import { logger } from '../core/common/Logger';
+import { SharedEventService } from '../core/domain/SharedEventService';
+import { TransactionService } from '../core/domain/TransactionService';
 
 export const useSharedEventViewModel = (editingEventId?: string | null) => {
   const { currentUser } = useAuth();
@@ -25,6 +21,7 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
   const [startTime, setStartTime] = useState('09:00');
   const [durationHours, setDurationHours] = useState(1);
   const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null);
+  const [selectedBoardingLocation, setSelectedBoardingLocation] = useState<BoardingLocation | null>(null);
   const [passengerCount, setPassengerCount] = useState(1);
   const [costPerPerson, setCostPerPerson] = useState(0);
   const [discountPerPerson, setDiscountPerPerson] = useState(0);
@@ -33,44 +30,49 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
   const [observations, setObservations] = useState('');
 
   const [availableBoats, setAvailableBoats] = useState<Boat[]>([]);
+  const [availableBoardingLocations, setAvailableBoardingLocations] = useState<BoardingLocation[]>([]);
   const [scheduledEvents, setScheduledEvents] = useState<EventType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const existingSharedEvent = useMemo(() => {
     if (!selectedBoat || !startTime) return null;
-    return scheduledEvents.find(e =>
-      e.id !== editingEventId && // Ignore itself
-      e.boat.id === selectedBoat.id &&
-      e.startTime === startTime &&
-      e.tourType?.name.toLowerCase() === 'compartilhado' &&
-      e.status !== 'CANCELLED' && e.status !== 'ARCHIVED_CANCELLED'
-    );
+
+    return scheduledEvents.find((event) =>
+      event.id !== editingEventId &&
+      event.boat.id === selectedBoat.id &&
+      event.startTime === startTime &&
+      SharedEventService.isSharedEvent(event) &&
+      event.status !== 'CANCELLED' &&
+      event.status !== 'ARCHIVED_CANCELLED'
+    ) || null;
   }, [scheduledEvents, selectedBoat, startTime, editingEventId]);
 
-  // Load initial data
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        const [boats] = await Promise.all([
+        const [boats, boardingLocations] = await Promise.all([
           boatRepository.getAll(),
-          CompanyDataRepository.getInstance().get()
+          boardingLocationRepository.getAll()
         ]);
-        const activeBoats = boats.filter(b => !b.isArchived);
+
+        const activeBoats = boats.filter((boat) => !boat.isArchived);
         setAvailableBoats(activeBoats);
+        setAvailableBoardingLocations(boardingLocations);
 
         if (editingEventId) {
           const event = await eventRepository.getById(editingEventId);
           if (event) {
-            setSelectedDate(new Date(event.date + 'T00:00'));
+            setSelectedDate(new Date(`${event.date}T00:00:00`));
             setStartTime(event.startTime);
-            setSelectedBoat(activeBoats.find(b => b.id === event.boat.id) || event.boat);
+            setSelectedBoat(activeBoats.find((boat) => boat.id === event.boat.id) || event.boat);
+            setSelectedBoardingLocation(boardingLocations.find((location) => location.id === event.boardingLocation.id) || event.boardingLocation);
             setPassengerCount(event.passengerCount);
             setObservations(event.observations || '');
 
-            const startMin = timeToMinutes(event.startTime);
-            const endMin = timeToMinutes(event.endTime);
-            setDurationHours(Math.max(1, (endMin - startMin) / 60));
+            const startMinutes = timeToMinutes(event.startTime);
+            const endMinutes = timeToMinutes(event.endTime);
+            setDurationHours(Math.max(1, (endMinutes - startMinutes) / 60));
 
             if (event.passengerCount > 0) {
               setCostPerPerson((event.rentalGross || 0) / event.passengerCount);
@@ -84,98 +86,59 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
         setIsLoading(false);
       }
     };
+
     loadData();
   }, [editingEventId]);
 
-  // Fetch events for conflict check
   useEffect(() => {
-    if (selectedDate) {
-      const dateString = format(selectedDate, 'yyyy-MM-dd');
-      eventRepository.getEventsByDate(dateString).then(setScheduledEvents);
-    }
+    const dateString = format(selectedDate, 'yyyy-MM-dd');
+    eventRepository.getEventsByDate(dateString).then(setScheduledEvents);
   }, [selectedDate]);
 
   const endTime = useMemo(() => {
-    const startMin = timeToMinutes(startTime);
-    const endMin = startMin + (durationHours * 60);
-    return minutesToTime(endMin % 1440);
+    const startMinutes = timeToMinutes(startTime);
+    const endMinutes = startMinutes + (durationHours * 60);
+    return minutesToTime(endMinutes % 1440);
   }, [startTime, durationHours]);
 
-  const subtotal = useMemo(() => {
-    return passengerCount * costPerPerson;
-  }, [passengerCount, costPerPerson]);
-
-  const totalDiscount = useMemo(() => {
-    return (passengerCount * discountPerPerson) + generalDiscount;
-  }, [passengerCount, discountPerPerson, generalDiscount]);
-
-  const total = useMemo(() => {
-    return Math.max(0, subtotal - totalDiscount);
-  }, [subtotal, totalDiscount]);
+  const subtotal = useMemo(() => passengerCount * costPerPerson, [passengerCount, costPerPerson]);
+  const totalDiscount = useMemo(() => (passengerCount * discountPerPerson) + generalDiscount, [passengerCount, discountPerPerson, generalDiscount]);
+  const total = useMemo(() => Math.max(0, subtotal - totalDiscount), [subtotal, totalDiscount]);
 
   const availableTimeSlots = useMemo(() => {
-    const slots: string[] = [];
-    for (let h = 0; h < 24; h++) {
-      slots.push(`${h.toString().padStart(2, '0')}:00`);
+    const slots = Array.from({ length: 24 }, (_, hour) => `${hour.toString().padStart(2, '0')}:00`);
+
+    if (!selectedBoat) {
+      return slots;
     }
 
-    if (!selectedBoat) return slots;
-
-    const orgTime = selectedBoat.organizationTimeMinutes || 0;
-    const otherEvents = scheduledEvents.filter(e =>
-        e.id !== editingEventId &&
-        e.boat.id === selectedBoat.id &&
-        e.status !== 'CANCELLED' &&
-        e.status !== 'ARCHIVED_CANCELLED' &&
-        e.tourType?.name.toLowerCase() !== 'compartilhado' // Ignore shared for slot visibility, we handle merging later
+    const organizationTime = selectedBoat.organizationTimeMinutes || 0;
+    const nonSharedEvents = scheduledEvents.filter((event) =>
+      event.id !== editingEventId &&
+      event.boat.id === selectedBoat.id &&
+      event.status !== 'CANCELLED' &&
+      event.status !== 'ARCHIVED_CANCELLED' &&
+      !SharedEventService.isSharedEvent(event)
     );
 
-    return slots.filter(slot => {
-      const slotMin = timeToMinutes(slot);
-      const slotEndMin = slotMin + (durationHours * 60);
+    return slots.filter((slot) => {
+      const slotMinutes = timeToMinutes(slot);
+      const slotEndMinutes = slotMinutes + (durationHours * 60);
 
-      if (slotEndMin > 1440) return false;
+      if (slotEndMinutes > 1440) {
+        return false;
+      }
 
-      return !otherEvents.some(event => {
-        const eventStartMin = timeToMinutes(event.startTime);
-        const eventEndMin = timeToMinutes(event.endTime);
-
-        const isBefore = slotEndMin <= (eventStartMin - 2 * orgTime);
-        const isAfter = slotMin >= (eventEndMin + 2 * orgTime);
-
+      return !nonSharedEvents.some((event) => {
+        const eventStartMinutes = timeToMinutes(event.startTime);
+        const eventEndMinutes = timeToMinutes(event.endTime);
+        const isBefore = slotEndMinutes <= (eventStartMinutes - 2 * organizationTime);
+        const isAfter = slotMinutes >= (eventEndMinutes + 2 * organizationTime);
         return !isBefore && !isAfter;
       });
     });
-  }, [selectedBoat, scheduledEvents, durationHours, editingEventId]);
+  }, [durationHours, editingEventId, scheduledEvents, selectedBoat]);
 
-  const getOrCreateSharedClient = async (): Promise<ClientProfile> => {
-    const results = await clientRepository.search('Compartilhado');
-    let sharedClient = results.find(c => c.name.toLowerCase() === 'compartilhado');
-
-    if (!sharedClient) {
-      sharedClient = await clientRepository.add({
-        name: 'Compartilhado',
-        phone: '00000000000',
-      });
-    }
-    return sharedClient;
-  };
-
-  const getOrCreateSharedTourType = async (): Promise<TourType> => {
-    const tourTypes = await tourTypeRepository.getAll();
-    let sharedType = tourTypes.find(t => t.name.toLowerCase() === 'compartilhado');
-
-    if (!sharedType) {
-      sharedType = await tourTypeRepository.add({
-        name: 'Compartilhado',
-        color: '#6366f1', // Indigo 500
-        isArchived: false
-      });
-    }
-    return sharedType;
-  };
-
-  // Reset startTime if not in available slots
   useEffect(() => {
     if (availableTimeSlots.length > 0 && !availableTimeSlots.includes(startTime)) {
       setStartTime(availableTimeSlots[0]);
@@ -183,131 +146,116 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
   }, [availableTimeSlots, startTime]);
 
   const createSharedEvent = async () => {
-    if (!selectedBoat || !startTime) {
-      showToast('Selecione um barco e horário.');
+    if (!selectedBoat || !startTime || !selectedBoardingLocation) {
+      showToast('Selecione barco, horario e local de embarque.');
+      return false;
+    }
+
+    if (passengerCount > selectedBoat.capacity) {
+      showToast('A quantidade de passageiros excede a capacidade do barco.');
       return false;
     }
 
     try {
+      const draft = {
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        startTime,
+        endTime,
+        boat: selectedBoat,
+        boardingLocation: selectedBoardingLocation,
+        passengerCount,
+        subtotal,
+        total,
+        totalDiscount,
+        observations,
+        createdByUserId: currentUser?.id
+      };
+
       if (editingEventId) {
-        // Update existing event instead of creating/merging
         const originalEvent = await eventRepository.getById(editingEventId);
-        if (!originalEvent) throw new Error('Evento não encontrado');
+        if (!originalEvent) {
+          throw new Error('Evento nao encontrado.');
+        }
 
-        const updatedEvent: EventType = {
-          ...originalEvent,
-          date: format(selectedDate, 'yyyy-MM-dd'),
-          startTime,
-          endTime,
-          boat: selectedBoat!,
-          passengerCount,
-          subtotal,
-          total,
-          rentalGross: subtotal,
-          rentalRevenue: total,
-          observations,
-          rentalDiscount: { type: 'FIXED', value: totalDiscount },
-        };
-
+        const updatedEvent = SharedEventService.buildUpdatedSharedEvent(originalEvent, draft);
         const savedEvent = await eventRepository.updateEvent(updatedEvent);
         await syncEvent(savedEvent);
-
         showToast('Passeio compartilhado atualizado com sucesso!');
         return true;
       }
 
       if (existingSharedEvent) {
-        // Update existing event
-        const updatedEvent: EventType = {
-          ...existingSharedEvent,
-          passengerCount: existingSharedEvent.passengerCount + passengerCount,
-          subtotal: existingSharedEvent.subtotal + subtotal,
-          total: existingSharedEvent.total + total,
-          rentalGross: (existingSharedEvent.rentalGross || 0) + subtotal,
-          rentalRevenue: (existingSharedEvent.rentalRevenue || 0) + total,
-          observations: existingSharedEvent.observations
-            ? `${existingSharedEvent.observations}\n---\nNovo grupo: ${passengerCount} pessoas. ${observations}`
-            : `Grupo inicial: ${existingSharedEvent.passengerCount} pessoas.\nNovo grupo: ${passengerCount} pessoas. ${observations}`,
-        };
-
-        const savedEvent = await eventRepository.updateEvent(updatedEvent);
-        await syncEvent(savedEvent);
-
-        // Register payment for the NEW group only
-        await paymentRepository.add({
-          eventId: existingSharedEvent.id,
-          amount: total,
-          method: paymentMethod,
-          type: 'FULL',
-          date: format(new Date(), 'yyyy-MM-dd'),
-          timestamp: Date.now()
+        const updatedEvent = SharedEventService.mergeIntoExistingEvent(existingSharedEvent, {
+          boardingLocation: selectedBoardingLocation,
+          passengerCount,
+          subtotal,
+          total,
+          totalDiscount,
+          observations
         });
+
+        const result = await TransactionService.updateEventWithPayment(
+          existingSharedEvent,
+          updatedEvent,
+          {
+            eventId: existingSharedEvent.id,
+            amount: total,
+            method: paymentMethod,
+            type: 'FULL',
+            date: format(new Date(), 'yyyy-MM-dd'),
+            timestamp: Date.now()
+          },
+          currentUser?.id || 'system',
+          currentUser?.name || 'SharedEvent'
+        );
+
+        if (!result.success || !result.eventId) {
+          throw new Error(result.error || 'Erro ao adicionar grupo ao passeio compartilhado.');
+        }
+
+        const savedEvent = await eventRepository.getById(result.eventId);
+        if (savedEvent) {
+          await syncEvent(savedEvent);
+        }
 
         showToast('Passageiros adicionados ao passeio compartilhado existente!');
         return true;
       }
 
-      const [sharedClient, sharedTourType, boardingLocations] = await Promise.all([
-        getOrCreateSharedClient(),
-        getOrCreateSharedTourType(),
-        boardingLocationRepository.getAll()
-      ]);
+      const eventData = SharedEventService.buildEventData(draft);
+      const result = await TransactionService.createEventWithPayment(
+        eventData,
+        {
+          eventId: 'pending-shared-event',
+          amount: total,
+          method: paymentMethod,
+          type: 'FULL',
+          date: format(new Date(), 'yyyy-MM-dd'),
+          timestamp: Date.now()
+        },
+        currentUser?.id || 'system',
+        currentUser?.name || 'SharedEvent'
+      );
 
-      const defaultLocation = boardingLocations[0];
-
-      if (!defaultLocation) {
-        throw new Error('Nenhum local de embarque configurado.');
+      if (!result.success || !result.eventId) {
+        throw new Error(result.error || 'Erro ao criar passeio compartilhado.');
       }
 
-      const eventData: Omit<EventType, 'id'> = {
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        startTime,
-        endTime,
-        status: 'SCHEDULED',
-        paymentStatus: 'CONFIRMED',
-        boat: selectedBoat,
-        boardingLocation: defaultLocation,
-        tourType: sharedTourType,
-        products: [],
-        rentalDiscount: { type: 'FIXED', value: totalDiscount },
-        client: sharedClient,
-        passengerCount,
-        subtotal: subtotal,
-        total: total,
-        observations: observations,
-        rentalRevenue: total,
-        productsRevenue: 0,
-        rentalGross: subtotal,
-        productsGross: 0,
-        rentalCost: 0,
-        productsCost: 0,
-        taxCost: 0,
-        additionalCosts: [],
-        createdByUserId: currentUser?.id,
-      };
-
-      const newEvent = await eventRepository.add(sanitizeObject(eventData));
-      await syncEvent(newEvent);
-
-      // Register payment
-      await paymentRepository.add({
-        eventId: newEvent.id,
-        amount: total,
-        method: paymentMethod,
-        type: 'FULL',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        timestamp: Date.now()
-      });
+      const savedEvent = await eventRepository.getById(result.eventId);
+      if (savedEvent) {
+        await syncEvent(savedEvent);
+      }
 
       showToast('Passeio compartilhado criado com sucesso!');
       return true;
     } catch (error: unknown) {
-      logger.error('Error creating shared event', error as Error, { 
+      logger.error('Error creating shared event', error as Error, {
         operation: 'createSharedEvent',
         selectedDate,
         startTime,
         passengerCount,
-        selectedBoatId: selectedBoat?.id
+        selectedBoatId: selectedBoat?.id,
+        selectedBoardingLocationId: selectedBoardingLocation?.id
       });
       showToast(error instanceof Error ? error.message : 'Erro ao criar passeio compartilhado.');
       return false;
@@ -324,6 +272,9 @@ export const useSharedEventViewModel = (editingEventId?: string | null) => {
     setDurationHours,
     selectedBoat,
     setSelectedBoat,
+    availableBoardingLocations,
+    selectedBoardingLocation,
+    setSelectedBoardingLocation,
     passengerCount,
     setPassengerCount,
     costPerPerson,

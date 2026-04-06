@@ -1,18 +1,79 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
+
+type ToastType = 'success' | 'error' | 'warning' | 'info'
+
+type ToastAction = {
+  onClick: () => void
+}
+
+type Toast = {
+  id: string
+  message: string
+  type: ToastType
+  duration: number
+  position: string
+  persistent: boolean
+  action?: ToastAction | null
+  timestamp: number
+  isVisible: boolean
+  updatedAt?: number
+}
+
+type ToastOptions = {
+  duration?: number
+  position?: string
+  persistent?: boolean
+  action?: ToastAction | null
+}
 
 // Mock do ViewModel para testes
 export const useToastState = () => {
-  const [toasts, setToasts] = useState<any[]>([])
-  const [activeToasts, setActiveToasts] = useState(new Set())
-  const [toastQueue, setToastQueue] = useState<any[]>([])
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const [activeToasts, setActiveToasts] = useState<Set<string>>(new Set())
+  const [toastQueue, setToastQueue] = useState<Toast[]>([])
   const [maxToasts] = useState(5)
   const [defaultDuration] = useState(5000)
   const [defaultPosition] = useState('top-right')
-  const [nextId, setNextId] = useState(1)
+  const toastsRef = useRef<Toast[]>([])
+  const activeToastsRef = useRef<Set<string>>(new Set())
+  const toastQueueRef = useRef<Toast[]>([])
+  const nextIdRef = useRef(1)
 
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info', options?: any) => {
-    const toast = {
-      id: `toast-${nextId}`,
+  function hideToast(toastId: string) {
+    const nextActiveToasts = new Set(activeToastsRef.current)
+    nextActiveToasts.delete(toastId)
+
+    const queuedToast = toastQueueRef.current[0] ?? null
+    const remainingQueue = queuedToast ? toastQueueRef.current.slice(1) : []
+
+    if (queuedToast) {
+      nextActiveToasts.add(queuedToast.id)
+    }
+
+    const remainingToasts = toastsRef.current.filter(toast => toast.id !== toastId)
+    const nextToasts = queuedToast ? [...remainingToasts, queuedToast] : remainingToasts
+
+    toastsRef.current = nextToasts
+    activeToastsRef.current = nextActiveToasts
+    toastQueueRef.current = remainingQueue
+
+    setToasts(nextToasts)
+    setActiveToasts(new Set(nextActiveToasts))
+    setToastQueue(remainingQueue)
+
+    if (queuedToast && !queuedToast.persistent) {
+      setTimeout(() => {
+        hideToast(queuedToast.id)
+      }, queuedToast.duration)
+    }
+  }
+
+  const showToast = useCallback((message: string, type: ToastType = 'info', options?: ToastOptions) => {
+    const toastId = `toast-${nextIdRef.current}`
+    nextIdRef.current += 1
+
+    const toast: Toast = {
+      id: toastId,
       message,
       type,
       duration: options?.duration || defaultDuration,
@@ -23,82 +84,59 @@ export const useToastState = () => {
       isVisible: false
     }
 
-    setNextId(prev => prev + 1)
-
-    if (activeToasts.size >= maxToasts) {
-      // Adicionar à fila
-      setToastQueue(prev => [...prev, toast])
+    if (activeToastsRef.current.size >= maxToasts) {
+      const nextQueue = [...toastQueueRef.current, toast]
+      toastQueueRef.current = nextQueue
+      setToastQueue(nextQueue)
       return toast.id
     }
 
-    // Adicionar diretamente
-    setToasts(prev => [...prev, toast])
-    setActiveToasts(prev => new Set([...prev, toast.id]))
+    const nextActiveToasts = new Set(activeToastsRef.current)
+    nextActiveToasts.add(toast.id)
+    const nextToasts = [...toastsRef.current, toast]
 
-    // Auto-dismiss se não for persistente
+    toastsRef.current = nextToasts
+    activeToastsRef.current = nextActiveToasts
+
+    setToasts(nextToasts)
+    setActiveToasts(new Set(nextActiveToasts))
+
     if (!toast.persistent) {
       setTimeout(() => {
         hideToast(toast.id)
       }, toast.duration)
     }
-
     return toast.id
-  }, [nextId, activeToasts.size, maxToasts, defaultDuration, defaultPosition])
+  }, [maxToasts, defaultDuration, defaultPosition, hideToast])
 
-  const hideToast = useCallback((toastId: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== toastId))
-    setActiveToasts(prev => {
-      const newSet = new Set(prev)
-      newSet.delete(toastId)
-      return newSet
-    })
-
-    // Processar fila se houver toasts pendentes
-    setToastQueue(prev => {
-      if (prev.length > 0) {
-        const nextToast = prev[0]
-        setToasts(currentToasts => [...currentToasts, nextToast])
-        setActiveToasts(currentActive => new Set([...currentActive, nextToast.id]))
-        
-        // Auto-dismiss para o próximo toast
-        if (!nextToast.persistent) {
-          setTimeout(() => {
-            hideToast(nextToast.id)
-          }, nextToast.duration)
-        }
-        
-        return prev.slice(1)
-      }
-      return prev
-    })
-  }, [])
-
-  const updateToast = useCallback((toastId: string, updates: any) => {
-    setToasts(prev => prev.map(toast => 
-      toast.id === toastId 
+  const updateToast = useCallback((toastId: string, updates: Partial<Toast>) => {
+    setToasts(prev => prev.map(toast =>
+      toast.id === toastId
         ? { ...toast, ...updates, updatedAt: Date.now() }
         : toast
     ))
   }, [])
 
   const clearAll = useCallback(() => {
+    toastsRef.current = []
+    activeToastsRef.current = new Set()
+    toastQueueRef.current = []
     setToasts([])
     setActiveToasts(new Set())
     setToastQueue([])
   }, [])
 
-  const clearByType = useCallback((type: string) => {
-    setToasts(prev => prev.filter(toast => {
-      if (toast.type === type) {
-        setActiveToasts(currentActive => {
-          const newSet = new Set(currentActive)
-          newSet.delete(toast.id)
-          return newSet
-        })
-        return false
-      }
-      return true
-    }))
+  const clearByType = useCallback((type: ToastType) => {
+    const nextToasts = toastsRef.current.filter(toast => toast.type !== type)
+    const nextActiveToasts = new Set(
+      [...activeToastsRef.current].filter(toastId => nextToasts.some(toast => toast.id === toastId))
+    )
+
+    toastsRef.current = nextToasts
+    activeToastsRef.current = nextActiveToasts
+
+    setToasts(nextToasts)
+    setActiveToasts(new Set(nextActiveToasts))
   }, [])
 
   const getToastsByPosition = useCallback((position: string) => {
@@ -114,11 +152,12 @@ export const useToastState = () => {
   }, [activeToasts])
 
   const executeToastAction = useCallback((toastId: string) => {
-    const toast = toasts.find(t => t.id === toastId)
-    if (toast && toast.action) {
+    const toast = toasts.find(currentToast => currentToast.id === toastId)
+    if (toast?.action) {
       toast.action.onClick()
       return true
     }
+
     return false
   }, [toasts])
 

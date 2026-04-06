@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/auth/useAuth';
 import { googleCalendarRepository } from '../core/repositories/GoogleCalendarRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import type { EventType } from '../core/domain/types';
+import { PublicVoucherService } from '../core/domain/PublicVoucherService';
 
 export const useEventSync = () => {
   const { currentUser, googleAccessToken } = useAuth();
@@ -28,6 +29,12 @@ export const useEventSync = () => {
   }, [currentUser, googleAccessToken]);
 
   const syncEvent = useCallback(async (event: EventType) => {
+    try {
+      await PublicVoucherService.syncForEvent(event.id);
+    } catch (publicVoucherError) {
+      console.error('Public voucher sync failed:', publicVoucherError);
+    }
+
     if (
       !currentUser?.calendarSettings?.autoSync ||
       !currentUser?.calendarSettings?.calendarId ||

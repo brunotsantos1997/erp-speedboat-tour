@@ -1,7 +1,9 @@
-// src/viewmodels/VoucherAppearanceViewModel.ts
 import { useState, useEffect, useCallback } from 'react';
 import type { VoucherAppearanceData } from '../core/repositories/VoucherAppearanceRepository';
 import { VoucherAppearanceRepository } from '../core/repositories/VoucherAppearanceRepository';
+
+const isAllowedWatermarkUrl = (value: string) =>
+  /^(https?:\/\/|\/)[^\s]+$/i.test(value.trim());
 
 export const useVoucherAppearanceViewModel = () => {
   const [appearanceData, setAppearanceData] = useState<VoucherAppearanceData | null>(null);
@@ -11,7 +13,7 @@ export const useVoucherAppearanceViewModel = () => {
   const repository = VoucherAppearanceRepository.getInstance();
 
   useEffect(() => {
-    repository.get().catch(() => setError('Falha ao carregar aparência do voucher.'));
+    repository.get().catch(() => setError('Falha ao carregar aparencia do voucher.'));
 
     const unsubscribe = repository.subscribe((data) => {
       setAppearanceData(data);
@@ -21,41 +23,54 @@ export const useVoucherAppearanceViewModel = () => {
     return unsubscribe;
   }, [repository]);
 
-  const updateWatermark = useCallback(
-    async (file: File) => {
-      if (!appearanceData) return;
+  const updateWatermarkUrl = useCallback(
+    async (watermarkImageUrl: string) => {
+      const trimmedUrl = watermarkImageUrl.trim();
+
+      if (!trimmedUrl) {
+        throw new Error('Informe uma URL publica ou caminho relativo da aplicacao.');
+      }
+
+      if (!isAllowedWatermarkUrl(trimmedUrl)) {
+        throw new Error('Use uma URL publica iniciando com http(s):// ou um caminho relativo iniciando com /.');
+      }
 
       try {
-        // TODO: Implement upload to Firebase Storage and get URL
-        // For now, keep base64 as fallback during migration
-        const base64Image = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-        });
-
-        // Store both for backward compatibility during migration
-        const updatedData: VoucherAppearanceData = { 
-          ...appearanceData, 
-          watermarkImageUrl: null, // Will be updated when storage upload is implemented
-          watermarkImageBase64: base64Image 
+        const updatedData: VoucherAppearanceData = {
+          id: appearanceData?.id || 'default',
+          watermarkImageUrl: trimmedUrl,
+          watermarkImageBase64: null
         };
         await repository.update(updatedData);
         setAppearanceData(updatedData);
-        return base64Image;
-      } catch (e) {
-        setError('Falha ao atualizar marca d\'água.');
-        throw e;
+        setError(null);
+        return trimmedUrl;
+      } catch (updateError) {
+        setError('Falha ao atualizar marca d\'agua.');
+        throw updateError;
       }
     },
     [appearanceData, repository]
   );
 
+  const clearWatermark = useCallback(async () => {
+    const updatedData: VoucherAppearanceData = {
+      id: appearanceData?.id || 'default',
+      watermarkImageUrl: null,
+      watermarkImageBase64: null
+    };
+
+    await repository.update(updatedData);
+    setAppearanceData(updatedData);
+    setError(null);
+  }, [appearanceData, repository]);
+
   return {
     appearanceData,
     isLoading,
     error,
-    updateWatermark,
+    hasLegacyBase64Watermark: Boolean(appearanceData?.watermarkImageBase64 && !appearanceData?.watermarkImageUrl),
+    updateWatermarkUrl,
+    clearWatermark
   };
 };

@@ -70,6 +70,15 @@ export const useDashboardState = () => {
     [upcomingEvents]
   );
 
+  const todayEvents = useMemo(() =>
+    upcomingEvents.filter(event => isSameDay(new Date(event.date + 'T00:00'), today)),
+    [today, upcomingEvents]
+  );
+
+  const totalEvents = eventsForPeriod.length;
+  const completedEvents = eventsForPeriod.filter(event => event.status === 'COMPLETED').length;
+  const cancelledEvents = eventsForPeriod.filter(event => event.status === 'CANCELLED').length;
+
   // State setters
   const setEventsData = useCallback((events: EventType[]) => {
     setEventsForPeriod(events);
@@ -102,12 +111,21 @@ export const useDashboardState = () => {
     upcomingEvents,
     eventsForSelectedDate,
     eventsThisWeek,
+    weekEvents: eventsThisWeek,
+    todayEvents,
     pendingPayments,
     monthlyStats,
     calendarEvents,
+    totalEvents,
+    completedEvents,
+    cancelledEvents,
 
     // Actions
     setSelectedDate,
+    setEventsForPeriod: setEventsData,
+    setNotificationEvents: setNotificationsData,
+    setAllPayments: setPaymentsData,
+    setIsLoading: setLoading,
     setEventsData,
     setNotificationsData,
     setPaymentsData,

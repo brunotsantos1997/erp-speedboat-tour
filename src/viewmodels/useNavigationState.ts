@@ -1,42 +1,77 @@
 import { useState, useCallback } from 'react'
 
+type Breadcrumb = {
+  label: string
+  path: string
+}
+
+const DEFAULT_BREADCRUMBS: Breadcrumb[] = [{ label: 'Inicio', path: '/dashboard' }]
+
 // Mock do ViewModel para testes
 export const useNavigationState = () => {
   const [currentPath, setCurrentPath] = useState('/dashboard')
   const [previousPath, setPreviousPath] = useState<string | null>(null)
   const [navigationHistory, setNavigationHistory] = useState<string[]>(['/dashboard'])
-  const [breadcrumbs, setBreadcrumbs] = useState<any[]>([{ label: 'Início', path: '/dashboard' }])
+  const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>(DEFAULT_BREADCRUMBS)
   const [isNavigating, setIsNavigating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [navigationStack] = useState<any[]>([])
+  const [navigationStack] = useState<string[]>([])
 
-  const navigate = useCallback((path: string, _state?: any) => {
+  const generateBreadcrumbs = useCallback((path: string) => {
+    const breadcrumbConfig: Record<string, Breadcrumb[]> = {
+      '/dashboard': DEFAULT_BREADCRUMBS,
+      '/events': [
+        { label: 'Inicio', path: '/dashboard' },
+        { label: 'Eventos', path: '/events' }
+      ],
+      '/events/create': [
+        { label: 'Inicio', path: '/dashboard' },
+        { label: 'Eventos', path: '/events' },
+        { label: 'Novo Evento', path: '/events/create' }
+      ],
+      '/clients': [
+        { label: 'Inicio', path: '/dashboard' },
+        { label: 'Clientes', path: '/clients' }
+      ],
+      '/boats': [
+        { label: 'Inicio', path: '/dashboard' },
+        { label: 'Barcos', path: '/boats' }
+      ],
+      '/finance': [
+        { label: 'Inicio', path: '/dashboard' },
+        { label: 'Financeiro', path: '/finance' }
+      ]
+    }
+
+    setBreadcrumbs(breadcrumbConfig[path] || DEFAULT_BREADCRUMBS)
+  }, [])
+
+  const navigate = useCallback((path: string, _state?: unknown) => {
     setIsNavigating(true)
     setPreviousPath(currentPath)
     setCurrentPath(path)
-    setNavigationHistory((prev: any) => [...prev, path])
-    
-    // Simular navegação assíncrona
+    setNavigationHistory(prev => [...prev, path])
+
     setTimeout(() => {
       setIsNavigating(false)
       generateBreadcrumbs(path)
     }, 100)
-  }, [currentPath])
+  }, [currentPath, generateBreadcrumbs])
 
   const goBack = useCallback(() => {
-    if (navigationHistory.length > 1) {
-      const newHistory = [...navigationHistory]
-      newHistory.pop()
-      const previousPath = newHistory[newHistory.length - 1]
-      setNavigationHistory(newHistory)
-      setCurrentPath(previousPath)
-      setPreviousPath(currentPath)
-      generateBreadcrumbs(previousPath)
-    }
-  }, [navigationHistory, currentPath])
+    if (navigationHistory.length <= 1) return
+
+    const newHistory = [...navigationHistory]
+    newHistory.pop()
+    const nextPreviousPath = newHistory[newHistory.length - 1]
+
+    setNavigationHistory(newHistory)
+    setCurrentPath(nextPreviousPath)
+    setPreviousPath(currentPath)
+    generateBreadcrumbs(nextPreviousPath)
+  }, [navigationHistory, currentPath, generateBreadcrumbs])
 
   const goForward = useCallback(() => {
-    // Implementação simplificada
     return false
   }, [])
 
@@ -44,45 +79,15 @@ export const useNavigationState = () => {
     setPreviousPath(currentPath)
     setCurrentPath(path)
     generateBreadcrumbs(path)
-  }, [currentPath])
+  }, [currentPath, generateBreadcrumbs])
 
   const reload = useCallback(() => {
     setIsLoading(true)
     setTimeout(() => setIsLoading(false), 500)
   }, [])
 
-  const generateBreadcrumbs = useCallback((path: string) => {
-    const breadcrumbConfig: Record<string, any[]> = {
-      '/dashboard': [{ label: 'Início', path: '/dashboard' }],
-      '/events': [
-        { label: 'Início', path: '/dashboard' },
-        { label: 'Eventos', path: '/events' }
-      ],
-      '/events/create': [
-        { label: 'Início', path: '/dashboard' },
-        { label: 'Eventos', path: '/events' },
-        { label: 'Novo Evento', path: '/events/create' }
-      ],
-      '/clients': [
-        { label: 'Início', path: '/dashboard' },
-        { label: 'Clientes', path: '/clients' }
-      ],
-      '/boats': [
-        { label: 'Início', path: '/dashboard' },
-        { label: 'Barcos', path: '/boats' }
-      ],
-      '/finance': [
-        { label: 'Início', path: '/dashboard' },
-        { label: 'Financeiro', path: '/finance' }
-      ]
-    }
-
-    const config = breadcrumbConfig[path] || [{ label: 'Início', path: '/dashboard' }]
-    setBreadcrumbs(config)
-  }, [])
-
   const canGoBack = navigationHistory.length > 1
-  const canGoForward = false // Implementação simplificada
+  const canGoForward = false
 
   const canAccessRoute = useCallback((path: string, userRole: string, isAuthenticated: boolean) => {
     const routeProtection: Record<string, { requiredRole: string | null; authenticated: boolean }> = {
@@ -98,7 +103,6 @@ export const useNavigationState = () => {
 
     const protection = routeProtection[path]
     if (!protection) return false
-
     if (protection.authenticated && !isAuthenticated) return false
     if (!protection.authenticated && isAuthenticated) return false
     if (protection.requiredRole && userRole !== protection.requiredRole) return false

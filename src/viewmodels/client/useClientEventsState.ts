@@ -1,6 +1,7 @@
 // src/viewmodels/client/useClientEventsState.ts
 import { useState, useEffect, useCallback } from 'react';
 import type { EventType, ClientProfile } from '../../core/domain/types';
+import { EventStatusService } from '../../core/domain/EventStatusService';
 import { eventRepository } from '../../core/repositories/EventRepository';
 import { useEventSync } from '../useEventSync';
 import { logger } from '../../core/common/Logger';
@@ -11,14 +12,12 @@ export const useClientEventsState = (selectedClient: ClientProfile | null) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const processAutoCancel = useCallback(async (events: EventType[]) => {
-    const now = Date.now();
-    const twentyFourHours = 24 * 60 * 60 * 1000;
     const processedEvents: EventType[] = [];
 
     for (const event of events) {
-      if (event.status === 'PRE_SCHEDULED' && event.preScheduledAt && (now - event.preScheduledAt > twentyFourHours)) {
+      const cancelledEvent = EventStatusService.getAutoCancelledEvent(event);
+      if (cancelledEvent) {
         try {
-          const cancelledEvent = { ...event, status: 'CANCELLED' as const, autoCancelled: true };
           const savedEvent = await eventRepository.updateEvent(cancelledEvent);
           await syncEvent(savedEvent);
           processedEvents.push(savedEvent);
@@ -26,7 +25,7 @@ export const useClientEventsState = (selectedClient: ClientProfile | null) => {
           logger.info('Auto-cancelled client event', {
             eventId: event.id,
             preScheduledAt: event.preScheduledAt,
-            cancelledAt: now
+            cancelledAt: Date.now()
           });
         } catch (error) {
           logger.error('Failed to auto-cancel client event', error as Error, { 

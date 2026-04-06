@@ -1,53 +1,74 @@
 import { useState, useCallback } from 'react'
 
+type FormValues = Record<string, unknown>
+type FieldErrors = Record<string, string[]>
+type TouchedFields = Record<string, boolean>
+
+interface ValidationRule {
+  required?: boolean
+  minLength?: number
+  maxLength?: number
+  pattern?: RegExp
+  min?: number
+  max?: number
+}
+
+type ValidationRules = Record<string, ValidationRule>
+type SubmitHandler<TValues extends FormValues> = (values: TValues) => Promise<unknown> | unknown
+
+const toComparableString = (value: unknown) => String(value ?? '')
+
 // Mock do ViewModel para testes
-export const useFormState = (initialValues: any = {}) => {
-  const [values, setValues] = useState(initialValues)
-  const [errors, setErrors] = useState<any>({})
-  const [touched, setTouched] = useState<any>({})
+export const useFormState = <TValues extends FormValues = FormValues>(initialValues: TValues = {} as TValues) => {
+  const [values, setValues] = useState<TValues>(initialValues)
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const [touched, setTouched] = useState<TouchedFields>({})
   const [dirty, setDirty] = useState(false)
   const [isValid, setIsValid] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitCount, setSubmitCount] = useState(0)
   const [lastSubmittedAt, setLastSubmittedAt] = useState<Date | null>(null)
 
-  const setValue = useCallback((field: string, value: any) => {
-    setValues((prev: any) => ({ ...prev, [field]: value }))
-    setTouched((prev: any) => ({ ...prev, [field]: true }))
+  const setValue = useCallback((field: string, value: unknown) => {
+    setValues(prev => ({ ...prev, [field]: value }) as TValues)
+    setTouched(prev => ({ ...prev, [field]: true }))
     setDirty(true)
   }, [])
 
   const setError = useCallback((field: string, error: string[] | null) => {
-    setErrors((prev: any) => {
+    setErrors(prev => {
       const newErrors = { ...prev }
+
       if (error) {
         newErrors[field] = error
       } else {
         delete newErrors[field]
       }
+
       return newErrors
     })
   }, [])
 
-  const validateField = useCallback((field: string, value: any, rules: any) => {
+  const validateField = useCallback((field: string, value: unknown, rules?: ValidationRule) => {
     if (!rules) return null
 
     const fieldErrors: string[] = []
+    const stringValue = toComparableString(value)
 
-    if (rules.required && (!value || value.toString().trim() === '')) {
-      fieldErrors.push(`${field} é obrigatório`)
+    if (rules.required && stringValue.trim() === '') {
+      fieldErrors.push(`${field} e obrigatorio`)
     }
 
-    if (rules.minLength && value.toString().length < rules.minLength) {
+    if (rules.minLength && stringValue.length < rules.minLength) {
       fieldErrors.push(`${field} deve ter pelo menos ${rules.minLength} caracteres`)
     }
 
-    if (rules.maxLength && value.toString().length > rules.maxLength) {
-      fieldErrors.push(`${field} deve ter no máximo ${rules.maxLength} caracteres`)
+    if (rules.maxLength && stringValue.length > rules.maxLength) {
+      fieldErrors.push(`${field} deve ter no maximo ${rules.maxLength} caracteres`)
     }
 
-    if (rules.pattern && !rules.pattern.test(value.toString())) {
-      fieldErrors.push(`${field} tem formato inválido`)
+    if (rules.pattern && !rules.pattern.test(stringValue)) {
+      fieldErrors.push(`${field} tem formato invalido`)
     }
 
     if (rules.min !== undefined && Number(value) < rules.min) {
@@ -55,20 +76,20 @@ export const useFormState = (initialValues: any = {}) => {
     }
 
     if (rules.max !== undefined && Number(value) > rules.max) {
-      fieldErrors.push(`${field} deve ser no máximo ${rules.max}`)
+      fieldErrors.push(`${field} deve ser no maximo ${rules.max}`)
     }
 
     return fieldErrors.length > 0 ? fieldErrors : null
   }, [])
 
-  const validateForm = useCallback((validationRules: any) => {
-    const formErrors: Record<string, string[]> = {}
+  const validateForm = useCallback((validationRules: ValidationRules) => {
+    const formErrors: FieldErrors = {}
     let formIsValid = true
 
     Object.keys(validationRules).forEach(field => {
       const value = values[field]
       const fieldErrors = validateField(field, value, validationRules[field])
-      
+
       if (fieldErrors) {
         formErrors[field] = fieldErrors
         formIsValid = false
@@ -81,11 +102,11 @@ export const useFormState = (initialValues: any = {}) => {
     return { isValid: formIsValid, errors: formErrors }
   }, [values, validateField])
 
-  const submitForm = useCallback(async (onSubmit: Function, validationRules?: any) => {
+  const submitForm = useCallback(async (onSubmit: SubmitHandler<TValues>, validationRules?: ValidationRules) => {
     if (validationRules) {
       const validation = validateForm(validationRules)
       if (!validation.isValid) {
-        throw new Error('Formulário inválido')
+        throw new Error('Formulario invalido')
       }
     }
 
@@ -93,13 +114,9 @@ export const useFormState = (initialValues: any = {}) => {
 
     try {
       await onSubmit(values)
-      
       setSubmitCount(prev => prev + 1)
       setLastSubmittedAt(new Date())
-      
       return { success: true }
-    } catch (error) {
-      throw error
     } finally {
       setIsSubmitting(false)
     }
@@ -135,15 +152,15 @@ export const useFormState = (initialValues: any = {}) => {
   }, [errors])
 
   const touchField = useCallback((field: string) => {
-    setTouched((prev: any) => ({ ...prev, [field]: true }))
+    setTouched(prev => ({ ...prev, [field]: true }))
   }, [])
 
   const touchAllFields = useCallback(() => {
     const allTouched = Object.keys(values).reduce((acc, field) => {
       acc[field] = true
       return acc
-    }, {} as Record<string, boolean>)
-    
+    }, {} as TouchedFields)
+
     setTouched(allTouched)
   }, [values])
 
@@ -151,7 +168,7 @@ export const useFormState = (initialValues: any = {}) => {
     setErrors({})
   }, [])
 
-  const updateValues = useCallback((newValues: any) => {
+  const updateValues = useCallback((newValues: TValues) => {
     setValues(newValues)
     setDirty(true)
   }, [])

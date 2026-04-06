@@ -1,12 +1,7 @@
-// src/viewmodels/useVoucherViewModel.ts
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import type { EventType, CompanyData, VoucherTerms, Payment } from '../core/domain/types';
-import { eventRepository } from '../core/repositories/EventRepository';
-import { CompanyDataRepository } from '../core/repositories/CompanyDataRepository';
-import { VoucherTermsRepository } from '../core/repositories/VoucherTermsRepository';
-import { VoucherAppearanceRepository } from '../core/repositories/VoucherAppearanceRepository';
-import { paymentRepository } from '../core/repositories/PaymentRepository';
+import type { CompanyData, EventType, Payment, VoucherTerms } from '../core/domain/types';
+import { PublicVoucherRepository } from '../core/repositories/PublicVoucherRepository';
 import { useModal } from '../ui/contexts/modal/useModal';
 
 interface VoucherDetails extends EventType {
@@ -17,6 +12,37 @@ interface VoucherDetails extends EventType {
   totalPaid: number;
   isFullyPaid: boolean;
 }
+
+const buildVoucherState = (
+  currentEvent: EventType,
+  currentPayments: Payment[],
+  reservationFeePercentage: number,
+  overrideName: string | null
+): VoucherDetails => {
+  const totalPaid = currentPayments.reduce((acc, payment) => acc + payment.amount, 0);
+  const reservationFee = currentEvent.total * (reservationFeePercentage / 100);
+  const displaySignal = Math.max(reservationFee, totalPaid);
+  const remainingReservationFee = Math.max(0, reservationFee - totalPaid);
+  const remainingBalance = Math.max(0, currentEvent.total - totalPaid);
+  const parseTime = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours + minutes / 60;
+  };
+
+  return {
+    ...currentEvent,
+    client: {
+      ...currentEvent.client,
+      name: overrideName || currentEvent.client.name
+    },
+    reservationFee: displaySignal,
+    remainingReservationFee,
+    remainingBalance,
+    durationHours: parseTime(currentEvent.endTime) - parseTime(currentEvent.startTime),
+    totalPaid,
+    isFullyPaid: totalPaid >= currentEvent.total
+  };
+};
 
 export const useVoucherViewModel = () => {
   const { eventId } = useParams<{ eventId: string }>();
@@ -32,147 +58,99 @@ export const useVoucherViewModel = () => {
 
   useEffect(() => {
     if (!eventId) {
-      setError('ID do evento não fornecido.');
+      setError('ID do evento nao fornecido.');
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
+    const repository = PublicVoucherRepository.getInstance();
 
-    const companyRepo = CompanyDataRepository.getInstance();
-    const termsRepo = VoucherTermsRepository.getInstance();
-    const appearanceRepo = VoucherAppearanceRepository.getInstance();
-
-    // Public voucher should work without authentication - repositories handle their own initialization
-    const unsubs: (() => void)[] = [];
-
-    unsubs.push(companyRepo.subscribe((data) => {
-      if (data) setCompanyData(data);
-    }));
-
-    unsubs.push(termsRepo.subscribe((data) => {
-      if (data) setVoucherTerms(data);
-    }));
-
-    unsubs.push(appearanceRepo.subscribe((data) => {
-      if (data) {
-        // Use imageUrl if available, fallback to base64 during migration
-        setWatermark(data.watermarkImageUrl || data.watermarkImageBase64 || null);
-      }
-    }));
-
-    let currentEvent: EventType | undefined;
-    let currentPayments: Payment[] = [];
-
-    const updateVoucherState = () => {
-      if (!currentEvent) return;
-
-      const totalPaid = currentPayments.reduce((acc, p) => acc + p.amount, 0);
-      const reservationFeePercentage = companyData?.reservationFeePercentage || 30;
-      const reservationFee = currentEvent.total * (reservationFeePercentage / 100);
-
-      const displaySignal = Math.max(reservationFee, totalPaid);
-      const remainingReservationFee = Math.max(0, reservationFee - totalPaid);
-      const remainingBalance = Math.max(0, currentEvent.total - totalPaid);
-
-      const parseTime = (time: string) => {
-        const [h, m] = time.split(':').map(Number);
-        return h + m / 60;
-      };
-      const durationHours = parseTime(currentEvent.endTime) - parseTime(currentEvent.startTime);
-
-      setVoucher({
-        ...currentEvent,
-        client: {
-          ...currentEvent.client,
-          name: overrideName || currentEvent.client.name
-        },
-        reservationFee: displaySignal,
-        remainingReservationFee,
-        remainingBalance,
-        durationHours,
-        totalPaid,
-        isFullyPaid: totalPaid >= currentEvent.total
+    repository.getByEventId(eventId)
+      .then((snapshot) => {
+        if (!snapshot) {
+          setError('Voucher publico nao encontrado.');
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {
+        setError('Falha ao carregar voucher publico.');
+        setIsLoading(false);
       });
 
-      if (overrideName || currentEvent.client?.name) {
-        document.title = `Voucher - ${overrideName || currentEvent.client.name}`;
-      }
-      setIsLoading(false);
-    };
-
-    unsubs.push(eventRepository.subscribeToId(eventId, (event) => {
-      if (event) {
-        currentEvent = event;
-        updateVoucherState();
-      } else {
-        setError('Evento não encontrado.');
+    const unsubscribe = repository.subscribeToEvent(eventId, (snapshot) => {
+      if (!snapshot) {
+        setError('Voucher publico nao encontrado.');
         setIsLoading(false);
+        return;
       }
-    }));
 
-    unsubs.push(paymentRepository.subscribeToEventPayments(eventId, (payments) => {
-      currentPayments = payments;
-      updateVoucherState();
-    }));
+      setCompanyData(snapshot.companyData as CompanyData | null);
+      setVoucherTerms(snapshot.voucherTerms);
+      setWatermark(snapshot.watermarkImageUrl);
+      setVoucher(buildVoucherState(
+        snapshot.event,
+        snapshot.payments,
+        snapshot.companyData?.reservationFeePercentage || 30,
+        overrideName
+      ));
 
-    return () => unsubs.forEach(fn => fn());
-  }, [eventId, companyData?.reservationFeePercentage, overrideName]);
+      if (!snapshot.companyData || !snapshot.voucherTerms) {
+        setError('A configuracao publica do voucher ainda nao foi concluida.');
+      } else {
+        setError(null);
+      }
+
+      document.title = `Voucher - ${overrideName || snapshot.event.client.name}`;
+      setIsLoading(false);
+    });
+
+    return unsubscribe;
+  }, [eventId, overrideName]);
 
   const handleDownloadPdf = async () => {
     const element = document.getElementById('voucher-content');
     const button = document.getElementById('download-pdf-button') as HTMLButtonElement;
     if (!element || !voucher) return;
 
-    // Disable button and show loading state
     if (button) {
       button.disabled = true;
       button.style.opacity = '0.5';
-      button.innerHTML = '<span class="animate-spin">⏳</span> Gerando PDF...';
+      button.innerHTML = '<span class="animate-spin">...</span> Gerando PDF...';
     }
 
     try {
-      // Dynamic import to avoid loading the heavy PDF library until needed
       const html2pdf = (await import('html2pdf.js')).default;
 
       const opt = {
         margin: 0.5,
         filename: `voucher-${voucher.client.name.replace(/\s+/g, '-')}-${voucher.id}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
+        html2canvas: {
+          scale: 2,
           useCORS: true,
-          logging: false, // Reduce console noise
+          logging: false,
           letterRendering: true
         },
-        jsPDF: { 
-          unit: 'in', 
-          format: 'letter', 
+        jsPDF: {
+          unit: 'in',
+          format: 'letter',
           orientation: 'portrait' as const,
-          compress: true // Reduce file size
+          compress: true
         }
       };
 
-      // Show progress feedback
-      console.log('Iniciando geração do PDF...');
-      
       await html2pdf()
         .from(element)
         .set(opt)
         .save();
-      
-      console.log('PDF gerado com sucesso');
-    } catch (err) {
-      console.error('Erro ao gerar PDF:', err);
-      
-      // More descriptive error message
-      const errorMessage = err instanceof Error 
-        ? `Ocorreu um erro ao gerar o PDF: ${err.message}` 
+    } catch (downloadError) {
+      const errorMessage = downloadError instanceof Error
+        ? `Ocorreu um erro ao gerar o PDF: ${downloadError.message}`
         : 'Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.';
-      
+
       await showAlert('Erro no PDF', errorMessage);
     } finally {
-      // Restore button state
       if (button) {
         button.disabled = false;
         button.style.opacity = '1';
@@ -193,6 +171,6 @@ export const useVoucherViewModel = () => {
     watermark,
     isLoading,
     error,
-    handleDownloadPdf,
+    handleDownloadPdf
   };
 };

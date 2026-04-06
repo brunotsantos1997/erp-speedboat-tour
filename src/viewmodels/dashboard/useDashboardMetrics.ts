@@ -2,8 +2,9 @@ import { useState, useCallback } from 'react'
 
 // Mock do ViewModel para testes
 export const useDashboardMetrics = () => {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setErrorState] = useState<string | null>(null)
+  const [metrics, setMetrics] = useState<Record<string, unknown>>({})
   const [financialMetrics, setFinancialMetrics] = useState<any>(null)
   const [performanceMetrics, setPerformanceMetrics] = useState<any>(null)
   const [periodMetrics, setPeriodMetrics] = useState<any>(null)
@@ -14,7 +15,7 @@ export const useDashboardMetrics = () => {
 
   const refreshMetrics = useCallback(async () => {
     setLoading(true)
-    setError(null)
+    setErrorState(null)
     try {
       await new Promise(resolve => setTimeout(resolve, 1000))
       
@@ -40,11 +41,15 @@ export const useDashboardMetrics = () => {
 
       setFinancialMetrics(updatedFinancialMetrics)
       setPerformanceMetrics(updatedPerformanceMetrics)
+      setMetrics({
+        ...updatedFinancialMetrics,
+        ...updatedPerformanceMetrics
+      })
       setLastUpdate(new Date())
       
       return { success: true }
     } catch (error) {
-      setError('Failed to refresh metrics')
+      setErrorState('Failed to refresh metrics')
       return { success: false, error }
     } finally {
       setLoading(false)
@@ -65,7 +70,7 @@ export const useDashboardMetrics = () => {
       setPeriodMetrics(updatedPeriodMetrics)
       return { success: true }
     } catch (error) {
-      setError('Failed to update period')
+      setErrorState('Failed to update period')
       return { success: false, error }
     } finally {
       setLoading(false)
@@ -92,16 +97,27 @@ export const useDashboardMetrics = () => {
 
       return { success: true, data: JSON.stringify(exportData, null, 2), format }
     } catch (error) {
-      setError('Failed to export metrics')
+      setErrorState('Failed to export metrics')
       return { success: false, error }
     } finally {
       setLoading(false)
     }
   }, [financialMetrics, performanceMetrics, periodMetrics, trends])
 
+  const updateMetrics = useCallback((nextMetrics: Record<string, unknown>) => {
+    setMetrics(nextMetrics)
+    setLoading(false)
+  }, [])
+
+  const setError = useCallback((nextError: string | null) => {
+    setErrorState(nextError)
+    setLoading(false)
+  }, [])
+
   return {
     loading,
     error,
+    metrics,
     financialMetrics,
     performanceMetrics,
     periodMetrics,
@@ -109,8 +125,10 @@ export const useDashboardMetrics = () => {
     targetComparison,
     alerts,
     lastUpdate,
+    setError,
     refreshMetrics,
     updatePeriod,
+    updateMetrics,
     exportMetrics
   }
 }

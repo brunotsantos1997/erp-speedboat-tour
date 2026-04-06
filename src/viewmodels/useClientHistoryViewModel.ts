@@ -6,10 +6,13 @@ import type { ClientProfile, EventType, Payment, PaymentMethod, PaymentType } fr
 import { clientRepository } from '../core/repositories/ClientRepository';
 import { eventRepository } from '../core/repositories/EventRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
+import { EventStatusService } from '../core/domain/EventStatusService';
+import { TransactionService } from '../core/domain/TransactionService';
 import { format } from 'date-fns';
 import { useEventSync } from './useEventSync';
 import { useModal } from '../ui/contexts/modal/useModal';
 import { logger } from '../core/common/Logger';
+import { PublicVoucherService } from '../core/domain/PublicVoucherService';
 
 export const useClientHistoryViewModel = () => {
   const { currentUser } = useAuth();
@@ -71,13 +74,11 @@ export const useClientHistoryViewModel = () => {
 
     // Initial fetch for auto-cancel check
     eventRepository.getEventsByClient(selectedClient.id).then(async (events) => {
-      const now = Date.now();
-      const twentyFourHours = 24 * 60 * 60 * 1000;
-
       for (const event of events) {
-        if (event.status === 'PRE_SCHEDULED' && event.preScheduledAt && (now - event.preScheduledAt > twentyFourHours)) {
+        const cancelledEvent = EventStatusService.getAutoCancelledEvent(event);
+        if (cancelledEvent) {
           try {
-            const savedEvent = await eventRepository.updateEvent({ ...event, status: 'CANCELLED', autoCancelled: true });
+            const savedEvent = await eventRepository.updateEvent(cancelledEvent);
             await syncEvent(savedEvent);
           } catch (error: unknown) {
             logger.error('Failed to auto-cancel event', error as Error, { eventId: event.id, operation: 'auto-cancel' });
@@ -114,25 +115,30 @@ export const useClientHistoryViewModel = () => {
       : 'Tem certeza que deseja cancelar este evento?';
 
     if (await confirm('Confirmar Cancelamento', message)) {
-      const newStatus = eventToUpdate.paymentStatus === 'CONFIRMED' ? 'PENDING_REFUND' : 'CANCELLED';
-      const updatedEvent = { ...eventToUpdate, status: newStatus as EventType['status'] };
-      const savedEvent = await eventRepository.updateEvent(updatedEvent);
-      await syncEvent(savedEvent);
+      const result = await TransactionService.cancelEventWithRefunds(
+        eventId,
+        'Cancelado pelo histórico do cliente',
+        currentUser?.id || 'system',
+        currentUser?.name || 'ClientHistory'
+      );
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao cancelar evento.');
+      }
+
+      const updatedEvent = await eventRepository.getById(eventId);
+      if (updatedEvent) {
+        await syncEvent(updatedEvent);
+      }
     }
-  }, [clientEvents, confirm, syncEvent]);
+  }, [clientEvents, confirm, currentUser?.id, currentUser?.name, syncEvent]);
 
   const initiatePayment = useCallback(async (eventId: string, type: 'DOWN_PAYMENT' | 'BALANCE' | 'FULL') => {
     const event = clientEvents.find(e => e.id === eventId);
     if (event) {
         const payments = await paymentRepository.getByEventId(eventId);
         const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
-
-        let suggested = 0;
-        if (type === 'DOWN_PAYMENT') {
-          suggested = Math.max(0, (event.total * 0.3) - totalPaid);
-        } else {
-          suggested = Math.max(0, event.total - totalPaid);
-        }
+        const suggested = EventStatusService.getSuggestedPaymentAmount(event, totalPaid, type);
 
         setActiveEventForPayment(event);
         setPaymentType(type);
@@ -145,33 +151,28 @@ export const useClientHistoryViewModel = () => {
     if (!activeEventForPayment) return;
 
     try {
-        const eventId = activeEventForPayment.id;
-
-        await paymentRepository.add({
-            eventId,
+        const result = await TransactionService.confirmPaymentAndUpdateStatus(
+          activeEventForPayment.id,
+          {
+            eventId: activeEventForPayment.id,
             amount,
             method,
             type,
             date: format(new Date(), 'yyyy-MM-dd'),
             timestamp: Date.now()
-        });
+          },
+          currentUser?.id || 'system',
+          currentUser?.name || 'ClientHistory'
+        );
 
-        const updatedEvent = { ...activeEventForPayment };
-        const payments = await paymentRepository.getByEventId(eventId);
-        const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
-
-        if (totalPaid > 0 && updatedEvent.status === 'PRE_SCHEDULED') {
-            updatedEvent.status = 'SCHEDULED';
+        if (!result.success || !result.eventId) {
+          throw new Error(result.error || 'Erro ao confirmar pagamento.');
         }
 
-        if (totalPaid >= updatedEvent.total) {
-            updatedEvent.paymentStatus = 'CONFIRMED';
-        } else {
-            updatedEvent.paymentStatus = 'PENDING';
+        const savedEvent = await eventRepository.getById(result.eventId);
+        if (savedEvent) {
+          await syncEvent(savedEvent);
         }
-
-        const savedEvent = await eventRepository.updateEvent(updatedEvent);
-        await syncEvent(savedEvent);
 
         setIsPaymentModalOpen(false);
         setActiveEventForPayment(null);
@@ -179,18 +180,14 @@ export const useClientHistoryViewModel = () => {
       logger.error('Failed to record payment', error as Error, { eventId: activeEventForPayment?.id, amount, method, type, operation: 'confirmPaymentRecord' });
       throw error;
     }
-  }, [activeEventForPayment, syncEvent]);
+  }, [activeEventForPayment, currentUser?.id, currentUser?.name, syncEvent]);
 
   const revertCancellation = useCallback(async (eventId: string) => {
     try {
       const eventToUpdate = clientEvents.find(e => e.id === eventId);
       if (!eventToUpdate) return;
 
-      const updatedEvent: EventType = {
-        ...eventToUpdate,
-        status: 'SCHEDULED',
-        autoCancelled: false
-      };
+      const updatedEvent = EventStatusService.revertCancellation(eventToUpdate);
 
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
       await syncEvent(savedEvent);
@@ -221,6 +218,7 @@ export const useClientHistoryViewModel = () => {
     await paymentRepository.update(paymentId, data);
     const payments = await paymentRepository.getByEventId(activeEventForQuickEdit.id);
     setActiveEventPayments(payments);
+    await PublicVoucherService.syncForEvent(activeEventForQuickEdit.id);
   }, [activeEventForQuickEdit]);
 
   const deletePayment = useCallback(async (paymentId: string) => {
@@ -228,6 +226,7 @@ export const useClientHistoryViewModel = () => {
     await paymentRepository.remove(paymentId);
     const payments = await paymentRepository.getByEventId(activeEventForQuickEdit.id);
     setActiveEventPayments(payments);
+    await PublicVoucherService.syncForEvent(activeEventForQuickEdit.id);
   }, [activeEventForQuickEdit]);
 
   const addPaymentToEvent = useCallback(async (data: { amount: number; method: PaymentMethod; type: PaymentType; date: string }) => {
@@ -239,6 +238,7 @@ export const useClientHistoryViewModel = () => {
     });
     const payments = await paymentRepository.getByEventId(activeEventForQuickEdit.id);
     setActiveEventPayments(payments);
+    await PublicVoucherService.syncForEvent(activeEventForQuickEdit.id);
   }, [activeEventForQuickEdit]);
 
   const deleteEventPermanently = useCallback(async (eventId: string) => {
@@ -257,6 +257,7 @@ export const useClientHistoryViewModel = () => {
       for (const p of payments) {
         await paymentRepository.remove(p.id);
       }
+      await PublicVoucherService.removeForEvent(eventId);
       // UI will update automatically via subscription in useEffect
     } catch (error) {
       console.error('Failed to delete event:', error);

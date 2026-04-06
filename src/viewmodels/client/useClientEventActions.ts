@@ -8,6 +8,9 @@ import { useModal } from '../../ui/contexts/modal/useModal';
 import { useToast } from '../../ui/contexts/toast/useToast';
 import { format } from 'date-fns';
 import { logger } from '../../core/common/Logger';
+import { EventStatusService } from '../../core/domain/EventStatusService';
+import { TransactionService } from '../../core/domain/TransactionService';
+import { PublicVoucherService } from '../../core/domain/PublicVoucherService';
 
 export const useClientEventActions = () => {
   const { syncEvent, deleteFromGoogle } = useEventSync();
@@ -26,13 +29,7 @@ export const useClientEventActions = () => {
     try {
       const payments = await paymentRepository.getByEventId(eventId);
       const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
-
-      let suggested = 0;
-      if (type === 'DOWN_PAYMENT') {
-        suggested = Math.max(0, (event.total * 0.3) - totalPaid);
-      } else {
-        suggested = Math.max(0, event.total - totalPaid);
-      }
+      const suggested = EventStatusService.getSuggestedPaymentAmount(event, totalPaid, type);
 
       onOpenPaymentModal(event, type, suggested);
     } catch (error) {
@@ -49,35 +46,27 @@ export const useClientEventActions = () => {
     onUpdateEvent: (event: EventType) => Promise<void>
   ) => {
     try {
-      // Add payment
-      await paymentRepository.add({
+      const result = await TransactionService.confirmPaymentAndUpdateStatus(
         eventId,
-        amount,
-        method,
-        type,
-        date: format(new Date(), 'yyyy-MM-dd'),
-        timestamp: Date.now()
-      });
+        {
+          eventId,
+          amount,
+          method,
+          type,
+          date: format(new Date(), 'yyyy-MM-dd'),
+          timestamp: Date.now()
+        },
+        'system',
+        'ClientEventActions'
+      );
 
-      // Update event status based on payment
-      const event = await eventRepository.getById(eventId);
-      if (!event) return;
-
-      const payments = await paymentRepository.getByEventId(eventId);
-      const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
-
-      const updatedEvent = { ...event };
-      if (totalPaid > 0 && updatedEvent.status === 'PRE_SCHEDULED') {
-        updatedEvent.status = 'SCHEDULED';
+      if (!result.success || !result.eventId) {
+        throw new Error(result.error || 'Erro ao confirmar pagamento.');
       }
 
-      if (totalPaid >= updatedEvent.total) {
-        updatedEvent.paymentStatus = 'CONFIRMED';
-      } else {
-        updatedEvent.paymentStatus = 'PENDING';
-      }
+      const updatedEvent = await eventRepository.getById(result.eventId);
+      if (!updatedEvent) return;
 
-      await eventRepository.updateEvent(updatedEvent);
       await syncEvent(updatedEvent);
       await onUpdateEvent(updatedEvent);
 
@@ -105,7 +94,11 @@ export const useClientEventActions = () => {
     if (!confirmed) return;
 
     try {
-      const cancelledEvent = { ...event, status: 'CANCELLED' as const, cancelledAt: Date.now() };
+      const cancelledEvent = {
+        ...event,
+        status: EventStatusService.getCancellationStatus(event),
+        cancelledAt: Date.now()
+      };
       const savedEvent = await eventRepository.updateEvent(cancelledEvent);
       await syncEvent(savedEvent);
       await onUpdateEvent(savedEvent);
@@ -127,7 +120,7 @@ export const useClientEventActions = () => {
     if (!event) return;
 
     try {
-      const revertedEvent = { ...event, status: 'SCHEDULED' as const, autoCancelled: false };
+      const revertedEvent = EventStatusService.revertCancellation(event);
       const savedEvent = await eventRepository.updateEvent(revertedEvent);
       await syncEvent(savedEvent);
       await onUpdateEvent(savedEvent);
@@ -161,6 +154,7 @@ export const useClientEventActions = () => {
       
       // Delete from database
       await eventRepository.remove(eventId);
+      await PublicVoucherService.removeForEvent(eventId);
       await onUpdateEvent();
 
       showToast('Evento excluído com sucesso!');

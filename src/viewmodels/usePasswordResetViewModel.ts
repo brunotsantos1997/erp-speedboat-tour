@@ -1,10 +1,9 @@
 import { useCallback } from 'react';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { PasswordResetService } from '../core/services/auth/PasswordResetService';
 
 export const usePasswordResetViewModel = () => {
   const requestPasswordReset = useCallback(async (email: string): Promise<void> => {
-    await sendPasswordResetEmail(auth, email);
+    await PasswordResetService.requestPasswordReset(email);
   }, []);
 
   return {

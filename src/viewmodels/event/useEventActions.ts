@@ -8,12 +8,15 @@ export const useEventActions = () => {
   const [isCreating, setIsCreating] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [errors, setErrors] = useState<string[]>([])
+  const seedEvents = useCallback((nextEvents: any[]) => {
+    setEvents(nextEvents)
+  }, [])
 
   const createEvent = useCallback(async (eventData: any) => {
     setLoading(true)
     setIsCreating(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await Promise.resolve()
       const newEvent = {
         id: `event-${Date.now()}`,
         ...eventData,
@@ -36,7 +39,7 @@ export const useEventActions = () => {
     setLoading(true)
     setIsEditing(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await Promise.resolve()
       setEvents(prev => prev.map(event => 
         event.id === eventId ? { ...event, ...updates, updatedAt: Date.now() } : event
       ))
@@ -52,7 +55,7 @@ export const useEventActions = () => {
   const cancelEvent = useCallback(async (eventId: string, reason: string) => {
     setLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await Promise.resolve()
       setEvents(prev => prev.map(event => 
         event.id === eventId ? {
           ...event,
@@ -73,7 +76,7 @@ export const useEventActions = () => {
   const duplicateEvent = useCallback(async (eventId: string, newDate: string) => {
     setLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 400))
+      await Promise.resolve()
       const originalEvent = events.find((e: any) => e.id === eventId)
       if (!originalEvent) return { success: false, error: 'Event not found' }
 
@@ -100,7 +103,7 @@ export const useEventActions = () => {
   const deleteEvent = useCallback(async (eventId: string) => {
     setLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await Promise.resolve()
       setEvents(prev => prev.filter(event => event.id !== eventId))
       return { success: true }
     } catch (error) {
@@ -215,7 +218,7 @@ export const useEventActions = () => {
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await Promise.resolve()
     } finally {
       setLoading(false)
     }
@@ -228,6 +231,7 @@ export const useEventActions = () => {
     isCreating,
     isEditing,
     errors,
+    seedEvents,
     createEvent,
     updateEvent,
     cancelEvent,
