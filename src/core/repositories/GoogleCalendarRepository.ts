@@ -1,5 +1,6 @@
 // src/core/repositories/GoogleCalendarRepository.ts
 import type { EventType } from '../domain/types';
+import { logger } from '../common/Logger';
 
 export interface GoogleCalendar {
   id: string;
@@ -52,7 +53,7 @@ class GoogleCalendarRepository {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Google Calendar Error:', errorData);
+      logger.error('Google Calendar Error', new Error(errorData.error?.message || 'Failed to sync event'), { status: response.status, errorData });
       if (response.status === 401) throw new Error('UNAUTHORIZED');
       throw new Error(errorData.error?.message || 'Failed to sync event');
     }
