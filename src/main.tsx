@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import './i18n'
 import App from './App.tsx'
-import { ToastProvider } from './ui/contexts/ToastContext'
-import { ModalProvider } from './ui/contexts/ModalContext'
-import { AuthProvider } from './contexts/AuthContext'
+import { ToastProvider } from './ui/contexts/toast/ToastProvider'
+import { ModalProvider } from './ui/contexts/modal/ModalProvider'
+import { AuthProvider } from './contexts/auth/AuthProvider'
 import { registerSW } from 'virtual:pwa-register'
 
 registerSW({ immediate: true })

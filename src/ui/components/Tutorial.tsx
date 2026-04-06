@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Joyride, { type Step, type CallBackProps, STATUS } from 'react-joyride';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth/useAuth';
 
 interface TutorialProps {
   tourId: string;

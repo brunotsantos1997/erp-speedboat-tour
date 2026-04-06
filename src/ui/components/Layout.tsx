@@ -3,10 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Menu, PlusCircle, Settings, Users, LayoutDashboard, Palette, UserCog, TrendingUp, LogOut, Wallet, Calendar } from 'lucide-react';
 import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth/useAuth';
 import { useGlobalSync } from '../../viewmodels/useGlobalSync';
 import { SettingsMenu } from './SettingsMenu';
 import { useTranslation } from 'react-i18next';
+import type { User } from '../../core/domain/User';
 
 
 const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string }> = ({ isOpen, onClose, appName }) => {
@@ -25,7 +26,7 @@ const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void; appName: string 
       const fetchPendingUsers = async () => {
         try {
           const users = await getAllUsers();
-          const pendingCount = users.filter(u => u.status === 'PENDING').length;
+          const pendingCount = users.filter((u: User) => u.status === 'PENDING').length;
           setPendingUsersCount(pendingCount);
         } catch (error) {
           console.error("Failed to fetch pending users:", error);
