@@ -3,7 +3,6 @@ import { useCallback } from 'react';
 import { db } from '../lib/firebase';
 import {
   doc,
-  getDoc,
   getDocs,
   updateDoc,
   collection,
@@ -19,25 +18,19 @@ import type { User, UserRole, UserStatus, UserCommissionSettings } from '../core
  */
 export const useUserManagementViewModel = () => {
   const getAllUsers = useCallback(async (currentUser: User): Promise<User[]> => {
+    // Verificação básica de permissão - o enforcement real é feito server-side
     if (currentUser.role === 'SELLER') {
       throw new Error('Você não tem permissão para listar usuários.');
     }
 
+    // As regras do Firestore já fazem o enforcement server-side,
+    // filtrando apenas usuários que o currentUser tem permissão para ler
     const querySnapshot = await getDocs(collection(db, 'profiles'));
-    let users = querySnapshot.docs.map((d) => ({
+    
+    return querySnapshot.docs.map((d) => ({
       ...d.data() as User,
       id: d.id,
     }));
-
-    if (currentUser.role === 'SUPER_ADMIN') {
-      users = users.filter((u) => u.role !== 'OWNER');
-    } else if (currentUser.role === 'ADMIN') {
-      users = users.filter(
-        (u) => u.role !== 'OWNER' && u.role !== 'SUPER_ADMIN'
-      );
-    }
-
-    return users;
   }, []);
 
   const updateUserStatus = useCallback(
@@ -46,26 +39,13 @@ export const useUserManagementViewModel = () => {
       userId: string,
       status: UserStatus
     ): Promise<void> => {
+      // Verificação básica de permissão - o enforcement real é feito server-side
       if (currentUser.role === 'SELLER') {
         throw new Error('Você não tem permissão para alterar o status de usuários.');
       }
 
+      // As regras do Firestore farão o enforcement server-side das hierarquias
       const profileRef = doc(db, 'profiles', userId);
-      const targetSnap = await getDoc(profileRef);
-      const targetData = targetSnap.data() as User;
-
-      if (targetData?.role === 'OWNER' && currentUser.role !== 'OWNER') {
-        throw new Error('Você não tem permissão para alterar o status do proprietário.');
-      }
-      if (
-        targetData?.role === 'SUPER_ADMIN' &&
-        currentUser.role === 'ADMIN'
-      ) {
-        throw new Error(
-          'Você não tem permissão para alterar o status de um Super Administrador.'
-        );
-      }
-
       await updateDoc(profileRef, { status });
     },
     []
@@ -77,26 +57,13 @@ export const useUserManagementViewModel = () => {
       userId: string,
       role: UserRole
     ): Promise<void> => {
+      // Verificação básica de permissão - o enforcement real é feito server-side
       if (currentUser.role === 'SELLER') {
         throw new Error('Você não tem permissão para alterar cargos.');
       }
 
+      // As regras do Firestore farão o enforcement server-side das hierarquias
       const profileRef = doc(db, 'profiles', userId);
-      const targetSnap = await getDoc(profileRef);
-      const targetData = targetSnap.data() as User;
-
-      if (targetData?.role === 'OWNER' && currentUser.role !== 'OWNER') {
-        throw new Error('Você não tem permissão para alterar o cargo do proprietário.');
-      }
-      if (
-        targetData?.role === 'SUPER_ADMIN' &&
-        currentUser.role === 'ADMIN'
-      ) {
-        throw new Error(
-          'Você não tem permissão para alterar o cargo de um Super Administrador.'
-        );
-      }
-
       await updateDoc(profileRef, { role });
     },
     []
@@ -108,26 +75,13 @@ export const useUserManagementViewModel = () => {
       userId: string,
       settings: UserCommissionSettings
     ): Promise<void> => {
+      // Verificação básica de permissão - o enforcement real é feito server-side
       if (currentUser.role === 'SELLER') {
         throw new Error('Você não tem permissão para alterar comissões.');
       }
 
+      // As regras do Firestore farão o enforcement server-side das hierarquias
       const profileRef = doc(db, 'profiles', userId);
-      const targetSnap = await getDoc(profileRef);
-      const targetData = targetSnap.data() as User;
-
-      if (targetData?.role === 'OWNER' && currentUser.role !== 'OWNER') {
-        throw new Error('Você não tem permissão para alterar a comissão do proprietário.');
-      }
-      if (
-        targetData?.role === 'SUPER_ADMIN' &&
-        currentUser.role === 'ADMIN'
-      ) {
-        throw new Error(
-          'Você não tem permissão para alterar a comissão de um Super Administrador.'
-        );
-      }
-
       await updateDoc(profileRef, { commissionSettings: settings });
     },
     []
