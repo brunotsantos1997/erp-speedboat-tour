@@ -1,7 +1,7 @@
 // src/core/repositories/CompanyDataRepository.ts
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { CompanyData, DayOfWeek } from '../domain/types';
+import type { CompanyData, DayOfWeek, BusinessHours } from '../domain/types';
 import type { User } from '../domain/User';
 
 export class CompanyDataRepository {
@@ -37,7 +37,7 @@ export class CompanyDataRepository {
         const fetchedData = { ...docSnap.data() as CompanyData, id: docSnap.id };
         // Ensure all business hours are present
         if (!fetchedData.businessHours) {
-          fetchedData.businessHours = {} as any;
+          fetchedData.businessHours = {} as BusinessHours;
         }
         const days: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         days.forEach(day => {
@@ -85,7 +85,7 @@ export class CompanyDataRepository {
       const fetchedData = { ...docSnap.data() as CompanyData, id: docSnap.id };
       // Ensure all business hours are present even if partially saved
       if (!fetchedData.businessHours) {
-        fetchedData.businessHours = {} as any;
+        fetchedData.businessHours = {} as BusinessHours;
       }
       const days: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       days.forEach(day => {

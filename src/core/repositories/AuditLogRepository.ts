@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, FieldValue } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { logger } from '../common/Logger';
 
@@ -11,10 +11,10 @@ export interface AuditLogEntry {
   resource?: string;
   collection?: string;
   docId?: string;
-  newData?: any;
-  oldData?: any;
-  context?: Record<string, any>;
-  timestamp: any;
+  newData?: unknown;
+  oldData?: unknown;
+  context?: Record<string, unknown>;
+  timestamp: FieldValue;
 }
 
 export const auditLogRepository = {

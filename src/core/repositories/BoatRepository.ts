@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Boat } from '../domain/types';
+import type { User } from '../domain/User';
 
 export interface IBoatRepository {
   getAll(): Promise<Boat[]>;
@@ -18,14 +19,14 @@ export interface IBoatRepository {
   update(boat: Boat): Promise<Boat>;
   remove(boatId: string): Promise<void>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(user?: User): void;
   subscribe(callback: (data: Boat[]) => void): Unsubscribe;
 }
 
 class BoatRepositoryImpl implements IBoatRepository {
   private static instance: BoatRepositoryImpl;
   private collectionName = 'boats';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -36,7 +37,7 @@ class BoatRepositoryImpl implements IBoatRepository {
     return BoatRepositoryImpl.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }
@@ -84,7 +85,7 @@ class BoatRepositoryImpl implements IBoatRepository {
     const { id, ...data } = updatedBoat;
     const docRef = doc(db, this.collectionName, id);
 
-    await updateDoc(docRef, data as any);
+    await updateDoc(docRef, data);
 
     return updatedBoat;
   }

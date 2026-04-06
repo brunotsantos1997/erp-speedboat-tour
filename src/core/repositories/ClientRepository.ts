@@ -147,7 +147,7 @@ class ClientRepositoryImpl implements IClientRepository {
     const { id, ...data } = updatedClient;
     const docRef = doc(db, this.collectionName, id);
 
-    await updateDoc(docRef, data as any);
+    await updateDoc(docRef, data);
 
     return updatedClient;
   }

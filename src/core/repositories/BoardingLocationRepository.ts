@@ -11,11 +11,12 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { BoardingLocation } from '../domain/types';
+import type { User } from '../domain/User';
 
 export class BoardingLocationRepository {
   private static instance: BoardingLocationRepository;
   private collectionName = 'boarding_locations';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -26,7 +27,7 @@ export class BoardingLocationRepository {
     return BoardingLocationRepository.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }
@@ -74,7 +75,7 @@ export class BoardingLocationRepository {
     const { id, ...data } = location;
     const docRef = doc(db, this.collectionName, id);
 
-    await updateDoc(docRef, data as any);
+    await updateDoc(docRef, data);
 
     return location;
   }

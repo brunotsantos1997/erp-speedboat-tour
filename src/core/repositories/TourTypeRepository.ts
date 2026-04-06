@@ -12,12 +12,13 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { TourType } from '../domain/types';
+import type { User } from '../domain/User';
 import { auditLogRepository } from './AuditLogRepository';
 
 export class TourTypeRepository {
   private static instance: TourTypeRepository;
   private collectionName = 'tour_types';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -28,7 +29,7 @@ export class TourTypeRepository {
     return TourTypeRepository.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }
@@ -82,7 +83,7 @@ export class TourTypeRepository {
     const oldDoc = await getDoc(docRef);
     const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
 
-    await updateDoc(docRef, data as any);
+    await updateDoc(docRef, data);
 
     await auditLogRepository.log({
       userId: this.currentUser?.id || 'unknown',

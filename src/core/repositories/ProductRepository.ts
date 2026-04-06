@@ -85,7 +85,7 @@ class ProductRepositoryImpl implements IProductRepository {
     const { id, ...data } = updatedProduct;
     const docRef = doc(db, this.collectionName, id);
 
-    await updateDoc(docRef, data as any);
+    await updateDoc(docRef, data);
 
     return updatedProduct;
   }

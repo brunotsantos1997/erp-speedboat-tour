@@ -101,7 +101,7 @@ class ExpenseCategoryRepositoryImpl implements IExpenseCategoryRepository {
     const oldDoc = await getDoc(docRef);
     const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
 
-    await updateDoc(docRef, data as any);
+    await updateDoc(docRef, data);
 
     await auditLogRepository.log({
       userId: this.currentUser?.id || 'unknown',

@@ -34,7 +34,7 @@ export class EventStatusService {
     totalPaid: number,
     payments: Payment[]
   ): EventType {
-    let updatedEvent = { ...event };
+    const updatedEvent = { ...event };
 
     // Rule 1: PRE_SCHEDULED -> SCHEDULED on first payment
     if (totalPaid > 0 && updatedEvent.status === 'PRE_SCHEDULED') {
