@@ -1,5 +1,5 @@
 // src/core/domain/EventStatusService.ts
-import type { EventType, Payment } from './types';
+import type { EventType, Payment, PaymentType } from './types';
 import { logger } from '../common/Logger';
 
 export class EventStatusService {
@@ -24,6 +24,21 @@ export class EventStatusService {
     }
 
     return shouldCancel;
+  }
+
+  /**
+   * Build the canonical auto-cancelled state when a pre-scheduled event expires.
+   */
+  static getAutoCancelledEvent(event: EventType): EventType | null {
+    if (!this.shouldAutoCancel(event)) {
+      return null;
+    }
+
+    return {
+      ...event,
+      status: 'CANCELLED',
+      autoCancelled: true
+    };
   }
 
   /**
@@ -53,6 +68,22 @@ export class EventStatusService {
   }
 
   /**
+   * Suggest the next amount to charge for a payment action.
+   */
+  static getSuggestedPaymentAmount(
+    event: EventType,
+    totalPaid: number,
+    type: PaymentType,
+    reservationFeePercentage = 0.3
+  ): number {
+    if (type === 'DOWN_PAYMENT') {
+      return Math.max(0, (event.total * reservationFeePercentage) - totalPaid);
+    }
+
+    return Math.max(0, event.total - totalPaid);
+  }
+
+  /**
    * Centralized rule: Archive completed/cancelled events
    */
   static archiveEvent(event: EventType): EventType {
@@ -76,6 +107,46 @@ export class EventStatusService {
     }
 
     return archivedEvent;
+  }
+
+  /**
+   * Determine the correct status when a user cancels an event.
+   */
+  static getCancellationStatus(event: EventType): EventType['status'] {
+    return event.paymentStatus === 'CONFIRMED' ? 'PENDING_REFUND' : 'CANCELLED';
+  }
+
+  /**
+   * Revert an auto-cancelled event back into a scheduled state.
+   */
+  static revertCancellation(event: EventType): EventType {
+    return {
+      ...event,
+      status: 'SCHEDULED',
+      autoCancelled: false
+    };
+  }
+
+  /**
+   * Update event state when a payment is deleted or rolled back.
+   */
+  static updateStatusAfterPaymentRemoval(
+    event: EventType,
+    totalPaid: number,
+    reservationFeePercentage = 0.3
+  ): EventType {
+    const updatedEvent: EventType = {
+      ...event,
+      paymentStatus: totalPaid >= event.total ? 'CONFIRMED' : 'PENDING'
+    };
+
+    const reservationFee = event.total * reservationFeePercentage;
+    if (totalPaid < reservationFee && updatedEvent.status === 'SCHEDULED') {
+      updatedEvent.status = 'PRE_SCHEDULED';
+      updatedEvent.preScheduledAt = Date.now();
+    }
+
+    return updatedEvent;
   }
 
   /**

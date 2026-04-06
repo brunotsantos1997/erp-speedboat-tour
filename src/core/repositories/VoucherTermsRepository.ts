@@ -1,4 +1,3 @@
-// src/core/repositories/VoucherTermsRepository.ts
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { VoucherTerms } from '../domain/types';
@@ -33,17 +32,15 @@ export class VoucherTermsRepository {
   private initListener() {
     const docRef = doc(db, this.collectionName, this.docId);
     this.unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        this.data = { ...docSnap.data() as VoucherTerms, id: docSnap.id };
-      } else {
-        this.data = null;
-      }
+      this.data = docSnap.exists()
+        ? { ...(docSnap.data() as VoucherTerms), id: docSnap.id }
+        : null;
       this.notifyListeners();
     });
   }
 
   private notifyListeners() {
-    this.listeners.forEach(listener => listener(this.data));
+    this.listeners.forEach((listener) => listener(this.data));
   }
 
   subscribe(listener: (data: VoucherTerms | null) => void) {
@@ -52,7 +49,7 @@ export class VoucherTermsRepository {
       listener(this.data);
     }
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      this.listeners = this.listeners.filter((currentListener) => currentListener !== listener);
     };
   }
 
@@ -65,44 +62,31 @@ export class VoucherTermsRepository {
     this.currentUser = null;
   }
 
-  async get(): Promise<VoucherTerms> {
+  async get(): Promise<VoucherTerms | null> {
     if (this.data) return this.data;
 
     const docRef = doc(db, this.collectionName, this.docId);
     const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      this.data = { ...docSnap.data() as VoucherTerms, id: docSnap.id };
-      this.notifyListeners();
-      return this.data;
+    if (!docSnap.exists()) {
+      return null;
     }
 
-    const defaultData = {
-      id: this.docId,
-      terms: `
-        <h2>Termos e Condições</h2>
-        <p><strong>1. Cancelamento e Reembolso:</strong> O cancelamento com reembolso de 100% do sinal é permitido apenas se feito com 7 dias de antecedência. Após este período, o sinal não é reembolsável.</p>
-        <p><strong>2. Condições Climáticas:</strong> Condições climáticas adversas (chuva forte, ventos perigosos) podem levar ao reagendamento do passeio sem custo adicional, a ser combinado entre as partes.</p>
-        <p><strong>3. Responsabilidade:</strong> Danos causados à embarcação por mau uso dos passageiros são de responsabilidade do contratante.</p>
-        <p><strong>4. Embarque:</strong> O embarque ocorrerá no local e horário combinados. É recomendado chegar com 15 minutos de antecedência. A tolerância de atraso é de 10 minutos.</p>
-      `.trim()
-    };
-
-    this.data = defaultData;
+    this.data = { ...(docSnap.data() as VoucherTerms), id: docSnap.id };
     this.notifyListeners();
-
-    return defaultData;
+    return this.data;
   }
 
   async update(updatedData: VoucherTerms): Promise<VoucherTerms> {
     if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
-      throw new Error('Você não tem permissão para alterar os termos do voucher.');
+      throw new Error('Voce nao tem permissao para alterar os termos do voucher.');
     }
+
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
-
     await setDoc(docRef, data, { merge: true });
 
     this.data = updatedData;
+    this.notifyListeners();
     return updatedData;
   }
 }

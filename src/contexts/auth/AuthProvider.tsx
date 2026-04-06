@@ -12,7 +12,6 @@
 // - Regras de negócio de domínio (delegadas para ViewModels especializados)
 // - Operações diretas de persistência (delegadas para repositories)
 // - Enforcement de autorização (feito pelas regras do Firestore server-side)
-// - Auditoria (delegada para AuditLogRepository, apenas acionada aqui)
 // 
 // OWNERSHIP CLARO:
 // - Auth: login/logout/signup e estado da sessão
@@ -44,68 +43,12 @@ import {
 } from 'firebase/firestore';
 import DOMPurify from 'dompurify';
 import { googleTokenStore } from '../../core/utils/googleTokenStore';
-import { auditLogRepository } from '../../core/repositories/AuditLogRepository';
-import { productRepository } from '../../core/repositories/ProductRepository';
-import { boatRepository } from '../../core/repositories/BoatRepository';
-import { boardingLocationRepository } from '../../core/repositories/BoardingLocationRepository';
-import { clientRepository } from '../../core/repositories/ClientRepository';
-import { eventRepository } from '../../core/repositories/EventRepository';
-import { expenseCategoryRepository } from '../../core/repositories/ExpenseCategoryRepository';
-import { expenseRepository } from '../../core/repositories/ExpenseRepository';
-import { incomeRepository } from '../../core/repositories/IncomeRepository';
-import { paymentRepository } from '../../core/repositories/PaymentRepository';
-import { tourTypeRepository } from '../../core/repositories/TourTypeRepository';
-import { VoucherAppearanceRepository } from '../../core/repositories/VoucherAppearanceRepository';
-import { VoucherTermsRepository } from '../../core/repositories/VoucherTermsRepository';
-import { CompanyDataRepository } from '../../core/repositories/CompanyDataRepository';
+import { assertStrongPassword } from '../../core/services/auth/PasswordPolicy';
 import { useUserManagementViewModel } from '../../viewmodels/useUserManagementViewModel';
 import { usePasswordResetViewModel } from '../../viewmodels/usePasswordResetViewModel';
 import { useProfileViewModel } from '../../viewmodels/useProfileViewModel';
 import { AuthContext, type AuthContextType } from './AuthContext';
-
-const validatePassword = (password: string) => {
-  if (password.length < 8) throw new Error('A senha deve ter pelo menos 8 caracteres.');
-  if (!/[A-Z]/.test(password)) throw new Error('A senha deve conter pelo menos uma letra maiúscula.');
-  if (!/[a-z]/.test(password)) throw new Error('A senha deve conter pelo menos uma letra minúscula.');
-  if (!/\d/.test(password)) throw new Error('A senha deve conter pelo menos um número.');
-  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) throw new Error('A senha deve conter pelo menos um caractere especial.');
-};
-
-const disposeRepositories = () => {
-  productRepository.dispose();
-  boatRepository.dispose();
-  boardingLocationRepository.dispose();
-  clientRepository.dispose();
-  eventRepository.dispose();
-  expenseCategoryRepository.dispose();
-  expenseRepository.dispose();
-  incomeRepository.dispose();
-  paymentRepository.dispose();
-  tourTypeRepository.dispose();
-  VoucherAppearanceRepository.getInstance().dispose();
-  VoucherTermsRepository.getInstance().dispose();
-  CompanyDataRepository.getInstance().dispose();
-};
-
-// Bootstrap de repositories - responsabilidade do AuthProvider
-// Inicializa repositories com contexto de usuário após autenticação aprovada
-// Isso é necessário porque repositories precisam saber qual usuário está operando
-// para queries e validações, mas as regras de negócio ficam nos ViewModels
-const initializeRepositories = (user: User) => {
-  productRepository.initialize(user);
-  boatRepository.initialize(user);
-  boardingLocationRepository.initialize(user);
-  clientRepository.initialize(user);
-  eventRepository.initialize(user);
-  expenseCategoryRepository.initialize(user);
-  expenseRepository.initialize(user);
-  incomeRepository.initialize(user);
-  paymentRepository.initialize(); // PaymentRepository não usa contexto de usuário
-  tourTypeRepository.initialize(user);
-  VoucherAppearanceRepository.getInstance().initialize(user);
-  VoucherTermsRepository.getInstance().initialize(user);
-  CompanyDataRepository.getInstance().initialize(user);
-};
+import { disposeRepositories, initializeRepositories } from './repositoryLifecycle';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -168,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signup = async (name: string, email: string, password: string): Promise<User> => {
-    validatePassword(password);
+    assertStrongPassword(password);
     const sanitizedName = DOMPurify.sanitize(name);
     const sanitizedEmail = DOMPurify.sanitize(email);
     const userCredential = await createUserWithEmailAndPassword(auth, sanitizedEmail, password);
@@ -262,57 +205,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await userMgmt.updateUserStatus(currentUser, userId, status); 
     if (currentUser.id === userId) handleUserUpdated({ status });
     
-    // Auditoria da operação crítica
-    await auditLogRepository.log({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      targetId: userId,
-      action: 'UPDATE_USER_STATUS',
-      resource: 'user',
-      context: { newStatus: status }
-    });
   };
   const updateUserRole = async (userId: string, role: UserRole) => { 
     if (!currentUser) throw new Error('Usuário não autenticado.'); 
     await userMgmt.updateUserRole(currentUser, userId, role); 
     
-    // Auditoria da operação crítica
-    await auditLogRepository.log({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      targetId: userId,
-      action: 'UPDATE_USER_ROLE',
-      resource: 'user',
-      context: { newRole: role }
-    });
   };
   const updateUserCommissionSettings = async (userId: string, settings: UserCommissionSettings) => { 
     if (!currentUser) throw new Error('Usuário não autenticado.'); 
     await userMgmt.updateUserCommissionSettings(currentUser, userId, settings); 
     
-    // Auditoria da operação crítica
-    await auditLogRepository.log({
-      userId: currentUser.id,
-      userName: currentUser.name,
-      targetId: userId,
-      action: 'UPDATE_COMMISSION_SETTINGS',
-      resource: 'user',
-      context: { newSettings: settings }
-    });
   };
   const requestPasswordReset = async (email: string) => {
     await passwordReset.requestPasswordReset(email);
     
-    // Auditoria da operação sensível
-    if (currentUser) {
-      await auditLogRepository.log({
-        userId: currentUser.id,
-        userName: currentUser.name,
-        action: 'PASSWORD_RESET_REQUEST',
-        resource: 'auth',
-        context: { targetEmail: email }
-      });
-    }
   };
   const updateProfile = async (userId: string, data: { name?: string; email?: string; newPassword?: string; oldPassword?: string }) => { if (!currentUser) throw new Error('Usuário não autenticado.'); await profileVm.updateProfile(currentUser, userId, data, handleUserUpdated); };
   const updateCalendarSettings = async (userId: string, settings: { calendarId?: string; autoSync: boolean }) => { if (!currentUser) throw new Error('Usuário não autenticado.'); await profileVm.updateCalendarSettings(currentUser, userId, settings, handleUserUpdated); };

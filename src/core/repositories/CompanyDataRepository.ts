@@ -1,8 +1,36 @@
-// src/core/repositories/CompanyDataRepository.ts
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import type { CompanyData, DayOfWeek, BusinessHours } from '../domain/types';
+import type { BusinessHours, CompanyData, DayOfWeek } from '../domain/types';
 import type { User } from '../domain/User';
+import { createCompanyDataDraft } from '../domain/configurationTemplates';
+
+const BUSINESS_DAYS: DayOfWeek[] = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday'
+];
+
+const ensureBusinessHours = (data: CompanyData): CompanyData => {
+  const draft = createCompanyDataDraft(data.id);
+  const businessHours = { ...(data.businessHours || ({} as BusinessHours)) };
+
+  BUSINESS_DAYS.forEach((day) => {
+    businessHours[day] = {
+      ...draft.businessHours[day],
+      ...businessHours[day]
+    };
+  });
+
+  return {
+    ...draft,
+    ...data,
+    businessHours
+  };
+};
 
 export class CompanyDataRepository {
   private static instance: CompanyDataRepository;
@@ -33,28 +61,15 @@ export class CompanyDataRepository {
   private initListener() {
     const docRef = doc(db, this.collectionName, this.docId);
     this.unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const fetchedData = { ...docSnap.data() as CompanyData, id: docSnap.id };
-        // Ensure all business hours are present
-        if (!fetchedData.businessHours) {
-          fetchedData.businessHours = {} as BusinessHours;
-        }
-        const days: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        days.forEach(day => {
-          if (!fetchedData.businessHours[day]) {
-            fetchedData.businessHours[day] = { startTime: '08:00', endTime: '18:00', isClosed: day === 'sunday' || day === 'saturday' };
-          }
-        });
-        this.data = fetchedData;
-      } else {
-        this.data = null;
-      }
+      this.data = docSnap.exists()
+        ? ensureBusinessHours({ ...(docSnap.data() as CompanyData), id: docSnap.id })
+        : null;
       this.notifyListeners();
     });
   }
 
   private notifyListeners() {
-    this.listeners.forEach(listener => listener(this.data));
+    this.listeners.forEach((listener) => listener(this.data));
   }
 
   subscribe(listener: (data: CompanyData | null) => void) {
@@ -63,7 +78,7 @@ export class CompanyDataRepository {
       listener(this.data);
     }
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      this.listeners = this.listeners.filter((currentListener) => currentListener !== listener);
     };
   }
 
@@ -81,58 +96,29 @@ export class CompanyDataRepository {
 
     const docRef = doc(db, this.collectionName, this.docId);
     const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const fetchedData = { ...docSnap.data() as CompanyData, id: docSnap.id };
-      // Ensure all business hours are present even if partially saved
-      if (!fetchedData.businessHours) {
-        fetchedData.businessHours = {} as BusinessHours;
-      }
-      const days: DayOfWeek[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      days.forEach(day => {
-        if (!fetchedData.businessHours[day]) {
-          fetchedData.businessHours[day] = { startTime: '08:00', endTime: '18:00', isClosed: day === 'sunday' || day === 'saturday' };
-        }
-      });
-      this.data = fetchedData;
-      this.notifyListeners();
-      return this.data;
+    if (!docSnap.exists()) {
+      return undefined;
     }
 
-    const defaultData: CompanyData = {
-      id: this.docId,
-      cnpj: '00.000.000/0001-00',
-      phone: '(00) 00000-0000',
-      appName: 'BoatManager',
-      reservationFeePercentage: 30,
-      businessHours: {
-        sunday: { startTime: '08:00', endTime: '18:00', isClosed: true },
-        monday: { startTime: '08:00', endTime: '18:00', isClosed: false },
-        tuesday: { startTime: '08:00', endTime: '18:00', isClosed: false },
-        wednesday: { startTime: '08:00', endTime: '18:00', isClosed: false },
-        thursday: { startTime: '08:00', endTime: '18:00', isClosed: false },
-        friday: { startTime: '08:00', endTime: '18:00', isClosed: false },
-        saturday: { startTime: '08:00', endTime: '18:00', isClosed: true },
-      },
-      commissionBasis: 'RENTAL_ONLY',
-    };
-
-    this.data = defaultData;
+    this.data = ensureBusinessHours({ ...(docSnap.data() as CompanyData), id: docSnap.id });
     this.notifyListeners();
-
-    return defaultData;
+    return this.data;
   }
 
   async update(updatedData: CompanyData): Promise<CompanyData> {
     if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
-      throw new Error('Você não tem permissão para alterar as configurações da empresa.');
+      throw new Error('Voce nao tem permissao para alterar as configuracoes da empresa.');
     }
-    const { id, ...data } = updatedData;
+
+    const normalizedData = ensureBusinessHours(updatedData);
+    const { id, ...data } = normalizedData;
     const docRef = doc(db, this.collectionName, this.docId);
 
     await setDoc(docRef, data, { merge: true });
 
-    this.data = updatedData;
-    return updatedData;
+    this.data = normalizedData;
+    this.notifyListeners();
+    return normalizedData;
   }
 }
 

@@ -1,12 +1,11 @@
-// src/core/repositories/VoucherAppearanceRepository.ts
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { User } from '../domain/User';
 
 export interface VoucherAppearanceData {
   id: string;
-  watermarkImageUrl: string | null; // Changed from watermarkImage to watermarkImageUrl
-  watermarkImageBase64?: string | null; // Keep for backward compatibility during migration
+  watermarkImageUrl: string | null;
+  watermarkImageBase64?: string | null;
 }
 
 export class VoucherAppearanceRepository {
@@ -38,17 +37,15 @@ export class VoucherAppearanceRepository {
   private initListener() {
     const docRef = doc(db, this.collectionName, this.docId);
     this.unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
-        this.data = { ...docSnap.data() as VoucherAppearanceData, id: docSnap.id };
-      } else {
-        this.data = null;
-      }
+      this.data = docSnap.exists()
+        ? { ...(docSnap.data() as VoucherAppearanceData), id: docSnap.id }
+        : null;
       this.notifyListeners();
     });
   }
 
   private notifyListeners() {
-    this.listeners.forEach(listener => listener(this.data));
+    this.listeners.forEach((listener) => listener(this.data));
   }
 
   subscribe(listener: (data: VoucherAppearanceData | null) => void) {
@@ -57,7 +54,7 @@ export class VoucherAppearanceRepository {
       listener(this.data);
     }
     return () => {
-      this.listeners = this.listeners.filter(l => l !== listener);
+      this.listeners = this.listeners.filter((currentListener) => currentListener !== listener);
     };
   }
 
@@ -70,35 +67,31 @@ export class VoucherAppearanceRepository {
     this.currentUser = null;
   }
 
-  async get(): Promise<VoucherAppearanceData> {
+  async get(): Promise<VoucherAppearanceData | null> {
     if (this.data) return this.data;
 
     const docRef = doc(db, this.collectionName, this.docId);
     const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      this.data = { ...docSnap.data() as VoucherAppearanceData, id: docSnap.id };
-      this.notifyListeners();
-      return this.data;
+    if (!docSnap.exists()) {
+      return null;
     }
 
-    const defaultData = { id: this.docId, watermarkImageUrl: null, watermarkImageBase64: null };
-
-    this.data = defaultData;
+    this.data = { ...(docSnap.data() as VoucherAppearanceData), id: docSnap.id };
     this.notifyListeners();
-
-    return defaultData;
+    return this.data;
   }
 
   async update(updatedData: VoucherAppearanceData): Promise<VoucherAppearanceData> {
     if (!this.currentUser || (this.currentUser.role !== 'OWNER' && this.currentUser.role !== 'SUPER_ADMIN')) {
-      throw new Error('Você não tem permissão para alterar a aparência do voucher.');
+      throw new Error('Voce nao tem permissao para alterar a aparencia do voucher.');
     }
+
     const { id, ...data } = updatedData;
     const docRef = doc(db, this.collectionName, this.docId);
-
     await setDoc(docRef, data, { merge: true });
 
     this.data = updatedData;
+    this.notifyListeners();
     return updatedData;
   }
 }

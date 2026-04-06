@@ -5,7 +5,6 @@ import {
   addDoc,
   updateDoc,
   doc,
-  getDoc,
   onSnapshot,
   query,
   type Unsubscribe
@@ -13,7 +12,6 @@ import {
 import { db } from '../../lib/firebase';
 import type { ExpenseCategory } from '../domain/types';
 import type { User } from '../domain/User';
-import { auditLogRepository } from './AuditLogRepository';
 
 export interface IExpenseCategoryRepository {
   getAll(): Promise<ExpenseCategory[]>;
@@ -79,18 +77,7 @@ class ExpenseCategoryRepositoryImpl implements IExpenseCategoryRepository {
   async add(categoryData: Omit<ExpenseCategory, 'id'>): Promise<ExpenseCategory> {
     this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), categoryData);
-    const newCategory = { id: docRef.id, ...categoryData };
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'CREATE',
-      collection: this.collectionName,
-      docId: docRef.id,
-      newData: newCategory,
-    });
-
-    return newCategory;
+    return { id: docRef.id, ...categoryData };
   }
 
   async update(updatedCategory: ExpenseCategory): Promise<ExpenseCategory> {
@@ -98,20 +85,7 @@ class ExpenseCategoryRepositoryImpl implements IExpenseCategoryRepository {
     const { id, ...data } = updatedCategory;
     const docRef = doc(db, this.collectionName, id);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, data);
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: id,
-      oldData,
-      newData: updatedCategory,
-    });
 
     return updatedCategory;
   }
@@ -120,20 +94,7 @@ class ExpenseCategoryRepositoryImpl implements IExpenseCategoryRepository {
     this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, categoryId);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, { isArchived: true });
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'DELETE',
-      collection: this.collectionName,
-      docId: categoryId,
-      oldData,
-      newData: { ...oldData, isArchived: true },
-    });
   }
 }
 

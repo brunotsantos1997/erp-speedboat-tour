@@ -5,7 +5,6 @@ import {
   addDoc,
   updateDoc,
   doc,
-  getDoc,
   onSnapshot,
   query,
   where,
@@ -17,7 +16,6 @@ import {
 import { db } from '../../lib/firebase';
 import type { Income } from '../domain/types';
 import type { User } from '../domain/User';
-import { auditLogRepository } from './AuditLogRepository';
 
 export interface IIncomeRepository {
   getAll(limitCount?: number): Promise<Income[]>;
@@ -122,18 +120,7 @@ class IncomeRepositoryImpl implements IIncomeRepository {
   async add(incomeData: Omit<Income, 'id'>): Promise<Income> {
     this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), incomeData);
-    const newIncome = { id: docRef.id, ...incomeData };
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'CREATE',
-      collection: this.collectionName,
-      docId: docRef.id,
-      newData: newIncome,
-    });
-
-    return newIncome;
+    return { id: docRef.id, ...incomeData };
   }
 
   async update(updatedIncome: Income): Promise<Income> {
@@ -141,20 +128,7 @@ class IncomeRepositoryImpl implements IIncomeRepository {
     const { id, ...data } = updatedIncome;
     const docRef = doc(db, this.collectionName, id);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, data);
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: id,
-      oldData,
-      newData: updatedIncome,
-    });
 
     return updatedIncome;
   }
@@ -163,19 +137,7 @@ class IncomeRepositoryImpl implements IIncomeRepository {
     this.checkAdminPermission();
     const docRef = doc(db, this.collectionName, incomeId);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await deleteDoc(docRef);
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'DELETE',
-      collection: this.collectionName,
-      docId: incomeId,
-      oldData,
-    });
   }
 }
 

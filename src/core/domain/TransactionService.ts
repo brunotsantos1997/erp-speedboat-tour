@@ -3,7 +3,7 @@ import type { EventType, Payment } from './types';
 import { eventRepository } from '../repositories/EventRepository';
 import { paymentRepository } from '../repositories/PaymentRepository';
 import { logger } from '../common/Logger';
-import { auditLogRepository } from '../repositories/AuditLogRepository';
+import { EventStatusService } from './EventStatusService';
 
 export interface TransactionResult {
   success: boolean;
@@ -26,7 +26,7 @@ export class TransactionService {
     eventData: Omit<EventType, 'id'>,
     paymentData: Omit<Payment, 'id'>,
     userId: string,
-    userName: string
+    _userName: string
   ): Promise<TransactionResult> {
     const rollbackData: TransactionResult['rollbackData'] = {
       createdPaymentIds: [],
@@ -52,29 +52,13 @@ export class TransactionService {
       rollbackData.createdPaymentIds = [savedPayment.id];
 
       // Step 3: Update event status based on payment
-      const totalPaid = paymentData.amount;
-      const updatedEvent = {
-        ...savedEvent,
-        status: totalPaid > 0 ? 'SCHEDULED' as const : 'PRE_SCHEDULED' as const,
-        paymentStatus: totalPaid >= savedEvent.total ? 'CONFIRMED' as const : 'PENDING' as const
-      };
+      const updatedEvent = EventStatusService.updateStatusFromPayment(
+        savedEvent,
+        paymentData.amount,
+        [savedPayment]
+      );
 
       const finalEvent = await eventRepository.updateEvent(updatedEvent);
-
-      // Step 4: Audit log
-      await auditLogRepository.log({
-        userId,
-        userName,
-        targetId: finalEvent.id,
-        action: 'CREATE_EVENT_WITH_PAYMENT',
-        resource: 'event',
-        context: {
-          eventTotal: finalEvent.total,
-          paymentAmount: paymentData.amount,
-          paymentMethod: paymentData.method,
-          finalStatus: finalEvent.status
-        }
-      });
 
       logger.info('Atomic transaction completed successfully', {
         eventId: finalEvent.id,
@@ -103,13 +87,60 @@ export class TransactionService {
   }
 
   /**
+   * Atomic transaction: Update event totals/details + create payment
+   */
+  static async updateEventWithPayment(
+    originalEvent: EventType,
+    updatedEvent: EventType,
+    paymentData: Omit<Payment, 'id'>,
+    userId: string,
+    _userName: string
+  ): Promise<TransactionResult> {
+    try {
+      logger.info('Starting atomic transaction: update event with payment', {
+        eventId: updatedEvent.id,
+        paymentAmount: paymentData.amount,
+        userId
+      });
+
+      const savedEvent = await eventRepository.updateEvent(updatedEvent);
+
+      try {
+        const savedPayment = await paymentRepository.add({
+          ...paymentData,
+          eventId: updatedEvent.id
+        });
+
+        return {
+          success: true,
+          eventId: savedEvent.id,
+          paymentId: savedPayment.id
+        };
+      } catch (paymentError) {
+        await eventRepository.updateEvent(originalEvent);
+        throw paymentError;
+      }
+    } catch (error) {
+      logger.error('Update event with payment transaction failed', error as Error, {
+        eventId: updatedEvent.id,
+        userId
+      });
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Atomic transaction: Confirm Payment + Update Event Status
    */
   static async confirmPaymentAndUpdateStatus(
     eventId: string,
     paymentData: Omit<Payment, 'id'>,
     userId: string,
-    userName: string
+    _userName: string
   ): Promise<TransactionResult> {
     try {
       logger.info('Starting atomic transaction: confirm payment', {
@@ -131,30 +162,15 @@ export class TransactionService {
       const totalPaid = allPayments.reduce((acc, p) => acc + p.amount, 0);
 
       // Step 3: Update event status
-      const updatedEvent = {
-        ...event,
-        status: totalPaid > 0 && event.status === 'PRE_SCHEDULED' ? 'SCHEDULED' as const : event.status,
-        paymentStatus: totalPaid >= event.total ? 'CONFIRMED' as const : 'PENDING' as const
-      };
+      const updatedEvent = EventStatusService.updateStatusFromPayment(event, totalPaid, allPayments);
 
-      const finalEvent = await eventRepository.updateEvent(updatedEvent);
-
-      // Step 4: Audit log
-      await auditLogRepository.log({
-        userId,
-        userName,
-        targetId: eventId,
-        action: 'CONFIRM_PAYMENT',
-        resource: 'payment',
-        context: {
-          paymentId: savedPayment.id,
-          paymentAmount: paymentData.amount,
-          totalPaid,
-          eventTotal: event.total,
-          newStatus: finalEvent.status,
-          paymentStatus: finalEvent.paymentStatus
-        }
-      });
+      let finalEvent: EventType;
+      try {
+        finalEvent = await eventRepository.updateEvent(updatedEvent);
+      } catch (updateError) {
+        await paymentRepository.remove(savedPayment.id);
+        throw updateError;
+      }
 
       logger.info('Payment confirmation transaction completed', {
         eventId,
@@ -189,7 +205,7 @@ export class TransactionService {
     eventId: string,
     cancelReason: string,
     userId: string,
-    userName: string
+    _userName: string
   ): Promise<TransactionResult> {
     const rollbackData: TransactionResult['rollbackData'] = {};
 
@@ -213,7 +229,7 @@ export class TransactionService {
       // Step 2: Update event status
       const cancelledEvent = {
         ...event,
-        status: 'CANCELLED' as const,
+        status: EventStatusService.getCancellationStatus(event),
         cancelReason,
         cancelledAt: Date.now()
       };
@@ -223,21 +239,6 @@ export class TransactionService {
       // Step 3: Handle refunds if needed (simplified - would integrate with payment gateway)
       const refundablePayments = payments.filter(p => p.status === 'CONFIRMED');
       
-      // Step 4: Audit log
-      await auditLogRepository.log({
-        userId,
-        userName,
-        targetId: eventId,
-        action: 'CANCEL_EVENT',
-        resource: 'event',
-        context: {
-          cancelReason,
-          paymentsCount: payments.length,
-          refundableCount: refundablePayments.length,
-          previousStatus: event.status
-        }
-      });
-
       logger.info('Event cancellation transaction completed', {
         eventId,
         paymentsCount: payments.length,

@@ -5,7 +5,6 @@ import {
   addDoc,
   updateDoc,
   doc,
-  getDoc,
   onSnapshot,
   query,
   type Unsubscribe
@@ -13,12 +12,10 @@ import {
 import { db } from '../../lib/firebase';
 import type { TourType } from '../domain/types';
 import type { User } from '../domain/User';
-import { auditLogRepository } from './AuditLogRepository';
 
 export class TourTypeRepository {
   private static instance: TourTypeRepository;
   private collectionName = 'tour_types';
-  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -29,11 +26,7 @@ export class TourTypeRepository {
     return TourTypeRepository.instance;
   }
 
-  initialize(user?: User) {
-    if (user) {
-      this.currentUser = user;
-    }
-  }
+  initialize(_user?: User) {}
 
   subscribe(callback: (data: TourType[]) => void): Unsubscribe {
     const q = query(collection(db, this.collectionName));
@@ -46,9 +39,7 @@ export class TourTypeRepository {
     });
   }
 
-  dispose() {
-    this.currentUser = null;
-  }
+  dispose() {}
 
   async getAll(): Promise<TourType[]> {
     const querySnapshot = await getDocs(collection(db, this.collectionName));
@@ -62,38 +53,14 @@ export class TourTypeRepository {
 
   async add(tourType: Omit<TourType, 'id'>): Promise<TourType> {
     const docRef = await addDoc(collection(db, this.collectionName), tourType);
-    const newTourType = { id: docRef.id, ...tourType };
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'CREATE',
-      collection: this.collectionName,
-      docId: docRef.id,
-      newData: newTourType,
-    });
-
-    return newTourType;
+    return { id: docRef.id, ...tourType };
   }
 
   async update(tourType: TourType): Promise<TourType> {
     const { id, ...data } = tourType;
     const docRef = doc(db, this.collectionName, id);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, data);
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: id,
-      oldData,
-      newData: tourType,
-    });
 
     return tourType;
   }
@@ -101,20 +68,7 @@ export class TourTypeRepository {
   async delete(id: string): Promise<void> {
     const docRef = doc(db, this.collectionName, id);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, { isArchived: true });
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'DELETE',
-      collection: this.collectionName,
-      docId: id,
-      oldData,
-      newData: { ...oldData, isArchived: true },
-    });
   }
 }
 

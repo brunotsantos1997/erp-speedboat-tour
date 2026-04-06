@@ -5,7 +5,6 @@ import {
   addDoc,
   updateDoc,
   doc,
-  getDoc,
   onSnapshot,
   query,
   where,
@@ -16,7 +15,6 @@ import {
 import { db } from '../../lib/firebase';
 import type { Expense } from '../domain/types';
 import type { User } from '../domain/User';
-import { auditLogRepository } from './AuditLogRepository';
 
 export interface IExpenseRepository {
   getAll(limitCount?: number): Promise<Expense[]>;
@@ -33,7 +31,6 @@ export interface IExpenseRepository {
 class ExpenseRepositoryImpl implements IExpenseRepository {
   private static instance: ExpenseRepositoryImpl;
   private collectionName = 'expenses';
-  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -44,11 +41,7 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
     return ExpenseRepositoryImpl.instance;
   }
 
-  initialize(user?: User) {
-    if (user) {
-      this.currentUser = user;
-    }
-  }
+  initialize(_user?: User): void {}
 
   subscribe(callback: (data: Expense[]) => void): Unsubscribe {
     const q = query(
@@ -81,9 +74,7 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
     });
   }
 
-  dispose() {
-    this.currentUser = null;
-  }
+  dispose(): void {}
 
   async getAll(limitCount: number = 100): Promise<Expense[]> {
     const q = query(
@@ -114,38 +105,14 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
 
   async add(expenseData: Omit<Expense, 'id'>): Promise<Expense> {
     const docRef = await addDoc(collection(db, this.collectionName), expenseData);
-    const newExpense = { id: docRef.id, ...expenseData };
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'CREATE',
-      collection: this.collectionName,
-      docId: docRef.id,
-      newData: newExpense,
-    });
-
-    return newExpense;
+    return { id: docRef.id, ...expenseData };
   }
 
   async update(updatedExpense: Expense): Promise<Expense> {
     const { id, ...data } = updatedExpense;
     const docRef = doc(db, this.collectionName, id);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, data);
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'UPDATE',
-      collection: this.collectionName,
-      docId: id,
-      oldData,
-      newData: updatedExpense,
-    });
 
     return updatedExpense;
   }
@@ -153,20 +120,7 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
   async remove(expenseId: string): Promise<void> {
     const docRef = doc(db, this.collectionName, expenseId);
 
-    const oldDoc = await getDoc(docRef);
-    const oldData = oldDoc.exists() ? { ...oldDoc.data(), id: oldDoc.id } : null;
-
     await updateDoc(docRef, { isArchived: true });
-
-    await auditLogRepository.log({
-      userId: this.currentUser?.id || 'unknown',
-      userName: this.currentUser?.name || 'Sistema',
-      action: 'DELETE',
-      collection: this.collectionName,
-      docId: expenseId,
-      oldData,
-      newData: { ...oldData, isArchived: true },
-    });
   }
 }
 
