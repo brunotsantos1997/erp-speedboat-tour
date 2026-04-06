@@ -34,8 +34,8 @@ test('Capture Screenshots with Tutorials', async ({ page }) => {
 
   // Login
   await page.goto('/login');
-  await page.fill('input[type="email"]', 'bruno.t.santos1997@hotmail.com');
-  await page.fill('input[type="password"]', 'Bruno@06252422');
+  await page.fill('input[type="email"]', '$env:VITE_TEST_EMAIL ?? "test@example.com"');
+  await page.fill('input[type="password"]', '$env:VITE_TEST_PASSWORD ?? "TestPassword123!"');
   await page.click('button[type="submit"]');
   await page.waitForURL('**/dashboard');
   await waitForLoading(page);

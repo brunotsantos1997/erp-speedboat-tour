@@ -23,8 +23,8 @@ test('Capture application screenshots fixed', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   await takeScreenshots(page, '02-login');
 
-  await page.fill('input[type="email"]', 'bruno.t.santos1997@hotmail.com');
-  await page.fill('input[type="password"]', 'Bruno@06252422');
+  await page.fill('input[type="email"]', '$env:VITE_TEST_EMAIL ?? "test@example.com"');
+  await page.fill('input[type="password"]', '$env:VITE_TEST_PASSWORD ?? "TestPassword123!"');
   await page.click('button[type="submit"]');
 
   // Wait for dashboard and ensure it's not the login page
