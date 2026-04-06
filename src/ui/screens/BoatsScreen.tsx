@@ -1,9 +1,9 @@
 // src/ui/screens/BoatsScreen.tsx
 import React from 'react';
 import { useBoatsViewModel } from '../../viewmodels/useBoatsViewModel';
-import { useAuth } from '../../contexts/AuthContext';
-import { useToastContext } from '../contexts/ToastContext';
-import { useModalContext } from '../contexts/ModalContext';
+import { useAuth } from '../../contexts/auth/useAuth';
+import { useToast } from '../contexts/toast/useToast';
+import { useModal } from '../contexts/modal/useModal';
 import { Plus, Edit, Trash2, Anchor, Users, Ruler } from 'lucide-react';
 import type { Boat } from '../../core/domain/types';
 import { MoneyInput } from '../components/MoneyInput';
@@ -71,8 +71,8 @@ const BoatModal: React.FC<{
 export const BoatsScreen: React.FC = () => {
   const vm = useBoatsViewModel();
   const { currentUser } = useAuth();
-  const { showToast } = useToastContext();
-  const { confirm } = useModalContext();
+  const { showToast } = useToast();
+  const { confirm } = useModal();
   const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
 
   const handleSave = async () => {

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Anchor, Utensils, Beer, User, Circle, HelpCircle, Users, Search, X, Package, Pencil, Trash2, AlertTriangle, Minus, Plus, Tag, CalendarDays } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import { useCreateEventViewModel } from '../../viewmodels/useCreateEventViewModel';
-import { useToastContext } from '../../ui/contexts/ToastContext';
+import { useToast } from '../../ui/contexts/toast/useToast';
 import { useNavigate } from 'react-router-dom';
 import type { Product, ClientProfile } from '../../core/domain/types';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
@@ -235,7 +235,7 @@ const NewClientModal: React.FC<{
 
 export const CreateEventScreen: React.FC = () => {
   const vm = useCreateEventViewModel();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [isTourTypeModalOpen, setIsTourTypeModalOpen] = useState(false);
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { DayOfWeek } from '../../core/domain/types';
 import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
-import { useToastContext } from '../contexts/ToastContext';
+import { useToast } from '../contexts/toast/useToast';
 import { CustomTimePicker } from '../components/CustomTimePicker';
 
 const weekDays: { key: DayOfWeek; label: string }[] = [
@@ -18,7 +18,7 @@ const weekDays: { key: DayOfWeek; label: string }[] = [
 export const CompanyDataScreen: React.FC = () => {
   const { companyData, isLoading, error, updateCompanyData } = useCompanyDataViewModel();
   const [formData, setFormData] = useState(companyData);
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (companyData) {

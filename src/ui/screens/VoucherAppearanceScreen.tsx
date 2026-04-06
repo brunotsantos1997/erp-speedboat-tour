@@ -1,12 +1,12 @@
 // src/ui/screens/VoucherAppearanceScreen.tsx
 import React, { useState, useCallback } from 'react';
 import { useVoucherAppearanceViewModel } from '../../viewmodels/VoucherAppearanceViewModel';
-import { useToastContext } from '../contexts/ToastContext';
+import { useToast } from '../contexts/toast/useToast';
 import { UploadCloud } from 'lucide-react';
 
 export const VoucherAppearanceScreen: React.FC = () => {
   const { appearanceData, isLoading, error, updateWatermark } = useVoucherAppearanceViewModel();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
   const [preview, setPreview] = useState<string | null>(null);
 
   const handleFileChange = useCallback(

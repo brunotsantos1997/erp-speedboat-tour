@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTourTypesViewModel } from '../../viewmodels/useTourTypesViewModel';
-import { useToastContext } from '../contexts/ToastContext';
-import { useModalContext } from '../contexts/ModalContext';
+import { useToast } from '../contexts/toast/useToast';
+import { useModal } from '../contexts/modal/useModal';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import type { TourType } from '../../core/domain/types';
 import { Tutorial } from '../components/Tutorial';
@@ -78,8 +78,8 @@ const TourTypeModal: React.FC<{
 
 export const TourTypesScreen: React.FC = () => {
   const vm = useTourTypesViewModel();
-  const { showToast } = useToastContext();
-  const { confirm } = useModalContext();
+  const { showToast } = useToast();
+  const { confirm } = useModal();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTourType, setEditingTourType] = useState<Partial<TourType> | null>(null);
 

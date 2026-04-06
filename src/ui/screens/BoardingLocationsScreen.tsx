@@ -1,9 +1,9 @@
 // src/ui/screens/BoardingLocationsScreen.tsx
 import React, { useState } from 'react';
 import { useBoardingLocationsViewModel } from '../../viewmodels/useBoardingLocationsViewModel';
-import { useAuth } from '../../contexts/AuthContext';
-import { useToastContext } from '../contexts/ToastContext';
-import { useModalContext } from '../contexts/ModalContext';
+import { useAuth } from '../../contexts/auth/useAuth';
+import { useToast } from '../contexts/toast/useToast';
+import { useModal } from '../contexts/modal/useModal';
 import type { BoardingLocation } from '../../core/domain/types';
 import { Tutorial } from '../components/Tutorial';
 import { boardingLocationsSteps } from '../tutorials/boardingLocationsSteps';
@@ -11,8 +11,8 @@ import { boardingLocationsSteps } from '../tutorials/boardingLocationsSteps';
 export const BoardingLocationsScreen: React.FC = () => {
   const { locations, isLoading, addLocation, updateLocation, confirmDeleteExternal } = useBoardingLocationsViewModel();
   const { currentUser } = useAuth();
-  const { showToast } = useToastContext();
-  const { confirm } = useModalContext();
+  const { showToast } = useToast();
+  const { confirm } = useModal();
   const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<Partial<BoardingLocation> | null>(null);

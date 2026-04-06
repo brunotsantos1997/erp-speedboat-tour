@@ -1,4 +1,4 @@
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 export function PendingApprovalScreen() {

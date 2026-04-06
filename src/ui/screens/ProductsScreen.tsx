@@ -1,14 +1,14 @@
 // src/ui/screens/ProductsScreen.tsx
 import React from 'react';
 import { useProductsViewModel } from '../../viewmodels/useProductsViewModel';
-import { useAuth } from '../../contexts/AuthContext';
-import { useToastContext } from '../contexts/ToastContext';
+import { useAuth } from '../../contexts/auth/useAuth';
+import { useToast } from '../contexts/toast/useToast';
 import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import type { Product } from '../../core/domain/types';
 import IconPicker from '../components/IconPicker';
 import type { IconKey } from '../components/IconPicker';
 import { MoneyInput } from '../components/MoneyInput';
-import { useModalContext } from '../contexts/ModalContext';
+import { useModal } from '../contexts/modal/useModal';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { Tutorial } from '../components/Tutorial';
 import { productsSteps } from '../tutorials/productsSteps';
@@ -82,8 +82,8 @@ const ProductModal: React.FC<{
 export const ProductsScreen: React.FC = () => {
   const vm = useProductsViewModel();
   const { currentUser } = useAuth();
-  const { showToast } = useToastContext();
-  const { confirm } = useModalContext();
+  const { showToast } = useToast();
+  const { confirm } = useModal();
   const isAuthorized = currentUser?.role === 'OWNER' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
 
   const handleSave = async () => {

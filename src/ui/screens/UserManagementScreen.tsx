@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth/useAuth';
 import type { User, UserRole, UserStatus } from '../../core/domain/User';
 import { Toast } from '../components/Toast';
 import { Tutorial } from '../components/Tutorial';
@@ -23,7 +23,7 @@ export function UserManagementScreen() {
 
     try {
       const allUsers = await getAllUsers();
-      setUsers(allUsers.filter((user) => user.id !== currentUser?.id));
+      setUsers(allUsers.filter((user: User) => user.id !== currentUser?.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Falha ao buscar usuarios.');
     } finally {

@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Calendar, RefreshCw, CheckCircle, AlertCircle, ExternalLink, Link, Unlink } from 'lucide-react';
 import { useGoogleSyncViewModel } from '../../viewmodels/useGoogleSyncViewModel';
 import { useNavigate } from 'react-router-dom';
-import { useModalContext } from '../contexts/ModalContext';
+import { useModal } from '../contexts/modal/useModal';
 import { Tutorial } from '../components/Tutorial';
 import { googleSyncSteps } from '../tutorials/googleSyncSteps';
 
 export const GoogleSyncScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { confirm } = useModalContext();
+  const { confirm } = useModal();
   const {
     currentUser,
     calendars,

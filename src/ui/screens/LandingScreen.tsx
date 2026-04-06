@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Calendar, Users, BarChart3, ShieldCheck, ArrowRight, MessageCircle } from 'lucide-react';
 
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth/useAuth';
 import { useCompanyDataViewModel } from '../../viewmodels/CompanyDataViewModel';
 
 export const LandingScreen: React.FC = () => {

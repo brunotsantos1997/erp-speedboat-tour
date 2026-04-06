@@ -1,7 +1,7 @@
 // src/ui/screens/DashboardScreen.tsx
 import React, { useEffect } from 'react';
 import { useDashboardViewModel } from '../../viewmodels/useDashboardViewModel';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth/useAuth';
 import { Link, useSearchParams } from 'react-router-dom';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { DollarSign, Hash, PlusCircle, Search, Clock, AlertTriangle, Anchor, CheckCircle, Bell, Ban, Wallet, Users } from 'lucide-react';

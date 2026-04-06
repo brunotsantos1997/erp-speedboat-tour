@@ -7,7 +7,7 @@ import { DollarSign, TrendingDown, TrendingUp, BarChart3, Calendar, PlusCircle, 
 import { Link, useNavigate } from 'react-router-dom';
 import { MoneyInput } from '../components/MoneyInput';
 import { incomeRepository } from '../../core/repositories/IncomeRepository';
-import { useToastContext } from '../contexts/ToastContext';
+import { useToast } from '../contexts/toast/useToast';
 import { Tutorial } from '../components/Tutorial';
 import { financeSteps } from '../tutorials/financeSteps';
 
@@ -29,7 +29,7 @@ const StatCard: React.FC<{ title: string; value: string; subValue?: string; icon
 export const FinanceScreen: React.FC = () => {
   const { loading, stats, cashFlowData, dailyCashFlow, startDate, setStartDate, endDate, setEndDate, refresh } = useFinanceViewModel();
   const navigate = useNavigate();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
   const [isIncomeModalOpen, setIsIncomeModalOpen] = React.useState(false);
   const [incomeAmount, setIncomeAmount] = React.useState(0);
   const [incomeDesc, setIncomeDesc] = React.useState('');

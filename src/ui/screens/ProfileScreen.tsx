@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/auth/useAuth';
 import { Toast } from '../components/Toast';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
-import { useModalContext } from '../contexts/ModalContext';
+import { useModal } from '../contexts/modal/useModal';
 
 export function ProfileScreen() {
   const { currentUser, updateProfile, linkGoogle, unlinkGoogle, linkedProviders, resetTours } = useAuth();
-  const { confirm } = useModalContext();
+  const { confirm } = useModal();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [oldPassword, setOldPassword] = useState('');

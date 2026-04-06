@@ -7,7 +7,7 @@ import 'react-day-picker/dist/style.css';
 import { ptBR } from 'date-fns/locale';
 import { CheckCircle, Clock, DollarSign, X } from 'lucide-react';
 import type { CommissionReportEntry, PaymentMethod } from '../../core/domain/types';
-import { useToastContext } from '../contexts/ToastContext';
+import { useToast } from '../contexts/toast/useToast';
 import { Tutorial } from '../components/Tutorial';
 import { commissionReportSteps } from '../tutorials/commissionReportSteps';
 
@@ -26,7 +26,7 @@ export const CommissionReportScreen: React.FC = () => {
     currentUser,
     payCommission,
   } = useCommissionReportViewModel();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<CommissionReportEntry | null>(null);

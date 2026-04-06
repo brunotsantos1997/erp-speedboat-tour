@@ -4,7 +4,7 @@ import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { useVoucherTermsViewModel } from '../../viewmodels/useVoucherTermsViewModel';
 import { Bold, Italic, Strikethrough, List, ListOrdered, Heading2, Palette, Highlighter } from 'lucide-react';
-import { useToastContext } from '../../ui/contexts/ToastContext';
+import { useToast } from '../../ui/contexts/toast/useToast';
 import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Highlight } from '@tiptap/extension-highlight';
@@ -69,7 +69,7 @@ const MenuBar: React.FC<{ editor: Editor | null }> = ({ editor }) => {
 
 export const VoucherTermsScreen: React.FC = () => {
   const { terms, isLoading, saveTerms } = useVoucherTermsViewModel();
-  const { showToast } = useToastContext();
+  const { showToast } = useToast();
 
   const editor = useEditor({
     extensions: [

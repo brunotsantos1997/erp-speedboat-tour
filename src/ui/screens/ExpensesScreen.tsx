@@ -4,11 +4,11 @@ import { useExpenseViewModel } from '../../viewmodels/useExpenseViewModel';
 import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { Plus, Trash2, Pencil, Anchor, Tag } from 'lucide-react';
 import { MoneyInput } from '../components/MoneyInput';
-import { useModalContext } from '../contexts/ModalContext';
+import { useModal } from '../contexts/modal/useModal';
 import type { Expense } from '../../core/domain/types';
 
 export const ExpensesScreen: React.FC = () => {
-  const { showAlert } = useModalContext();
+  const { showAlert } = useModal();
   const { expenses, categories, boats, loading, addExpense, updateExpense, removeExpense } = useExpenseViewModel();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);

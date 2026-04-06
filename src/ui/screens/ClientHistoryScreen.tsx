@@ -2,8 +2,8 @@
 // src/ui/screens/ClientHistoryScreen.tsx
 import React from 'react';
 import { useClientHistoryViewModel } from '../../viewmodels/useClientHistoryViewModel';
-import { useToastContext } from '../contexts/ToastContext';
-import { useModalContext } from '../contexts/ModalContext';
+import { useToast } from '../contexts/toast/useToast';
+import { useModal } from '../contexts/modal/useModal';
 import { Search, X, Calendar, Edit, Ban, CheckCircle, Clock, Pencil, FileText, Share2, DollarSign, AlertTriangle, History, Settings, Trash2 } from 'lucide-react';
 import type { EventStatus, PaymentStatus, EventType, ClientProfile } from '../../core/domain/types';
 import { useNavigate } from 'react-router-dom';
@@ -113,8 +113,8 @@ const EventCard: React.FC<{
   onQuickEdit: (event: EventType) => void;
   onDelete: (id: string) => void;
 }> = ({ eventType, onCancel, onEdit, onConfirmPayment, onOpenCosts, onRevert, onQuickEdit, onDelete }) => {
-  const { showToast } = useToastContext();
-  const { showAlert } = useModalContext();
+  const { showToast } = useToast();
+  const { showAlert } = useModal();
 
   const shareVoucher = (eventId: string) => {
     const url = `${window.location.origin}/voucher/${eventId}`;
@@ -198,7 +198,7 @@ const EventCard: React.FC<{
 export const ClientHistoryScreen: React.FC = () => {
     const vm = useClientHistoryViewModel();
     const costVm = useEventCostViewModel();
-    const { showToast } = useToastContext();
+    const { showToast } = useToast();
     const navigate = useNavigate();
 
     const handleEditEvent = (eventId: string) => {
