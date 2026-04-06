@@ -8,11 +8,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['apple-touch-icon.png'],
       manifest: {
-        name: 'Dilancha Náutica',
+        name: 'Dilancha Nautica',
         short_name: 'Dilancha',
-        description: 'Sistema de gestão de passeios de lancha',
+        description: 'Sistema de gestao de passeios de lancha',
         start_url: '/dashboard',
         theme_color: '#2563eb',
         background_color: '#ffffff',
