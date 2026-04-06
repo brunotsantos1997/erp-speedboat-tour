@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 import fs from 'fs';
 
 const SCREENSHOT_DIR = 'app_screenshots';
@@ -9,7 +9,7 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
   fs.mkdirSync(`${SCREENSHOT_DIR}/mobile`, { recursive: true });
 }
 
-async function takeScreenshots(page, name) {
+async function takeScreenshots(page: Page, name: string) {
   // Desktop
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.waitForTimeout(2000);
@@ -73,7 +73,7 @@ test('Capture Screenshots with Tutorials', async ({ page }) => {
       try {
           await page.waitForSelector(tutorialSelector, { timeout: 10000 });
           console.log(`Tutorial active on ${screen.name}`);
-      } catch (e) {
+      } catch (_e) {
           console.log(`Tutorial NOT found on ${screen.name}`);
       }
 

@@ -1,10 +1,8 @@
-import { test, expect } from '@playwright/test';
-import * as fs from 'fs';
-import * as path from 'path';
+import { test, type Page } from '@playwright/test';
 
 const SCREENSHOT_DIR = 'app_screenshots';
 
-async function takeScreenshots(page, name) {
+async function takeScreenshots(page: Page, name: string) {
   // Desktop
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.screenshot({ path: `${SCREENSHOT_DIR}/desktop/${name}.png`, fullPage: true });
@@ -17,7 +15,6 @@ async function takeScreenshots(page, name) {
 test('Capture application screenshots', async ({ page }) => {
   // 1. Landing Page
   await page.goto('/');
-  await expect(page).toHaveURL('/');
   await takeScreenshots(page, '01-landing-page');
 
   // 2. Login

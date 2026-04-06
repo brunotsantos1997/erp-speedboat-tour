@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import fs from 'fs';
 
 const SCREENSHOT_DIR = 'app_screenshots';
@@ -30,7 +30,7 @@ async function waitForLoading(page) {
 }
 
 async function handleTutorial(page, screenName) {
-  const tutorialOverlay = page.locator('.joyride-step'); // Assuming react-joyride class
+  const _tutorialOverlay = page.locator('.joyride-step'); // Assuming react-joyride class
   const skipBtn = page.locator('button[aria-label="Skip"], button:has-text("Pular"), button:has-text("Skip")');
 
   if (await skipBtn.isVisible()) {

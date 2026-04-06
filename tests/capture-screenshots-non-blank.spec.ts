@@ -1,8 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 
 const SCREENSHOT_DIR = 'app_screenshots';
 
-async function takeScreenshots(page, name) {
+async function takeScreenshots(page: Page, name: string) {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.screenshot({ path: `${SCREENSHOT_DIR}/desktop/${name}.png`, fullPage: false });
 
@@ -65,7 +65,7 @@ test('Capture application screenshots non-blank', async ({ page }) => {
     await page.goto(screen.path);
     try {
         await page.waitForSelector(screen.selector, { timeout: 15000 });
-    } catch (e) {
+    } catch (_e) {
         console.log(`Timeout waiting for ${screen.selector} on ${screen.path}`);
     }
     await page.waitForTimeout(3000);
