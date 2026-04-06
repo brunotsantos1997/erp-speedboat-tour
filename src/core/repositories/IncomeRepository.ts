@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Income } from '../domain/types';
+import type { User } from '../domain/User';
 import { auditLogRepository } from './AuditLogRepository';
 
 export interface IIncomeRepository {
@@ -25,7 +26,7 @@ export interface IIncomeRepository {
   update(updatedIncome: Income): Promise<Income>;
   remove(incomeId: string): Promise<void>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(user?: User): void;
   subscribe(callback: (data: Income[]) => void): Unsubscribe;
   subscribeByDateRange(startDate: string, endDate: string, callback: (data: Income[]) => void): Unsubscribe;
 }
@@ -33,7 +34,7 @@ export interface IIncomeRepository {
 class IncomeRepositoryImpl implements IIncomeRepository {
   private static instance: IncomeRepositoryImpl;
   private collectionName = 'incomes';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -44,7 +45,7 @@ class IncomeRepositoryImpl implements IIncomeRepository {
     return IncomeRepositoryImpl.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }

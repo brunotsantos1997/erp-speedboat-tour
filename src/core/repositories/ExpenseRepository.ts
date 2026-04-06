@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Expense } from '../domain/types';
+import type { User } from '../domain/User';
 import { auditLogRepository } from './AuditLogRepository';
 
 export interface IExpenseRepository {
@@ -24,7 +25,7 @@ export interface IExpenseRepository {
   update(updatedExpense: Expense): Promise<Expense>;
   remove(expenseId: string): Promise<void>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(user?: User): void;
   subscribe(callback: (data: Expense[]) => Unsubscribe): Unsubscribe;
   subscribeByDateRange(startDate: string, endDate: string, callback: (data: Expense[]) => void): Unsubscribe;
 }
@@ -32,7 +33,7 @@ export interface IExpenseRepository {
 class ExpenseRepositoryImpl implements IExpenseRepository {
   private static instance: ExpenseRepositoryImpl;
   private collectionName = 'expenses';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -43,7 +44,7 @@ class ExpenseRepositoryImpl implements IExpenseRepository {
     return ExpenseRepositoryImpl.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }

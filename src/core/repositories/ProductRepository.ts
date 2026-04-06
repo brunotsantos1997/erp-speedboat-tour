@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { Product } from '../domain/types';
+import type { User } from '../domain/User';
 
 export interface IProductRepository {
   getAll(): Promise<Product[]>;
@@ -18,14 +19,14 @@ export interface IProductRepository {
   update(updatedProduct: Product): Promise<Product>;
   remove(productId: string): Promise<void>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(user?: User): void;
   subscribe(callback: (data: Product[]) => void): Unsubscribe;
 }
 
 class ProductRepositoryImpl implements IProductRepository {
   private static instance: ProductRepositoryImpl;
   private collectionName = 'products';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -36,7 +37,7 @@ class ProductRepositoryImpl implements IProductRepository {
     return ProductRepositoryImpl.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }

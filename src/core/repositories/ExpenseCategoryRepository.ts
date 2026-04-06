@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { ExpenseCategory } from '../domain/types';
+import type { User } from '../domain/User';
 import { auditLogRepository } from './AuditLogRepository';
 
 export interface IExpenseCategoryRepository {
@@ -20,14 +21,14 @@ export interface IExpenseCategoryRepository {
   update(updatedCategory: ExpenseCategory): Promise<ExpenseCategory>;
   remove(categoryId: string): Promise<void>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(user?: User): void;
   subscribe(callback: (data: ExpenseCategory[]) => void): Unsubscribe;
 }
 
 class ExpenseCategoryRepositoryImpl implements IExpenseCategoryRepository {
   private static instance: ExpenseCategoryRepositoryImpl;
   private collectionName = 'expense_categories';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   private constructor() {}
 
@@ -38,7 +39,7 @@ class ExpenseCategoryRepositoryImpl implements IExpenseCategoryRepository {
     return ExpenseCategoryRepositoryImpl.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }

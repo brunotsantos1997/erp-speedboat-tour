@@ -2,6 +2,7 @@
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { VoucherTerms } from '../domain/types';
+import type { User } from '../domain/User';
 
 export class VoucherTermsRepository {
   private static instance: VoucherTermsRepository;
@@ -9,7 +10,7 @@ export class VoucherTermsRepository {
   private collectionName = 'voucher_terms';
   private data: VoucherTerms | null = null;
   private unsubscribe: Unsubscribe | null = null;
-  private currentUser: any = null;
+  private currentUser: User | null = null;
   private listeners: ((data: VoucherTerms | null) => void)[] = [];
 
   private constructor() {}
@@ -21,7 +22,7 @@ export class VoucherTermsRepository {
     return VoucherTermsRepository.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }

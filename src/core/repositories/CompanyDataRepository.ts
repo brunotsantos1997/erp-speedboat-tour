@@ -2,6 +2,7 @@
 import { doc, getDoc, setDoc, onSnapshot, type Unsubscribe } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { CompanyData, DayOfWeek } from '../domain/types';
+import type { User } from '../domain/User';
 
 export class CompanyDataRepository {
   private static instance: CompanyDataRepository;
@@ -9,7 +10,7 @@ export class CompanyDataRepository {
   private collectionName = 'company_data';
   private data: CompanyData | null = null;
   private unsubscribe: Unsubscribe | null = null;
-  private currentUser: any = null;
+  private currentUser: User | null = null;
   private listeners: ((data: CompanyData | null) => void)[] = [];
 
   private constructor() {}
@@ -21,7 +22,7 @@ export class CompanyDataRepository {
     return CompanyDataRepository.instance;
   }
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }

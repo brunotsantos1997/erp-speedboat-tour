@@ -14,6 +14,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { ClientProfile } from '../domain/types';
+import type { User } from '../domain/User';
+import { logger } from '../common/Logger';
 
 export interface IClientRepository {
   search(term: string): Promise<ClientProfile[]>;
@@ -23,16 +25,16 @@ export interface IClientRepository {
   getById(clientId: string): Promise<ClientProfile | null>;
   getAll(limitCount?: number): Promise<ClientProfile[]>;
   dispose(): void;
-  initialize(user?: any): void;
+  initialize(user?: User): void;
 }
 
 class ClientRepositoryImpl implements IClientRepository {
   private collectionName = 'clients';
-  private currentUser: any = null;
+  private currentUser: User | null = null;
 
   constructor() {}
 
-  initialize(user?: any) {
+  initialize(user?: User) {
     if (user) {
       this.currentUser = user;
     }
@@ -55,7 +57,7 @@ class ClientRepositoryImpl implements IClientRepository {
         id: doc.id
       }));
     } catch (error) {
-      console.error("Error fetching clients:", error);
+      logger.error('Error fetching clients', error as Error);
       return [];
     }
   }
@@ -100,7 +102,7 @@ class ClientRepositoryImpl implements IClientRepository {
 
       return results;
     } catch (error) {
-      console.error("Error searching clients:", error);
+      logger.error('Error searching clients', error as Error, { term });
       return [];
     }
   }
@@ -113,7 +115,7 @@ class ClientRepositoryImpl implements IClientRepository {
         return { ...docSnap.data() as ClientProfile, id: docSnap.id };
       }
     } catch (error) {
-      console.error("Error fetching client by id:", error);
+      logger.error('Error fetching client by id', error as Error, { clientId });
     }
     return null;
   }
