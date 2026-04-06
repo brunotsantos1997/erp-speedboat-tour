@@ -118,7 +118,7 @@ export const useClientHistoryViewModel = () => {
       const savedEvent = await eventRepository.updateEvent(updatedEvent);
       await syncEvent(savedEvent);
     }
-  }, [clientEvents, selectedClient, selectClient, confirm]);
+  }, [clientEvents, confirm, syncEvent]);
 
   const initiatePayment = useCallback(async (eventId: string, type: 'DOWN_PAYMENT' | 'BALANCE' | 'FULL') => {
     const event = clientEvents.find(e => e.id === eventId);
@@ -178,7 +178,7 @@ export const useClientHistoryViewModel = () => {
         console.error('Failed to record payment:', error);
         throw error;
     }
-  }, [activeEventForPayment, selectedClient, selectClient]);
+  }, [activeEventForPayment, syncEvent]);
 
   const revertCancellation = useCallback(async (eventId: string) => {
     try {
@@ -261,7 +261,7 @@ export const useClientHistoryViewModel = () => {
       console.error('Failed to delete event:', error);
       await showAlert('Erro', 'Erro ao excluir evento.');
     }
-  }, [confirm, showAlert]);
+  }, [clientEvents, confirm, currentUser, deleteFromGoogle, showAlert]);
 
   // --- Client Edit Handlers ---
   const openEditModal = () => {

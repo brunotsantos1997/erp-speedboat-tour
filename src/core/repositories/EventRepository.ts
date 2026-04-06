@@ -12,9 +12,7 @@ import {
   type Unsubscribe,
   where,
   orderBy,
-  limit,
-  startAt,
-  endAt
+  limit
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { EventType } from '../domain/types';
@@ -32,13 +30,13 @@ export interface IEventRepository {
   backfillFinancialData(): Promise<void>;
   dispose(): void;
   initialize(user?: any): void;
+  subscribe(callback: (data: EventType[]) => void): Unsubscribe;
   subscribeToDateRange(startDate: string, endDate: string, callback: (data: EventType[]) => void): Unsubscribe;
   subscribeToNotifications(callback: (data: EventType[]) => void): Unsubscribe;
 }
 
 class EventRepositoryImpl implements IEventRepository {
   private collectionName = 'events';
-  private isInitialized = false;
   private currentUser: any = null;
 
   constructor() {}
@@ -47,7 +45,22 @@ class EventRepositoryImpl implements IEventRepository {
     if (user) {
       this.currentUser = user;
     }
-    this.isInitialized = true;
+  }
+
+  subscribe(callback: (data: EventType[]) => void): Unsubscribe {
+    const q = query(
+      collection(db, this.collectionName),
+      orderBy('date', 'desc'),
+      limit(100)
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const events = snapshot.docs.map(doc => ({
+        ...doc.data() as EventType,
+        id: doc.id
+      }));
+      callback(events);
+    });
   }
 
   subscribeToDateRange(startDate: string, endDate: string, callback: (data: EventType[]) => void): Unsubscribe {
@@ -106,7 +119,6 @@ class EventRepositoryImpl implements IEventRepository {
   }
 
   dispose() {
-    this.isInitialized = false;
     this.currentUser = null;
   }
 

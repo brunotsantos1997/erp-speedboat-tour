@@ -20,7 +20,7 @@ export const useDashboardViewModel = () => {
   const [activeEventForPayment, setActiveEventForPayment] = useState<EventType | null>(null);
   const [paymentType, setPaymentType] = useState<'DOWN_PAYMENT' | 'BALANCE' | 'FULL'>('DOWN_PAYMENT');
   const [defaultPaymentAmount, setDefaultPaymentAmount] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()));
 
   // Derived period for listeners: Current month

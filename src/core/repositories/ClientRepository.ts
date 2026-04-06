@@ -5,14 +5,12 @@ import {
   addDoc,
   updateDoc,
   doc,
-  onSnapshot,
   query,
   deleteDoc,
   getDoc,
   where,
   limit,
-  orderBy,
-  type Unsubscribe
+  orderBy
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import type { ClientProfile } from '../domain/types';
@@ -30,7 +28,6 @@ export interface IClientRepository {
 
 class ClientRepositoryImpl implements IClientRepository {
   private collectionName = 'clients';
-  private isInitialized = false;
   private currentUser: any = null;
 
   constructor() {}
@@ -39,11 +36,9 @@ class ClientRepositoryImpl implements IClientRepository {
     if (user) {
       this.currentUser = user;
     }
-    this.isInitialized = true;
   }
 
   dispose() {
-    this.isInitialized = false;
     this.currentUser = null;
   }
 
@@ -75,7 +70,6 @@ class ClientRepositoryImpl implements IClientRepository {
     // otherwise fallback to a limited fetch.
     
     try {
-      const termUpper = term.charAt(0).toUpperCase() + term.slice(1);
       const q = query(
         collection(db, this.collectionName),
         where('name', '>=', term),

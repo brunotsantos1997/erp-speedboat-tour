@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useEventSync } from './useEventSync';
 import { useAuth } from '../contexts/AuthContext';
 import { eventRepository } from '../core/repositories/EventRepository';
+import type { EventType } from '../core/domain/types';
 
 /**
  * Hook to automatically synchronize Google Calendar when events are updated by other users.
@@ -20,7 +21,7 @@ export const useGlobalSync = () => {
       return;
     }
 
-    const unsubscribe = eventRepository.subscribe((events) => {
+    const unsubscribe = eventRepository.subscribe((events: EventType[]) => {
       const currentIds = new Set(events.map(e => e.id));
 
       // 1. Handle Deletions
@@ -35,7 +36,7 @@ export const useGlobalSync = () => {
       });
 
       // 2. Handle Updates and Additions
-      events.forEach((event) => {
+      events.forEach((event: EventType) => {
         // Data that affects the calendar event content
         const relevantData = JSON.stringify({
           date: event.date,
@@ -48,7 +49,7 @@ export const useGlobalSync = () => {
           observations: event.observations,
           passengerCount: event.passengerCount,
           tourTypeName: event.tourType?.name,
-          products: event.products?.map(p => ({ name: p.name, isCourtesy: p.isCourtesy }))
+          products: event.products?.map((p) => ({ name: p.name, isCourtesy: p.isCourtesy }))
         });
 
         const prev = lastSyncedRef.current[event.id];

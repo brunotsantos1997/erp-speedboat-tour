@@ -7,7 +7,6 @@ import {
 } from 'firebase/auth';
 import {
   doc,
-  getDoc,
   getDocs,
   updateDoc,
   collection,

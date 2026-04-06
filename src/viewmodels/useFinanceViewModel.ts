@@ -5,7 +5,7 @@ import { eventRepository } from '../core/repositories/EventRepository';
 import { expenseRepository } from '../core/repositories/ExpenseRepository';
 import { incomeRepository } from '../core/repositories/IncomeRepository';
 import { paymentRepository } from '../core/repositories/PaymentRepository';
-import { startOfMonth, endOfMonth, format, subMonths, eachDayOfInterval } from 'date-fns';
+import { startOfMonth, endOfMonth, format, eachDayOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const useFinanceViewModel = () => {

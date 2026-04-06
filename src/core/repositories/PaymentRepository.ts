@@ -10,6 +10,7 @@ import {
   where,
   limit,
   orderBy,
+  deleteDoc,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -20,6 +21,8 @@ export interface IPaymentRepository {
   subscribeToEventPayments(eventId: string, callback: (data: Payment[]) => void): Unsubscribe;
   add(paymentData: Omit<Payment, 'id'>): Promise<Payment>;
   getAll(limitCount?: number): Promise<Payment[]>;
+  update(paymentId: string, data: Partial<Payment>): Promise<void>;
+  remove(paymentId: string): Promise<void>;
   dispose(): void;
   initialize(user?: any): void;
 }
@@ -103,6 +106,18 @@ class PaymentRepositoryImpl implements IPaymentRepository {
     this.checkAdminPermission();
     const docRef = await addDoc(collection(db, this.collectionName), paymentData);
     return { id: docRef.id, ...paymentData };
+  }
+
+  async update(paymentId: string, data: Partial<Payment>): Promise<void> {
+    this.checkAdminPermission();
+    const docRef = doc(db, this.collectionName, paymentId);
+    await updateDoc(docRef, data);
+  }
+
+  async remove(paymentId: string): Promise<void> {
+    this.checkAdminPermission();
+    const docRef = doc(db, this.collectionName, paymentId);
+    await deleteDoc(docRef);
   }
 }
 

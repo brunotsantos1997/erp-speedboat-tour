@@ -7,7 +7,6 @@ import {
   doc,
   onSnapshot,
   query,
-  where,
   type Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
