@@ -5,7 +5,7 @@ import { formatCurrencyBRL } from '../../core/utils/currencyUtils';
 import { MoneyInput } from './MoneyInput';
 import type { EventType, Payment, EventStatus, PaymentStatus, PaymentMethod, PaymentType } from '../../core/domain/types';
 import { format } from 'date-fns';
-import { useModalContext } from '../contexts/ModalContext';
+import { useModal } from '../contexts/modal/useModal';
 
 interface EventQuickEditModalProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export const EventQuickEditModal: React.FC<EventQuickEditModalProps> = ({
   onDeletePayment,
   onAddPayment
 }) => {
-  const { confirm } = useModalContext();
+  const { confirm } = useModal();
   const [eventStatus, setEventStatus] = useState<EventStatus>(event.status);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(event.paymentStatus || 'PENDING');
   const [isSaving, setIsSaving] = useState(false);

@@ -37,4 +37,5 @@ const IconPicker: React.FC<IconPickerProps> = ({ selectedIcon, onSelectIcon }) =
   );
 };
 
+export { type IconKey } from './icons';
 export default IconPicker;
