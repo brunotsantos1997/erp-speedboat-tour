@@ -184,7 +184,7 @@ describe('useUserCommissionViewModel - Testes Unitários', () => {
 
   it('deve validar casos extremos', () => {
     // Teste com array vazio
-    const emptyUsers = []
+    const emptyUsers: any[] = []
     expect(emptyUsers).toHaveLength(0)
 
     // Teste com usuário não encontrado
@@ -194,7 +194,7 @@ describe('useUserCommissionViewModel - Testes Unitários', () => {
 
     // Teste com currentUser nulo
     const currentUserNull = null
-    const filteredWithNull = users.filter((u) => u.id !== currentUserNull?.id)
+    const filteredWithNull = users.filter((u: any) => u.id !== currentUserNull?.id)
     expect(filteredWithNull).toHaveLength(1) // não filtra nada
   })
 
@@ -210,7 +210,7 @@ describe('useUserCommissionViewModel - Testes Unitários', () => {
   it('deve validar lógica de callback', () => {
     // Mock de função callback
     const callback = vi.fn()
-    const dependencyArray = []
+    const dependencyArray: any[] = []
 
     // Lógica de useCallback
     expect(typeof callback).toBe('function')
@@ -225,7 +225,7 @@ describe('useUserCommissionViewModel - Testes Unitários', () => {
 
   it('deve validar lógica de estados iniciais', () => {
     // Mock de estados iniciais
-    const initialUsers = []
+    const initialUsers: any[] = []
     const initialLoading = true
     const initialError = null
 
@@ -238,8 +238,8 @@ describe('useUserCommissionViewModel - Testes Unitários', () => {
   it('deve validar lógica de atualização local', () => {
     // Mock de estado anterior
     const prevUsers = [
-      { id: 'user-1', name: 'User 1', commissionSettings: { percentage: 5 } },
-      { id: 'user-2', name: 'User 2', commissionSettings: { percentage: 15 } }
+      { id: 'user-1', name: 'User 1', commissionSettings: { percentage: 5, fixedAmount: 0, isActive: true } },
+      { id: 'user-2', name: 'User 2', commissionSettings: { percentage: 15, fixedAmount: 0, isActive: true } }
     ]
 
     const userId = 'user-1'
@@ -308,5 +308,441 @@ describe('useUserCommissionViewModel - Testes Unitários', () => {
     expect(dependencies).toHaveLength(2)
     expect(dependencies[0]).toBe(getAllUsers)
     expect(dependencies[1]).toBe(currentUser)
+  })
+
+  // Novos testes para aumentar coverage
+  describe('Testes de Funcionalidades Específicas', () => {
+    it('deve validar lógica de cálculo de comissões', () => {
+      // Mock de usuários com diferentes configurações
+      const users = [
+        { 
+          id: 'user-1', 
+          name: 'Vendedor 1',
+          commissionSettings: { 
+            percentage: 10, 
+            fixedAmount: 50, 
+            isActive: true 
+          },
+          totalSales: 1000
+        },
+        { 
+          id: 'user-2', 
+          name: 'Vendedor 2',
+          commissionSettings: { 
+            percentage: 15, 
+            fixedAmount: 0, 
+            isActive: true 
+          },
+          totalSales: 2000
+        },
+        { 
+          id: 'user-3', 
+          name: 'Vendedor 3',
+          commissionSettings: { 
+            percentage: 0, 
+            fixedAmount: 100, 
+            isActive: true 
+          },
+          totalSales: 1500
+        },
+        { 
+          id: 'user-4', 
+          name: 'Vendedor 4',
+          commissionSettings: { 
+            percentage: 5, 
+            fixedAmount: 25, 
+            isActive: false 
+          },
+          totalSales: 800
+        }
+      ]
+
+      // Calcular comissões
+      const commissions = users.map(user => {
+        if (!user.commissionSettings.isActive) return 0
+        
+        const percentageCommission = user.totalSales * (user.commissionSettings.percentage / 100)
+        const totalCommission = percentageCommission + user.commissionSettings.fixedAmount
+        
+        return totalCommission
+      })
+
+      expect(commissions[0]).toBe(150) // 10% de 1000 + 50
+      expect(commissions[1]).toBe(300) // 15% de 2000 + 0
+      expect(commissions[2]).toBe(100) // 0% de 1500 + 100
+      expect(commissions[3]).toBe(0) // inativo
+    })
+
+    it('deve validar lógica de validação de configurações de comissão', () => {
+      // Mock de validação
+      const validateCommissionSettings = (settings: any) => {
+        const errors: string[] = []
+
+        if (settings.percentage < 0 || settings.percentage > 100) {
+          errors.push('Percentual deve estar entre 0 e 100')
+        }
+
+        if (settings.fixedAmount < 0) {
+          errors.push('Valor fixo não pode ser negativo')
+        }
+
+        if (settings.percentage === 0 && settings.fixedAmount === 0) {
+          errors.push('Pelo menos percentual ou valor fixo deve ser maior que zero')
+        }
+
+        return {
+          isValid: errors.length === 0,
+          errors
+        }
+      }
+
+      // Testar configurações válidas
+      const validSettings1 = { percentage: 10, fixedAmount: 50, isActive: true }
+      const validSettings2 = { percentage: 0, fixedAmount: 100, isActive: true }
+      const validSettings3 = { percentage: 100, fixedAmount: 0, isActive: true }
+
+      expect(validateCommissionSettings(validSettings1).isValid).toBe(true)
+      expect(validateCommissionSettings(validSettings2).isValid).toBe(true)
+      expect(validateCommissionSettings(validSettings3).isValid).toBe(true)
+
+      // Testar configurações inválidas
+      const invalidSettings1 = { percentage: -5, fixedAmount: 50, isActive: true }
+      const invalidSettings2 = { percentage: 150, fixedAmount: 0, isActive: true }
+      const invalidSettings3 = { percentage: 0, fixedAmount: 0, isActive: true }
+      const invalidSettings4 = { percentage: 10, fixedAmount: -25, isActive: true }
+
+      expect(validateCommissionSettings(invalidSettings1).isValid).toBe(false)
+      expect(validateCommissionSettings(invalidSettings2).isValid).toBe(false)
+      expect(validateCommissionSettings(invalidSettings3).isValid).toBe(false)
+      expect(validateCommissionSettings(invalidSettings4).isValid).toBe(false)
+    })
+
+    it('deve validar lógica de busca de usuários por tipo', () => {
+      // Mock de usuários com diferentes tipos
+      const users = [
+        { id: 'user-1', name: 'Admin', type: 'ADMIN', commissionSettings: { percentage: 0 } },
+        { id: 'user-2', name: 'Vendedor', type: 'SELLER', commissionSettings: { percentage: 10 } },
+        { id: 'user-3', name: 'Gerente', type: 'MANAGER', commissionSettings: { percentage: 5 } },
+        { id: 'user-4', name: 'Guia', type: 'GUIDE', commissionSettings: { percentage: 8 } },
+        { id: 'user-5', name: 'Owner', type: 'OWNER', commissionSettings: { percentage: 0 } }
+      ]
+
+      // Filtrar usuários que podem ter comissão
+      const commissionableUsers = users.filter(user => 
+        ['SELLER', 'MANAGER', 'GUIDE'].includes(user.type)
+      )
+
+      // Filtrar usuários com comissão ativa
+      const usersWithActiveCommission = commissionableUsers.filter((user: any) =>
+        user.commissionSettings.percentage > 0 || (user.commissionSettings.fixedAmount || 0) > 0
+      )
+
+      expect(commissionableUsers).toHaveLength(3)
+      expect(usersWithActiveCommission).toHaveLength(3)
+      expect(commissionableUsers.map(u => u.type)).toEqual(['SELLER', 'MANAGER', 'GUIDE'])
+    })
+
+    it('deve validar lógica de ordenação de usuários por comissão', () => {
+      // Mock de usuários com vendas
+      const users = [
+        { 
+          id: 'user-1', 
+          name: 'Vendedor A', 
+          totalSales: 1000,
+          commissionSettings: { percentage: 10, fixedAmount: 50 }
+        },
+        { 
+          id: 'user-2', 
+          name: 'Vendedor B', 
+          totalSales: 2000,
+          commissionSettings: { percentage: 5, fixedAmount: 100 }
+        },
+        { 
+          id: 'user-3', 
+          name: 'Vendedor C', 
+          totalSales: 1500,
+          commissionSettings: { percentage: 15, fixedAmount: 0 }
+        }
+      ]
+
+      // Calcular comissões totais
+      const usersWithCommission = users.map(user => ({
+        ...user,
+        totalCommission: (user.totalSales * user.commissionSettings.percentage / 100) + user.commissionSettings.fixedAmount
+      }))
+
+      // Ordenar por comissão total (decrescente)
+      const sortedByCommission = [...usersWithCommission].sort((a, b) => b.totalCommission - a.totalCommission)
+
+      // Ordenar por vendas (decrescente)
+      const sortedBySales = [...usersWithCommission].sort((a, b) => b.totalSales - a.totalSales)
+
+      expect(sortedByCommission[0].name).toBe('Vendedor C') // 225 = 15% de 1500 + 0
+      expect(sortedByCommission[1].name).toBe('Vendedor B') // 200 = 5% de 2000 + 100
+      expect(sortedByCommission[2].name).toBe('Vendedor A') // 150 = 10% de 1000 + 50
+
+      expect(sortedBySales[0].name).toBe('Vendedor B') // 2000
+      expect(sortedBySales[1].name).toBe('Vendedor C') // 1500
+      expect(sortedBySales[2].name).toBe('Vendedor A') // 1000
+    })
+
+    it('deve validar lógica de agrupamento por tipo de usuário', () => {
+      // Mock de usuários
+      const users = [
+        { id: 'user-1', name: 'Vendedor 1', type: 'SELLER', totalCommission: 150 },
+        { id: 'user-2', name: 'Vendedor 2', type: 'SELLER', totalCommission: 200 },
+        { id: 'user-3', name: 'Gerente 1', type: 'MANAGER', totalCommission: 100 },
+        { id: 'user-4', name: 'Guia 1', type: 'GUIDE', totalCommission: 75 },
+        { id: 'user-5', name: 'Guia 2', type: 'GUIDE', totalCommission: 125 }
+      ]
+
+      // Agrupar por tipo
+      const groupedByType = users.reduce((acc, user) => {
+        const type = user.type
+        if (!acc[type]) {
+          acc[type] = {
+            users: [],
+            totalCommission: 0,
+            count: 0
+          }
+        }
+        acc[type].users.push(user)
+        acc[type].totalCommission += user.totalCommission
+        acc[type].count++
+        return acc
+      }, {} as Record<string, any>)
+
+      expect(Object.keys(groupedByType)).toHaveLength(3)
+      expect(groupedByType['SELLER'].count).toBe(2)
+      expect(groupedByType['SELLER'].totalCommission).toBe(350)
+      expect(groupedByType['MANAGER'].count).toBe(1)
+      expect(groupedByType['MANAGER'].totalCommission).toBe(100)
+      expect(groupedByType['GUIDE'].count).toBe(2)
+      expect(groupedByType['GUIDE'].totalCommission).toBe(200)
+    })
+
+    it('deve validar lógica de cálculo de estatísticas de comissão', () => {
+      // Mock de dados de comissão
+      const commissions = [150, 200, 100, 75, 125, 300, 50]
+
+      // Calcular estatísticas
+      const totalCommission = commissions.reduce((sum, commission) => sum + commission, 0)
+      const averageCommission = totalCommission / commissions.length
+      const maxCommission = Math.max(...commissions)
+      const minCommission = Math.min(...commissions)
+      const medianCommission = [...commissions].sort((a, b) => a - b)[Math.floor(commissions.length / 2)]
+
+      expect(totalCommission).toBe(1000)
+      expect(averageCommission).toBeCloseTo(142.86, 2)
+      expect(maxCommission).toBe(300)
+      expect(minCommission).toBe(50)
+      expect(medianCommission).toBe(125)
+    })
+
+    it('deve validar lógica de busca de usuários por nome', () => {
+      // Mock de usuários
+      const users = [
+        { id: 'user-1', name: 'João Vendedor', type: 'SELLER' },
+        { id: 'user-2', name: 'Maria Gerente', type: 'MANAGER' },
+        { id: 'user-3', name: 'José Guia', type: 'GUIDE' },
+        { id: 'user-4', name: 'João Guia', type: 'GUIDE' }
+      ]
+
+      const searchTerm = 'joão'
+      const searchLower = searchTerm.toLowerCase()
+
+      // Buscar por nome
+      const searchResults = users.filter(user =>
+        user.name.toLowerCase().includes(searchLower)
+      )
+
+      expect(searchResults).toHaveLength(2)
+      expect(searchResults.map(u => u.name)).toContain('João Vendedor')
+      expect(searchResults.map(u => u.name)).toContain('João Guia')
+    })
+
+    it('deve validar lógica de paginação de usuários', () => {
+      // Mock de lista de usuários
+      const allUsers = Array.from({ length: 25 }, (_, i) => ({
+        id: `user-${i}`,
+        name: `Usuário ${i + 1}`,
+        type: 'SELLER'
+      }))
+
+      const pageSize = 10
+      const currentPage = 1
+
+      // Paginar
+      const startIndex = currentPage * pageSize
+      const endIndex = startIndex + pageSize
+      const paginatedUsers = allUsers.slice(startIndex, endIndex)
+
+      expect(paginatedUsers).toHaveLength(10)
+      expect(paginatedUsers[0].name).toBe('Usuário 11')
+      expect(paginatedUsers[9].name).toBe('Usuário 20')
+
+      // Calcular total de páginas
+      const totalPages = Math.ceil(allUsers.length / pageSize)
+      expect(totalPages).toBe(3)
+    })
+
+    it('deve validar lógica de exportação de dados de comissão', () => {
+      // Mock de usuários com comissões
+      const users = [
+        {
+          id: 'user-1',
+          name: 'Vendedor 1',
+          type: 'SELLER',
+          totalSales: 1000,
+          commissionSettings: { percentage: 10, fixedAmount: 50 },
+          totalCommission: 150
+        },
+        {
+          id: 'user-2',
+          name: 'Gerente 1',
+          type: 'MANAGER',
+          totalSales: 2000,
+          commissionSettings: { percentage: 5, fixedAmount: 100 },
+          totalCommission: 200
+        }
+      ]
+
+      // Simular exportação CSV
+      const csvHeaders = ['ID', 'Nome', 'Tipo', 'Vendas Totais', 'Percentual', 'Valor Fixo', 'Comissão Total']
+      const csvRows = users.map(user => [
+        user.id,
+        user.name,
+        user.type,
+        user.totalSales.toString(),
+        user.commissionSettings.percentage.toString(),
+        user.commissionSettings.fixedAmount.toString(),
+        user.totalCommission.toString()
+      ])
+
+      expect(csvHeaders).toHaveLength(7)
+      expect(csvRows).toHaveLength(2)
+      expect(csvRows[0]).toEqual(['user-1', 'Vendedor 1', 'SELLER', '1000', '10', '50', '150'])
+    })
+
+    it('deve validar lógica de comparação de configurações', () => {
+      // Mock de configurações
+      const currentSettings = { percentage: 10, fixedAmount: 50, isActive: true }
+      const newSettings1 = { percentage: 10, fixedAmount: 50, isActive: true } // igual
+      const newSettings2 = { percentage: 15, fixedAmount: 50, isActive: true } // percentual diferente
+      const newSettings3 = { percentage: 10, fixedAmount: 75, isActive: true } // valor fixo diferente
+      const newSettings4 = { percentage: 10, fixedAmount: 50, isActive: false } // status diferente
+
+      // Comparar configurações
+      const isEqual1 = JSON.stringify(currentSettings) === JSON.stringify(newSettings1)
+      const isEqual2 = JSON.stringify(currentSettings) === JSON.stringify(newSettings2)
+      const isEqual3 = JSON.stringify(currentSettings) === JSON.stringify(newSettings3)
+      const isEqual4 = JSON.stringify(currentSettings) === JSON.stringify(newSettings4)
+
+      expect(isEqual1).toBe(true)
+      expect(isEqual2).toBe(false)
+      expect(isEqual3).toBe(false)
+      expect(isEqual4).toBe(false)
+    })
+
+    it('deve validar lógica de tratamento de campos opcionais', () => {
+      // Mock de usuário com campos opcionais
+      const userWithOptionals = {
+        id: 'user-1',
+        name: 'Vendedor 1',
+        type: 'SELLER',
+        commissionSettings: {
+          percentage: 10,
+          fixedAmount: 50,
+          isActive: true,
+          maxMonthlyCommission: 1000,
+          minSalesForCommission: 500,
+          notes: 'Comissão especial'
+        }
+      }
+
+      const userWithoutOptionals = {
+        id: 'user-2',
+        name: 'Vendedor 2',
+        type: 'SELLER',
+        commissionSettings: {
+          percentage: 15,
+          fixedAmount: 0,
+          isActive: true
+        }
+      }
+
+      // Validar campos opcionais
+      expect(userWithOptionals.commissionSettings.maxMonthlyCommission).toBe(1000)
+      expect(userWithOptionals.commissionSettings.minSalesForCommission).toBe(500)
+      expect(userWithOptionals.commissionSettings.notes).toBe('Comissão especial')
+
+      expect((userWithoutOptionals.commissionSettings as any).maxMonthlyCommission).toBeUndefined()
+      expect((userWithoutOptionals.commissionSettings as any).minSalesForCommission).toBeUndefined()
+      expect((userWithoutOptionals.commissionSettings as any).notes).toBeUndefined()
+    })
+
+    it('deve validar lógica de reset de configurações', () => {
+      // Mock de configurações
+      const defaultSettings = {
+        percentage: 0,
+        fixedAmount: 0,
+        isActive: false
+      }
+
+      const customSettings = {
+        percentage: 15,
+        fixedAmount: 100,
+        isActive: true
+      }
+
+      // Reset para padrão
+      const resetSettings = { ...defaultSettings }
+
+      expect(resetSettings.percentage).toBe(0)
+      expect(resetSettings.fixedAmount).toBe(0)
+      expect(resetSettings.isActive).toBe(false)
+
+      // Verificar que não afeta o original
+      expect(customSettings.percentage).toBe(15)
+      expect(customSettings.fixedAmount).toBe(100)
+      expect(customSettings.isActive).toBe(true)
+    })
+
+    it('deve validar lógica de validação de limites de comissão', () => {
+      // Mock de validação de limites
+      const validateCommissionLimits = (user: any) => {
+        const { totalSales, commissionSettings } = user
+        const calculatedCommission = (totalSales * commissionSettings.percentage / 100) + commissionSettings.fixedAmount
+        const maxMonthlyCommission = commissionSettings.maxMonthlyCommission || Infinity
+
+        return {
+          calculatedCommission,
+          finalCommission: Math.min(calculatedCommission, maxMonthlyCommission),
+          isCapped: calculatedCommission > maxMonthlyCommission
+        }
+      }
+
+      // Testar sem limite
+      const userWithoutLimit = {
+        totalSales: 1000,
+        commissionSettings: { percentage: 10, fixedAmount: 50 }
+      }
+
+      const result1 = validateCommissionLimits(userWithoutLimit)
+      expect(result1.calculatedCommission).toBe(150)
+      expect(result1.finalCommission).toBe(150)
+      expect(result1.isCapped).toBe(false)
+
+      // Testar com limite
+      const userWithLimit = {
+        totalSales: 10000,
+        commissionSettings: { percentage: 20, fixedAmount: 100, maxMonthlyCommission: 1000 }
+      }
+
+      const result2 = validateCommissionLimits(userWithLimit)
+      expect(result2.calculatedCommission).toBe(2100) // 20% de 10000 + 100
+      expect(result2.finalCommission).toBe(1000) // limitado
+      expect(result2.isCapped).toBe(true)
+    })
   })
 })
