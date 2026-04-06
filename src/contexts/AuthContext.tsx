@@ -22,7 +22,7 @@
 // - Repository Bootstrap: inicialização pós-autenticação, cleanup no logout
 // =================================================================
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import type { User, UserRole, UserStatus, UserCommissionSettings } from '../core/domain/User';
 import { auth, db } from '../lib/firebase';
 import {
@@ -352,10 +352,4 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) throw new Error('useAuth deve ser usado dentro de um AuthProvider');
-  return context;
 };

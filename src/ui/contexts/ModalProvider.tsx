@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, type ReactNode, useCallback } from 'react';
+// src/ui/contexts/ModalProvider.tsx
+import React, { useState, useCallback, type ReactNode } from 'react';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { InformationModal } from '../components/InformationModal';
+import { ModalContext } from './ModalContext';
 
 interface ConfirmationState {
   isOpen: boolean;
@@ -15,21 +17,6 @@ interface InformationState {
   message: ReactNode;
   resolve: () => void;
 }
-
-interface ModalContextType {
-  confirm: (title: string, message: string) => Promise<boolean>;
-  showAlert: (title: string, message: ReactNode) => Promise<void>;
-}
-
-const ModalContext = createContext<ModalContextType | undefined>(undefined);
-
-export const useModalContext = () => {
-  const context = useContext(ModalContext);
-  if (!context) {
-    throw new Error('useModalContext must be used within a ModalProvider');
-  }
-  return context;
-};
 
 export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [confirmation, setConfirmation] = useState<ConfirmationState>({
