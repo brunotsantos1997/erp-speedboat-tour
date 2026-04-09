@@ -1,8 +1,10 @@
 // src/viewmodels/event/useEventDataState.ts
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Product, Discount, SelectedProduct, Boat, EventType, CompanyData, BoardingLocation, TourType } from '../../core/domain/types';
 
-export const useEventDataState = (initialEvent?: EventType | null) => {
+export const useEventDataState = (initialEvent?: EventType | null, editingEventId?: string | null) => {
+  const [originalEvent, setOriginalEvent] = useState<EventType | null>(initialEvent || null);
+  const [originalPaymentStatus, setOriginalPaymentStatus] = useState<PaymentStatus | undefined>(initialEvent?.paymentStatus || undefined);
   // Event State
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     initialEvent ? new Date(initialEvent.date + 'T00:00') : new Date()
@@ -42,6 +44,11 @@ export const useEventDataState = (initialEvent?: EventType | null) => {
 
   // Loading state
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setOriginalEvent(initialEvent || null);
+    setOriginalPaymentStatus(initialEvent?.paymentStatus || undefined);
+  }, [initialEvent]);
 
   // Product handlers
   const toggleProduct = useCallback((product: Product) => {

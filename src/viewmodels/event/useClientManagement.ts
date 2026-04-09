@@ -1,28 +1,22 @@
-// src/viewmodels/event/useClientManagement.ts
 import { useState, useCallback } from 'react';
 import type { ClientProfile } from '../../core/domain/types';
 import { clientRepository } from '../../core/repositories/ClientRepository';
-import { useModal } from '../../ui/contexts/modal/useModal';
-import { useToast } from '../../ui/contexts/toast/useToast';
 
-export const useClientManagement = (initialClient?: ClientProfile | null) => {
-  const { confirm } = useModal();
-  const { showToast } = useToast();
-  
-  // Client Management State
+export const useClientManagement = (
+  initialClient?: ClientProfile | null,
+  confirmAction?: (title: string, message: string) => Promise<boolean>
+) => {
   const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(initialClient || null);
   const [clientSearchTerm, setClientSearchTerm] = useState(initialClient?.name || '');
   const [clientSearchResults, setClientSearchResults] = useState<ClientProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loyaltySuggestion, setLoyaltySuggestion] = useState<string | null>(null);
 
-  // New Client Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<ClientProfile | null>(null);
   const [newClientName, setNewClientName] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
 
-  // Client search
   const handleClientSearch = useCallback(async (term: string) => {
     setClientSearchTerm(term);
     if (term.length > 2) {
@@ -30,11 +24,7 @@ export const useClientManagement = (initialClient?: ClientProfile | null) => {
       try {
         const results = await clientRepository.search(term);
         setClientSearchResults(results);
-        
-        // Check for loyalty suggestion
-        const existingClient = results.find(c => 
-          c.name.toLowerCase().includes(term.toLowerCase())
-        );
+        const existingClient = results.find(c => c.name.toLowerCase().includes(term.toLowerCase()));
         if (existingClient && existingClient.totalTrips > 0) {
           setLoyaltySuggestion(`Cliente fiel! Já realizou ${existingClient.totalTrips} passeios.`);
         } else {
@@ -52,7 +42,6 @@ export const useClientManagement = (initialClient?: ClientProfile | null) => {
     }
   }, []);
 
-  // Client selection
   const selectClient = useCallback((client: ClientProfile) => {
     setSelectedClient(client);
     setClientSearchTerm(client.name);
@@ -67,7 +56,6 @@ export const useClientManagement = (initialClient?: ClientProfile | null) => {
     setLoyaltySuggestion(null);
   }, []);
 
-  // New client modal
   const openNewClientModal = useCallback(() => {
     setEditingClient(null);
     setNewClientName('');
@@ -91,38 +79,32 @@ export const useClientManagement = (initialClient?: ClientProfile | null) => {
 
   const handleSaveClient = useCallback(async () => {
     if (!newClientName || !newClientPhone) {
-      showToast('Por favor, preencha nome e telefone.', 'error');
+      // This should be handled by the view with a toast
+      console.error('Client name and phone are required.');
       return;
     }
 
     try {
       if (editingClient) {
-        // Update existing client
         const updatedClient = { ...editingClient, name: newClientName, phone: newClientPhone };
         await clientRepository.update(updatedClient);
         setSelectedClient(updatedClient);
         setClientSearchTerm(updatedClient.name);
-        showToast('Cliente atualizado com sucesso!');
       } else {
-        // Create new client
-        const newClient = await clientRepository.add({
-          name: newClientName,
-          phone: newClientPhone
-        });
+        const newClient = await clientRepository.add({ name: newClientName, phone: newClientPhone });
         setSelectedClient(newClient);
         setClientSearchTerm(newClient.name);
         setClientSearchResults([]);
-        showToast('Cliente criado com sucesso!');
       }
       closeClientModal();
     } catch (error) {
       console.error('Failed to save client:', error);
-      showToast('Erro ao salvar cliente.', 'error');
+      // This should be handled by the view with a toast
     }
-  }, [editingClient, newClientName, newClientPhone, showToast, closeClientModal]);
+  }, [editingClient, newClientName, newClientPhone, closeClientModal]);
 
   const handleDeleteClient = useCallback(async (client: ClientProfile) => {
-    if (!await confirm('Tem certeza que deseja excluir este cliente?', 'Esta ação é irreversível.')) {
+    if (confirmAction && !await confirmAction('Tem certeza que deseja excluir este cliente?', 'Esta ação é irreversível.')) {
       return;
     }
 
@@ -131,15 +113,13 @@ export const useClientManagement = (initialClient?: ClientProfile | null) => {
       if (selectedClient?.id === client.id) {
         clearClientSelection();
       }
-      showToast('Cliente excluído com sucesso!');
     } catch (error) {
       console.error('Failed to delete client:', error);
-      showToast('Erro ao excluir cliente.', 'error');
+      // This should be handled by the view with a toast
     }
-  }, [selectedClient, clearClientSelection, confirm]);
+  }, [selectedClient, clearClientSelection, confirmAction]);
 
   return {
-    // State
     selectedClient,
     clientSearchTerm,
     clientSearchResults,
@@ -149,8 +129,6 @@ export const useClientManagement = (initialClient?: ClientProfile | null) => {
     editingClient,
     newClientName,
     newClientPhone,
-
-    // Actions
     handleClientSearch,
     selectClient,
     clearClientSelection,
@@ -159,9 +137,9 @@ export const useClientManagement = (initialClient?: ClientProfile | null) => {
     closeClientModal,
     handleSaveClient,
     handleDeleteClient,
-
-    // Setters
     setNewClientName,
     setNewClientPhone,
+    setSelectedClient,
+    setClientSearchTerm
   };
 };

@@ -1,4 +1,5 @@
 import { Suspense, lazy } from 'react';
+import { useEventAutoSync } from './viewmodels/useEventAutoSync';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from './ui/components/Layout';
 import PublicLayout from './ui/layouts/PublicLayout';
@@ -41,6 +42,7 @@ const LoadingFallback = () => (
 );
 
 function App() {
+  useEventAutoSync();
   return (
     <BrowserRouter>
       <Suspense fallback={<LoadingFallback />}>

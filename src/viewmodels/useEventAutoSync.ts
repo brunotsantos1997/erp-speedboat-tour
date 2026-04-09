@@ -51,7 +51,7 @@ const wait = (delayMs: number) =>
     setTimeout(resolve, delayMs);
   });
 
-export const useGlobalSync = () => {
+export const useEventAutoSync = () => {
   const { currentUser } = useAuth();
   const { syncEvent, deleteFromGoogle } = useEventSync();
   const latestEventsRef = useRef<Record<string, EventType>>({});
@@ -111,7 +111,7 @@ export const useGlobalSync = () => {
               failedIds.push(eventId);
               logger.error('Global sync failed for event', error as Error, {
                 eventId,
-                operation: 'useGlobalSync.processSyncQueue',
+                operation: 'useEventAutoSync.processSyncQueue',
               });
             }
           })

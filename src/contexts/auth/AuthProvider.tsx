@@ -36,11 +36,7 @@ import {
   linkWithPopup,
   unlink,
 } from 'firebase/auth';
-import {
-  doc,
-  getDoc,
-  setDoc,
-} from 'firebase/firestore';
+
 import DOMPurify from 'dompurify';
 import { googleTokenStore } from '../../core/utils/googleTokenStore';
 import { assertStrongPassword } from '../../core/services/auth/PasswordPolicy';
@@ -48,7 +44,12 @@ import { useUserManagementViewModel } from '../../viewmodels/useUserManagementVi
 import { usePasswordResetViewModel } from '../../viewmodels/usePasswordResetViewModel';
 import { useProfileViewModel } from '../../viewmodels/useProfileViewModel';
 import { AuthContext, type AuthContextType } from './AuthContext';
-import { disposeRepositories, initializeRepositories } from './repositoryLifecycle';
+import { AuthLifecycleService } from '../../core/services/auth/AuthLifecycleService';
+import {
+  doc,
+  getDoc,
+  setDoc,
+} from 'firebase/firestore';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -67,27 +68,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        setLinkedProviders(firebaseUser.providerData.map((p) => p.providerId));
-        const profileRef = doc(db, 'profiles', firebaseUser.uid);
-        const profileSnap = await getDoc(profileRef);
-
-        if (profileSnap.exists()) {
-          const profileData = profileSnap.data() as User;
-          if (profileData.status === 'APPROVED') {
-            const user = { ...profileData, id: firebaseUser.uid };
-            setCurrentUser(user);
-            initializeRepositories(user);
-          } else {
-            setCurrentUser(null);
-            await logout();
-          }
+        const user = await AuthLifecycleService.initializeUserSession(firebaseUser.uid);
+        if (user) {
+          setCurrentUser(user);
         } else {
           setCurrentUser(null);
+          await logout();
         }
       } else {
         setCurrentUser(null);
         setLinkedProviders([]);
-        disposeRepositories();
+        AuthLifecycleService.disposeUserSession();
       }
       setLoading(false);
     });
@@ -97,16 +88,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string): Promise<User | null> => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const firebaseUser = userCredential.user;
-    const profileRef = doc(db, 'profiles', firebaseUser.uid);
-    const profileSnap = await getDoc(profileRef);
-
-    if (!profileSnap.exists()) { await logout(); throw new Error('Perfil não encontrado.'); }
-    const profileData = profileSnap.data() as User;
-    if (profileData.status !== 'APPROVED') { await logout(); throw new Error('Sua conta ainda não foi aprovada.'); }
-
-    const user = { ...profileData, id: firebaseUser.uid };
+    const user = await AuthLifecycleService.initializeUserSession(firebaseUser.uid);
+    if (!user) { await logout(); throw new Error('Perfil não encontrado ou não aprovado.'); }
     setCurrentUser(user);
-    initializeRepositories(user);
     return user;
   };
 
@@ -119,6 +103,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await firebaseUpdateProfile(firebaseUser, { displayName: sanitizedName });
     const newUser: User = { id: firebaseUser.uid, name: sanitizedName, email: sanitizedEmail, status: 'PENDING', role: 'SELLER', commissionPercentage: 0 };
     await setDoc(doc(db, 'profiles', firebaseUser.uid), newUser);
+
     return newUser;
   };
 
@@ -130,21 +115,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const result = await signInWithPopup(auth, provider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       if (credential?.accessToken) { googleTokenStore.set(credential.accessToken); setGoogleAccessToken(credential.accessToken); }
-      const firebaseUser = result.user;
-      const profileRef = doc(db, 'profiles', firebaseUser.uid);
-      const profileSnap = await getDoc(profileRef);
-      if (profileSnap.exists()) {
-        const profileData = profileSnap.data() as User;
-        if (profileData.status !== 'APPROVED') { await logout(); throw new Error('Sua conta ainda não foi aprovada.'); }
-        const user = { ...profileData, id: firebaseUser.uid };
+      const user = await AuthLifecycleService.initializeUserSession(result.user.uid);
+      if (user) {
         setCurrentUser(user);
-        initializeRepositories(user);
         return user;
       }
-      const newUser: User = { id: firebaseUser.uid, name: firebaseUser.displayName || 'Usuário Google', email: firebaseUser.email || '', status: 'PENDING', role: 'SELLER', commissionPercentage: 0 };
-      await setDoc(profileRef, newUser);
+      // If user is null, it means the profile was not found or not approved.
+      // If user is null, it means the profile was not found or not approved.
+      // In this case, we should log out and throw an error.
+      // Before logging out, check if the profile exists. If not, create it as PENDING.
+      const profileRef = doc(db, 'profiles', result.user.uid);
+      const profileSnap = await getDoc(profileRef);
+      if (!profileSnap.exists()) {
+        const newUser: User = { id: result.user.uid, name: result.user.displayName || 'Usuário Google', email: result.user.email || '', status: 'PENDING', role: 'SELLER', commissionPercentage: 0 };
+        await setDoc(profileRef, newUser);
+      }
       await logout();
-      throw new Error('Conta criada com sucesso! Aguarde a aprovação de um administrador.');
+      throw new Error('Conta criada com sucesso! Aguarde a aprovação de um administrador ou perfil não encontrado/aprovado.');
     } catch (error: unknown) {
       const fe = error as { code?: string };
       if (fe.code === 'auth/account-exists-with-different-credential') throw new Error('Este e-mail já está associado a uma conta. Por favor, faça login com seu e-mail e senha para vincular sua conta do Google nas configurações de perfil.');

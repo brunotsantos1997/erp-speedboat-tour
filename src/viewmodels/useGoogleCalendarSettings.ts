@@ -5,7 +5,7 @@ import { eventRepository } from '../core/repositories/EventRepository';
 import { logger } from '../core/common/Logger';
 import { googleTokenStore } from '../core/utils/googleTokenStore';
 
-export const useGoogleSyncViewModel = () => {
+export const useGoogleCalendarSettings = () => {
   const {
     currentUser,
     googleAccessToken,

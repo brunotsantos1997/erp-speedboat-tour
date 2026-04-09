@@ -1,5 +1,9 @@
 // src/viewmodels/useCreateEventViewModel.ts
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useEventDataState } from './event/useEventDataState';
+import { useEventCalculations } from './event/useEventCalculations';
+import { useClientManagement } from './event/useClientManagement';
+import { useEventCreation } from './event/useEventCreation';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/auth/useAuth';
 import type { DayOfWeek, Product, Discount, SelectedProduct, ClientProfile, Boat, EventType, PaymentStatus, CompanyData } from '../core/domain/types';
@@ -22,137 +26,60 @@ export const useCreateEventViewModel = () => {
   const { syncEvent } = useEventSync();
   const { confirm } = useModal();
   const [searchParams] = useSearchParams();
-  const [editingEventId, setEditingEventId] = useState<string | null>(searchParams.get('eventId'));
-  const [originalEvent, setOriginalEvent] = useState<EventType | null>(null);
-  const [originalPaymentStatus, setOriginalPaymentStatus] = useState<PaymentStatus | undefined>(undefined);
+  const [editingEventId, setEditingEventId] = useState<string | null>(searchParams.get(\'eventId\'));
 
-  // Event State
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('13:00');
-  const [scheduledEvents, setScheduledEvents] = useState<EventType[]>([]);
-  const [isPreScheduled, setIsPreScheduled] = useState(true);
+  const { 
+    selectedClient,
+    clientSearchTerm,
+    clientSearchResults, 
+    isSearching, 
+    loyaltySuggestion, 
+    isModalOpen, 
+    editingClient, 
+    newClientName, setNewClientName,
+    newClientPhone, setNewClientPhone,
+    handleClientSearch, 
+    selectClient, 
+    clearClientSelection,
+    openNewClientModal: handleOpenModal, 
+    closeClientModal: handleCloseModal, 
+    handleSaveClient, 
+    handleDeleteClient,
+    setSelectedClient, // Now exposed by useClientManagement
+    setClientSearchTerm // Now exposed by useClientManagement
+  } = useClientManagement(originalEvent?.client, confirm);
 
-  // Boat State
-  const [availableBoats, setAvailableBoats] = useState<Boat[]>([]);
-  const [selectedBoat, setSelectedBoat] = useState<Boat | null>(null);
 
-  // Boarding Location State
-  const [availableBoardingLocations, setAvailableBoardingLocations] = useState<BoardingLocation[]>([]);
-  const [selectedBoardingLocation, setSelectedBoardingLocation] = useState<BoardingLocation | null>(null);
+   const { 
+    selectedDate, setSelectedDate,
+    startTime, setStartTime,
+    endTime, setEndTime,
+    scheduledEvents, setScheduledEventsData,
+    isPreScheduled, updateIsPreScheduled,
+    availableBoats, setAvailableBoats,
+    selectedBoat, setSelectedBoat,
+    availableBoardingLocations, setAvailableBoardingLocations,
+    selectedBoardingLocation, setSelectedBoardingLocation,
+    availableTourTypes, setAvailableTourTypes,
+    selectedTourType, setSelectedTourType,
+    availableProducts, setAvailableProducts,
+    selectedProducts, setSelectedProducts,
+    rentalDiscount, setRentalDiscount,
+    passengerCount, updatePassengerCount,
+    observations, updateObservations,
+    tax, updateTax,
+    taxDescription, updateTaxDescription,
+    companyData, setCompanyData,
+    isLoading, setLoadingState,
+    originalEvent, originalPaymentStatus
+  } = useEventDataState(originalEvent, editingEventId);
 
-  // Tour Type State
-  const [availableTourTypes, setAvailableTourTypes] = useState<TourType[]>([]);
-  const [selectedTourType, setSelectedTourType] = useState<TourType | null>(null);
-
-  // Core State
-  const [availableProducts, setAvailableProducts] = useState<Product[]>([]);
-  const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
-  const [rentalDiscount, setRentalDiscount] = useState<Discount>({ type: 'FIXED', value: 0 });
-  const [passengerCount, setPassengerCount] = useState(1);
-  const [observations, setObservations] = useState('');
-  const [tax, setTax] = useState(0);
-  const [taxDescription, setTaxDescription] = useState('');
-
-  // Client Management State
-  const [selectedClient, setSelectedClient] = useState<ClientProfile | null>(null);
-  const [clientSearchTerm, setClientSearchTerm] = useState('');
-  const [clientSearchResults, setClientSearchResults] = useState<ClientProfile[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [loyaltySuggestion, setLoyaltySuggestion] = useState<string | null>(null);
-
-  // New Client Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingClient, setEditingClient] = useState<ClientProfile | null>(null);
-  const [newClientName, setNewClientName] = useState('');
-  const [newClientPhone, setNewClientPhone] = useState('');
-
-  // Loading state
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Company Data
-  const [companyData, setCompanyData] = useState<CompanyData | null>(null);
-
-  // Unified Data Loading
-  useEffect(() => {
-    const loadAllData = async () => {
-      setIsLoading(true);
-      try {
-        // Load event if editing
-        let initialEvent: EventType | null = null;
-        if (editingEventId) {
-          const event = await eventRepository.getById(editingEventId);
-          if (event) {
-            initialEvent = event;
-            setOriginalEvent(event);
-            setOriginalPaymentStatus(event.paymentStatus);
-          } else {
-            setEditingEventId(null);
-          }
-        } else {
-          setOriginalEvent(null);
-        }
-
-        // Load reference data
-        const [products, boats, boardingLocations, tourTypes, companyDataResponse] = await Promise.all([
-          productRepository.getAll(),
-          boatRepository.getAll(),
-          boardingLocationRepository.getAll(),
-          tourTypeRepository.getAll(),
-          CompanyDataRepository.getInstance().get()
-        ]);
-
-        if (companyDataResponse) setCompanyData(companyDataResponse);
-        setAvailableProducts(products);
-        setAvailableBoats(boats);
-        setAvailableBoardingLocations(boardingLocations);
-        setAvailableTourTypes(tourTypes);
-
-        if (initialEvent) {
-          // Set state from event
-          const eventDate = new Date(initialEvent.date);
-          const userTimezoneOffset = eventDate.getTimezoneOffset() * 60000;
-          setSelectedDate(new Date(eventDate.getTime() + userTimezoneOffset));
-          setStartTime(initialEvent.startTime);
-          setEndTime(initialEvent.endTime);
-          setSelectedBoat(initialEvent.boat);
-          setSelectedBoardingLocation(initialEvent.boardingLocation);
-          setSelectedTourType(initialEvent.tourType || null);
-          setSelectedProducts(initialEvent.products);
-          setRentalDiscount(initialEvent.rentalDiscount || { type: 'FIXED', value: 0 });
-          setPassengerCount(initialEvent.passengerCount);
-          setSelectedClient(initialEvent.client);
-          setClientSearchTerm(initialEvent.client.name);
-          setObservations(initialEvent.observations || '');
-          setIsPreScheduled(initialEvent.status === 'PRE_SCHEDULED');
-          setTax(initialEvent.tax || 0);
-          setTaxDescription(initialEvent.taxDescription || '');
-        } else {
-          // Set defaults for new event
-          if (boats.length > 0) setSelectedBoat(boats[0]);
-          if (boardingLocations.length > 0) setSelectedBoardingLocation(boardingLocations[0]);
-          if (tourTypes.length > 0) {
-            const defaultTourType = tourTypes.find(t => t.name.toLowerCase() === 'passeio') || tourTypes[0];
-            setSelectedTourType(defaultTourType);
-          }
-          const defaultCourtesies = products
-            .filter(p => p.isDefaultCourtesy)
-            .map(p => ({ ...p, isCourtesy: true }));
-          setSelectedProducts(defaultCourtesies);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAllData();
-  }, [editingEventId]);
 
   // Fetch scheduled events when selected date changes
   useEffect(() => {
     if (selectedDate) {
       const dateString = format(selectedDate, 'yyyy-MM-dd');
-      eventRepository.getEventsByDate(dateString).then(setScheduledEvents);
+      eventRepository.getEventsByDate(dateString).then(setScheduledEventsData);
     }
   }, [selectedDate]);
 
@@ -243,87 +170,7 @@ export const useCreateEventViewModel = () => {
     );
   }, []);
 
-  const handleClientSearch = useCallback(async (term: string) => {
-    setClientSearchTerm(term);
-    if (term.length > 2) {
-      setIsSearching(true);
-      try {
-        const results = await clientRepository.search(term);
-        setClientSearchResults(results);
-      } catch (error) {
-        console.error('Erro na busca de clientes:', error);
-      } finally {
-        setIsSearching(false);
-      }
-    } else {
-      setClientSearchResults([]);
-    }
-  }, []);
 
-  const selectClient = useCallback((client: ClientProfile) => {
-    setSelectedClient(client);
-    setClientSearchTerm(client.name);
-    setClientSearchResults([]);
-  }, []);
-
-  const clearClientSelection = useCallback(() => {
-    setSelectedClient(null);
-    setClientSearchTerm('');
-  }, []);
-
-  const handleOpenModal = (client: ClientProfile | null = null) => {
-    if (client) {
-      setEditingClient(client);
-      setNewClientName(client.name);
-      setNewClientPhone(client.phone);
-    } else {
-      setEditingClient(null);
-      const isPhone = /^\d+$/.test(clientSearchTerm);
-      setNewClientName(isPhone ? '' : clientSearchTerm);
-      setNewClientPhone(isPhone ? clientSearchTerm : '');
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = useCallback(() => {
-    setIsModalOpen(false);
-    setEditingClient(null);
-    setNewClientName('');
-    setNewClientPhone('');
-  }, []);
-
-  const handleSaveClient = useCallback(async () => {
-    if (!newClientName || !newClientPhone) return;
-
-    try {
-      if (editingClient) {
-        const updatedClient = { ...editingClient, name: newClientName, phone: newClientPhone };
-        const result = await clientRepository.update(updatedClient);
-        if (selectedClient?.id === result.id) {
-          setSelectedClient(result);
-          setClientSearchTerm(result.name);
-        }
-      } else {
-        const newClient = await clientRepository.add({ name: newClientName, phone: newClientPhone });
-        selectClient(newClient);
-      }
-
-      handleCloseModal();
-    } catch (error) {
-      console.error('Erro ao salvar cliente:', error);
-      throw error; // Re-throw to be handled by the UI (toast)
-    }
-  }, [editingClient, newClientName, newClientPhone, selectedClient, handleCloseModal, selectClient]);
-
-  const handleDeleteClient = useCallback(async (clientId: string) => {
-    if (await confirm('Confirmar Exclusão', 'Tem certeza que deseja excluir este cliente?')) {
-      await clientRepository.delete(clientId);
-      if (selectedClient?.id === clientId) {
-        clearClientSelection();
-      }
-       handleClientSearch(clientSearchTerm);
-    }
-  }, [selectedClient, clientSearchTerm, handleClientSearch, clearClientSelection, confirm]);
 
 
   // Calculations
